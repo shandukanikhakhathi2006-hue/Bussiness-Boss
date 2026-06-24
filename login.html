@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>BusinessBoss</title>
+        <link rel="stylesheet" href="login.css">
+    </head>
+    <body>
+        <header class="header">
+            <h1>Log in to BusinessBoss</h1>
+        </header>
+        <main class="main">
+            <section class="login">
+                <form action="" class="login-form">
+                    <div class="input-container">
+                        <label for="fullname">
+                            Full name
+                        </label>
+                        <input type="text" id="fullname" placeholder="Enter your name" required minlength="6" maxlength="40">
+                    </div>
+                    <div class="input-container">
+                        <label for="email">
+                            Email
+                        </label>
+                        <input type="email" id="email" placeholder="example@gmail.com" minlength="6" maxlength="40">
+                    </div>
+                    <div class="input-container">
+                        <label for="password">
+                           Password
+                        </label>
+                        <input type="password" id="password" placeholder="Example@0511" minlength="12" maxlength="40">
+                    </div>
+                    <div class="input-container">
+                        <label for="confirm-password">
+                            Confirm password
+                        </label>
+                        <input type="password" id="confirm-password">
+                    </div>
+                    <button type="submit" class="login-btn">login</button>
+                </form>
+                <p class="signup">New to BusinessBoss?  <a href="sign-up.html">Create an account</a></p>
+                <p class="choice">or</p>
+                <div class="google-btn-container">
+                <button  class="google-btn">
+                    <img class="google-icon" src="images/Logo-google-icon-PNG.png">
+                    <span>Continue with Google</span>
+                </button>
+            </div>
+            </section>
+
+        </main>
+    </body>
+</html>
