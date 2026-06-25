@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>BusinessBoss</title>
+        <link rel="stylesheet" href="signup.css">
+    </head>
+    <body>
+        <header class="header">
+            <div class="logo-container">
+                <img src="images/BussinessBoss-logo.png" alt="Bussiness Boss logo" class="bussinessBoss-logo">
+            </div>
+            <div class="headings">
+                <h1>Create Your Account</h1>
+                <h2>Start managing your business smarter today.</h2>
+             </div>
+        </header>
+        <main class="main">
+            <section class="sinup-section">
+                <form action="" class="signup-form">
+                    <div class="input-container">
+                        <label for="fullname">
+                            Full name
+                        </label>
+                        <input type="text" id="fullname" placeholder="e.g John smith" required minlength="6" maxlength="40">
+                    </div>
+                    <div class="input-container">
+                        <label for="email">
+                            Email
+                        </label>
+                        <input type="email" id="email" placeholder="example@gmail.com" minlength="6" maxlength="40">
+                    </div>
+                    <div class="input-container">
+                        <label for="password">
+                           Password
+                        </label>
+                        <input type="password" id="password" placeholder="Enter a strong password" minlength="12" maxlength="40">
+                    </div>
+                    <div class="input-container">
+                        <label for="confirm-password">
+                            Confirm password
+                        </label>
+                        <input type="password" id="confirm-password">
+                    </div>
+                    <div class="signup-btn-container">
+                    <button type="submit" class="signup-btn">Create Account</button>
+                    </div>
+                </form>
+                <p class="login">Already have an account? <a href="sign-up.html">Login</a></p>
+                <p class="choice">OR</p>
+                <div class="google-btn-container">
+                <button  class="google-btn">
+                    <img class="google-icon" src="images/Logo-google-icon-PNG.png" alt="Goggle logo icon">
+                    <span>Continue with Google</span>
+                </button>
+            </div>
+            </section>
+
+        </main>
+    </body>
+</html>
