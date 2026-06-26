@@ -1,3 +1,8 @@
+:root{
+    --brand-color:#2563eb;
+}
+
+
 *{
     box-sizing: border-box;
     margin: 0;
@@ -53,12 +58,12 @@ body{
     font-weight: 450;
     font-size: 1.6rem;
     padding: 10px;
-    color: #2563eb;
+    color: var(--brand-color);
 
 }
 .header h2{
     font-size: 16px;
-    color: #2563eb;
+    color:  var(--brand-color);
     padding: 10px;
     font-weight: 400;
 }
@@ -94,7 +99,7 @@ body{
 .input-container input:focus{
     outline: none;
     cursor: auto;
-    border-color: #2563eb;
+    border-color:  var(--brand-color);
     box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
 }
 input:hover{
@@ -108,14 +113,14 @@ label{
 }
 
 .signup-btn {
-    background: #2563eb;
+    background:  var(--brand-color);
     color: white;
     text-decoration: none;
     padding: 15px 28px;
     border-radius: 12px;
     font-weight: 600;
     transition: 0.3s;
-    border: 1px solid #2563eb;
+    border: 1px solid  var(--brand-color);
     margin-bottom: 30px;
     width: 320px;         
 }
@@ -126,7 +131,7 @@ label{
     transform: scale(1.02);
 }
 .signup-btn:active{
-   background-color: #2563eb;
+   background-color:  var(--brand-color);
 
 }
 .signup-btn-container{
@@ -143,7 +148,7 @@ label{
 }
 a{
     text-decoration: none;
-    color: #2563eb;
+    color:  var(--brand-color);
     transition: 0.3s ease;
 }
 a:hover{
