@@ -15,7 +15,6 @@ body{
     display: flex;
     flex-direction: column;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #fefefe;
     justify-content: center;
     align-items: center;
     padding: 20px 8%;
@@ -38,9 +37,7 @@ body{
     margin-bottom: 10px;
     border-radius: 5px;
 }
-.logo-container{
-    background-color: #fefefe;
-}
+
 .header{
     display: flex;
     flex-direction: column;
