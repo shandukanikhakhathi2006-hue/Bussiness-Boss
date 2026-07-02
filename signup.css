@@ -1,5 +1,7 @@
 :root{
     --brand-color:#2563eb;
+    --secondary-color:#F8F9FA;
+    --form-color:#fefefe;
 }
 
 
@@ -12,28 +14,30 @@ html{
     scroll-behavior: smooth;
 }
 body{
+    min-height:100vh;
     display: flex;
     flex-direction: column;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     justify-content: center;
     align-items: center;
     padding: 20px 8%;
-    background-color: #f8fafc;
+    background-color: var(--secondary-color);
     overflow-x: hidden;
 }
 
 .main{
-    padding: 60px 40px;
-    border: 1px solid #e2e8f0;
-    border-radius: 15px;
-    background-color: #fefefe;
     width: 100%;
     max-width:650px;
     min-width: 280px;
+    background-color:var(--form-color) ;
+    border: 1px solid #e2e8f0;
+    padding: 60px 40px;
+    border-radius: 15px;
 }
 .bussinessBoss-logo{
     height: auto;
-    width: 150px;
+    max-width:  150px;
+    width: 100%;
     margin-bottom: 10px;
     border-radius: 5px;
 }
@@ -59,13 +63,14 @@ body{
 
 }
 .header h2{
-    font-size: 16px;
+    font-size: 1.2rem;
     color:  var(--brand-color);
     padding: 10px;
     font-weight: 400;
 }
 
 .signup-form{
+   
     display: grid;
     grid-template-columns: repeat(auto-fit,minmax(260px,1fr));
     gap: 20px;
@@ -116,10 +121,13 @@ label{
     padding: 15px 28px;
     border-radius: 12px;
     font-weight: 600;
-    transition: 0.3s;
+    transition:
+    border-color .3s ease,
+    box-shadow .3s ease;
     border: 1px solid  var(--brand-color);
     margin-bottom: 30px;
-    width: 320px;         
+    width: 100%;  
+    max-width: 320px;       
 }
 .signup-btn:hover{
     box-shadow: 0 4px 14px rgba(37, 99, 235, 0.2);
@@ -202,14 +210,44 @@ a:hover{
         font-size: 14px;
         text-align: center;
     }
+    .main{
+        padding:35px 20px;
+    }
 
-  
     .signup-btn,
     .google-btn {
         width: 100%;       
         max-width: 320px; 
 }
-
     
+}
+@media (max-width:480px){
+
+    body{
+        padding:15px;
+    }
+
+    .main{
+        padding:25px 15px;
+    }
+
+    .header h1{
+        font-size:1.2rem;
+    }
+
+    .header h2{
+        font-size:.85rem;
+    }
+
+    .signup-form{
+        grid-template-columns:1fr;
+        gap:16px;
+    }
+
+    .signup-btn,
+    .google-btn{
+        max-width:none;
+    }
+
 }
 

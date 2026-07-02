@@ -5,16 +5,18 @@
 }
 :root{
     --brand-color:#2563eb;
-    --secondary-background-color:#f8fafc ;
+    --primary-brand-color:#1d4ed8;
+    --secondary-background-color:#F8F9FA ;
     --primary-background-color:#fefefe;
     --font-color:#0f172a;
+   
 }
 body{
     display: flex;
     flex-direction: column;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     justify-content: center;
-   align-items: center;
+    align-items: center;
     padding: 20px 8%;
     background-color: var(--secondary-background-color);
     overflow-x: hidden;
@@ -113,7 +115,7 @@ header h2{
 }
 
 .signup-message a:hover {
-    color: #1d4ed8;
+    color: var(--primary-brand-color);
     text-decoration: underline;
 }
 
@@ -161,7 +163,7 @@ header h2{
 
 .forgot-password a:hover {
     text-decoration: underline;    
-    color: #1d4ed8;                
+    color: var(--primary-brand-color);                
 }
 .choice{
     text-align: center;
@@ -193,7 +195,7 @@ header h2{
 .login-btn-container button:hover {
     box-shadow: 0 4px 14px rgba(37, 99, 235, 0.2);
     cursor: pointer;
-    background-color: #1d4ed8;
+    background-color: var(--primary-brand-color);
     transform: scale(1.02);
 }
 
