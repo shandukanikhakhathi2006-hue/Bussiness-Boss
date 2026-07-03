@@ -145,7 +145,7 @@ label{
     grid-column: 1 / -1;
 }
 .login {
-    font-size: 15px;
+    font-size: 1rem;
     font-weight: 400;
     margin-bottom: 20px;
     text-align: center;
@@ -162,7 +162,7 @@ a:hover{
 }
 .choice{
     text-align: center;
-    font-size: 15px;
+    font-size: 1rem;
     font-weight: 400;
 
 }
