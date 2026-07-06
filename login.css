@@ -11,6 +11,13 @@
     --font-color:#0f172a;
    
 }
+html{
+    overflow-x: hidden;
+}
+::selection{
+    color:#f8fafc ;
+    background-color: var(--brand-color);
+}
 body{
     display: flex;
     flex-direction: column;
@@ -152,8 +159,11 @@ header h2{
     height: 16px;
     margin: 0;                      
     cursor: pointer;
+    box-shadow:  0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
-
+.checkbox-container input:focus{
+    box-shadow:0 0 0 3px rgba(59, 130, 246, 0.5);
+}
 .checkbox-container label {
     cursor: pointer;
     user-select: none;              
