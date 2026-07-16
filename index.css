@@ -34,107 +34,36 @@ body{
 
 nav{
     display:flex;
-    position:sticky;
-    top:0;
     justify-content:space-between;
     align-items:center;
-    padding:15px 8%;
-    background:rgba(255,255,255,0.9);
-    backdrop-filter:blur(10px);
-    -webkit-backdrop-filter:blur(10px);
-    box-shadow:0 2px 15px rgba(0,0,0,0.05);
-    z-index:1000;
-   
+    padding:20px 8%;
+    background:#fff;
+    box-shadow:0 2px 10px rgba(0,0,0,.05);
 }
-/* =========================
-   LOGO STYLES
-========================= */
 
-.logo-container{
+nav ul{
     display:flex;
-    align-items:center;
+    list-style:none;
+    gap:25px;
 }
 
-.logo-img{
-    height:130px;
-    width:100%;
-    object-fit:cover;
-    transition:0.3s ease;
-}
-
-.logo-img:hover{
-    transform:scale(1.05);
-    cursor: pointer;
-}
-
-
-/* =========================
-   NAVIGATION LINKS
-========================= */
-
-.nav-links{
-    display:flex;
-    align-items:center;
-    gap:20px;
-    flex:1;
-    padding-right: 10px;
-    justify-content:end;
-}
-
-.nav-links a{
+nav a{
     text-decoration:none;
     color:#334155;
-    font-weight:500;
-    transition:0.3s;
-}
-
-.nav-links a:hover{
-    color:var(--brand-color);
-}
-
-/* =========================
-   NAV BUTTONS
-========================= */
-
-.nav-buttons{
-    display:flex;
-    align-items:center;
-    gap:12px;
-}
-
-.login-btn{
-    text-decoration:none;
     font-weight:600;
-    padding:12px 20px;
-    border-radius:10px;
-    transition:0.3s;
 }
 
-.login-btn:hover{
-    background:#eff6ff;
-    cursor: pointer;
+.brand-link{
+    font-size:1.4rem;
+    font-weight:700;
+    color:#2563eb;
 }
-.signup-btn{
-    background:var(--brand-color);
-    border:none;
-    color: #eff6ff;
-    padding:12px 20px;
-    border-radius: 7px;
-    font-weight:600;
-    font-size: 15px;
-    text-decoration:none;
-    transition: 0.3s ease;
-   
-   
+
+nav a:hover{
+    color:#2563eb;
 }
-.signup-btn:hover{
-    cursor: pointer;
-    background-color:#1d4ed8 ;
-    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
-}
-.signup-btn:active{
-    background-color: var(--brand-color);
-}
+
+
 /* =========================
    HERO SECTION
 ========================= */
@@ -308,25 +237,116 @@ nav{
    FOOTER
 ========================= */
 
-footer{
-    text-align:center;
-    padding:30px;
-    background:#0f172a;
-    color:white;
-    margin-top:40px;
+/* Footer Base Styles */
+.site-footer {
+  background-color: #1a1a1a;
+  color: #ffffff;
+  padding: 60px 20px 20px 20px;
+  font-family: Arial, sans-serif;
 }
 
-.site-footer{
-    background:#0f172a;
-    color:#e2e8f0;
-    text-align:center;
-    padding:24px 8% 28px;
-    margin-top:0;
+.footer-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 40px;
 }
 
-.site-footer p{
-    margin:0;
-    font-size:0.95rem;
+.footer-column {
+  flex: 1;
+  min-width: 200px;
+}
+
+/* Brand Section Styling */
+.footer-column.brand-info h3 {
+  font-size: 24px;
+  margin-bottom: 15px;
+  color: #3b82f6; /* Example primary brand color for Business Boss */
+}
+
+.footer-column.brand-info p {
+  color: #b3b3b3;
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+/* Link Column Styling */
+.footer-column h4 {
+  font-size: 16px;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.footer-column ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.footer-column ul li {
+  margin-bottom: 12px;
+}
+
+.footer-column ul li a {
+  color: #b3b3b3;
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.2s ease;
+}
+
+.footer-column ul li a:hover {
+  color: #ffffff; /* Turns bright on hover */
+}
+
+/* Bottom Legal Bar Styling */
+.footer-bottom {
+  margin-top: 40px;
+  border-top: 1px solid #333333;
+  padding-top: 20px;
+}
+
+.footer-bottom-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: #8c8c8c;
+  gap: 15px;
+}
+
+.footer-bottom strong {
+  color: #ffffff; /* Makes ShanDal Tech stand out professionally */
+}
+
+.legal-links a {
+  color: #8c8c8c;
+  text-decoration: none;
+  margin-left: 20px;
+}
+
+.legal-links a:hover {
+  color: #ffffff;
+}
+
+/* Responsive Design for Mobile Screens */
+@media (max-width: 768px) {
+  .footer-container {
+    flex-direction: column;
+    gap: 30px;
+  }
+  .footer-bottom-container {
+    flex-direction: column;
+    text-align: center;
+  }
+  .legal-links a {
+    margin: 0 10px;
+  }
 }
 
 /* =========================
@@ -392,6 +412,16 @@ footer{
         flex-wrap:wrap;
         justify-content:center;
     }
+    nav{
+        flex-direction:column;
+        gap:20px;
+    }
+    
+    nav ul{
+        flex-wrap:wrap;
+        justify-content:center;
+    }
+    
 
     .logo-img{
         height:70px;

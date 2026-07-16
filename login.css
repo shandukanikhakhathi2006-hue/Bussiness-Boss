@@ -46,13 +46,14 @@ header{
     text-align:center;
     margin-bottom:25px;
 }
-
-.businessBoss-logo,
 .bussinessBoss-logo{
-    width:140px;
-    border-radius:8px;
+    height: auto;
+    max-width: 150px;
+    width: 100%;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    border:none;
 }
-
 header h1{
     color:var(--brand-color);
     margin:10px 0;
@@ -164,14 +165,6 @@ header p{
     margin-top:20px;
 }
 
-footer{
-    width:100%;
-    padding:20px;
-    background:var(--brand-color);
-    color:#fff;
-    text-align:center;
-    margin-top:auto;
-}
 
 @media(max-width:768px){
     .page-nav{

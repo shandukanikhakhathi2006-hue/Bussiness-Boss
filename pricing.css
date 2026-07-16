@@ -4,10 +4,41 @@
     box-sizing:border-box;
 }
 
+:root{
+    /* Brand Colors */
+    --brand-color: #2563eb;
+    --brand-light: #eff6ff;
+    --brand-dark: #1e40af;
+    
+    /* Text Colors */
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --text-muted: #94a3b8;
+    --text-light: #cbd5e1;
+    --text-white: #ffffff;
+    
+    /* Background Colors */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-tertiary: #f1f5f9;
+    --bg-hover: #2563eb;
+    
+    /* Status Colors */
+    --success: #10b981;
+    --warning: #f59e0b;
+    --error: #ef4444;
+    --info: #06b6d4;
+    
+    /* Border Colors */
+    --border-color: #e2e8f0;
+    --border-dark: #cbd5e1;
+}
+
 body{
     font-family:Segoe UI,sans-serif;
     background:#f8fafc;
     color:#1e293b;
+    
 }
 
 nav{
@@ -29,6 +60,9 @@ nav a{
     text-decoration:none;
     color:#334155;
     font-weight:600;
+}
+nav a:hover{
+    color:var(--brand-color);
 }
 
 .hero{
@@ -120,13 +154,118 @@ button:hover{
     background:#1d4ed8;
 }
 
-footer{
-    margin-top:50px;
-    background:#0f172a;
-    color:white;
-    text-align:center;
-    padding:25px;
+/* Footer Base Styles */
+.site-footer {
+  background-color: #1a1a1a;
+  color: #ffffff;
+  padding: 60px 20px 20px 20px;
+  font-family: Arial, sans-serif;
 }
+
+.footer-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 40px;
+}
+
+.footer-column {
+  flex: 1;
+  min-width: 200px;
+}
+
+/* Brand Section Styling */
+.footer-column.brand-info h3 {
+  font-size: 24px;
+  margin-bottom: 15px;
+  color: #3b82f6; /* Example primary brand color for Business Boss */
+}
+
+.footer-column.brand-info p {
+  color: #b3b3b3;
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+/* Link Column Styling */
+.footer-column h4 {
+  font-size: 16px;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.footer-column ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.footer-column ul li {
+  margin-bottom: 12px;
+}
+
+.footer-column ul li a {
+  color: #b3b3b3;
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.2s ease;
+}
+
+.footer-column ul li a:hover {
+  color: #ffffff; /* Turns bright on hover */
+}
+
+/* Bottom Legal Bar Styling */
+.footer-bottom {
+  margin-top: 40px;
+  border-top: 1px solid #333333;
+  padding-top: 20px;
+}
+
+.footer-bottom-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: #8c8c8c;
+  gap: 15px;
+}
+
+.footer-bottom strong {
+  color: #ffffff; /* Makes ShanDal Tech stand out professionally */
+}
+
+.legal-links a {
+  color: #8c8c8c;
+  text-decoration: none;
+  margin-left: 20px;
+}
+
+.legal-links a:hover {
+  color: #ffffff;
+}
+
+/* Responsive Design for Mobile Screens */
+@media (max-width: 768px) {
+  .footer-container {
+    flex-direction: column;
+    gap: 30px;
+  }
+  .footer-bottom-container {
+    flex-direction: column;
+    text-align: center;
+  }
+  .legal-links a {
+    margin: 0 10px;
+  }
+}
+
 
 @media(max-width:768px){
 
