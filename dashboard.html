@@ -7,10 +7,351 @@
         <link rel="stylesheet" href="dashboard.css">
     </head>
     <body>
-        <header></header>
+        <header class="dashboard-header">
+            <div class=" dashboard-welcoming">
+            <h1>Dashboard</h1>
+            <p id="current-date" class="welcome-date"></p>
+            <p class="welcome-message">Welcome back to Business Boss</p>
+        </div>
+        <nav>
+            
+          <input type="search" class="search-bar">
+          <button class="search-btn">@</button>
+        </nav>
+        </header>
         <main>
-            <section></section>
-            <section></section>
+           
+            <section class="statistics-section">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon customers-stat">👥</div>
+                        <div class="stat-change positive">
+                            <span class="change-percent">+12%</span>
+                        </div>
+                    </div>
+                    <div class="stat-body">
+                        <p class="stat-label">Total Customers</p>
+                        <p class="stat-number">1,248</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon appointments-stat">📅</div>
+                        <div class="stat-change positive">
+                            <span class="change-percent">+8%</span>
+                        </div>
+                    </div>
+                    <div class="stat-body">
+                        <p class="stat-label">Today's Appointments</p>
+                        <p class="stat-number">24</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon revenue-stat">💰</div>
+                        <div class="stat-change positive">
+                            <span class="change-percent">+23%</span>
+                        </div>
+                    </div>
+                    <div class="stat-body">
+                        <p class="stat-label">Monthly Revenue</p>
+                        <p class="stat-number">R45,320</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon invoices-stat">📄</div>
+                        <div class="stat-change negative">
+                            <span class="change-percent">-5%</span>
+                        </div>
+                    </div>
+                    <div class="stat-body">
+                        <p class="stat-label">Outstanding Invoices</p>
+                        <p class="stat-number">R8,950</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon expenses-stat">💳</div>
+                        <div class="stat-change negative">
+                            <span class="change-percent">+3%</span>
+                        </div>
+                    </div>
+                    <div class="stat-body">
+                        <p class="stat-label">Total Expenses</p>
+                        <p class="stat-number">R12,840</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="dashboard-cards">
+                <div class="card">
+                    <a href="#invoices" class="card-icon invoices">
+                        📄
+                    </a>
+                    <div class="card-content">
+                        <h3>Invoices</h3>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <a href="#appointments" class="card-icon appointments">
+                        📅
+                    </a>
+                    <div class="card-content">
+                        <h3>Appointments</h3>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <a href="#customers" class="card-icon customers">
+                        👥
+                    </a>
+                    <div class="card-content">
+                        <h3>Customers</h3>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <a href="#payments" class="card-icon payments">
+                        💳
+                    </a>
+                    <div class="card-content">
+                        <h3>Payments</h3>
+                    </div>
+                </div>
+            </section>
+
+            <section class="revenue-section">
+                <div class="revenue-header">
+                    <div class="revenue-info">
+                        <h3 class="revenue-title">Revenue Overview</h3>
+                        <p class="revenue-total">Total Revenue: <span id="revenueTotal">R7,850</span></p>
+                    </div>
+                    <div class="revenue-controls">
+                        <select id="chartPeriod" class="period-dropdown">
+                            <option value="daily">Daily</option>
+                            <option value="weekly" selected>Weekly</option>
+                            <option value="monthly">Monthly</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </section>
+
+            <section class="appointments-section">
+                <h3 class="appointments-title">Today's Appointments</h3>
+                <div class="table-wrapper">
+                    <table class="appointments-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Customer</th>
+                                <th>Service</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="time-cell">09:00 AM</td>
+                                <td class="customer-cell">John Doe</td>
+                                <td class="service-cell">Consultation</td>
+                                <td class="status-cell">
+                                    <span class="status-badge completed">Completed</span>
+                                </td>
+                                <td class="action-cell">
+                                    <button class="action-btn">View Details</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="time-cell">10:30 AM</td>
+                                <td class="customer-cell">Jane Smith</td>
+                                <td class="service-cell">Website Design</td>
+                                <td class="status-cell">
+                                    <span class="status-badge pending">Pending</span>
+                                </td>
+                                <td class="action-cell">
+                                    <button class="action-btn">View Details</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="time-cell">12:00 PM</td>
+                                <td class="customer-cell">Michael Johnson</td>
+                                <td class="service-cell">Development</td>
+                                <td class="status-cell">
+                                    <span class="status-badge pending">Pending</span>
+                                </td>
+                                <td class="action-cell">
+                                    <button class="action-btn">View Details</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="time-cell">02:00 PM</td>
+                                <td class="customer-cell">Sarah Williams</td>
+                                <td class="service-cell">Marketing Review</td>
+                                <td class="status-cell">
+                                    <span class="status-badge cancelled">Cancelled</span>
+                                </td>
+                                <td class="action-cell">
+                                    <button class="action-btn">View Details</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="time-cell">03:30 PM</td>
+                                <td class="customer-cell">David Brown</td>
+                                <td class="service-cell">Support Session</td>
+                                <td class="status-cell">
+                                    <span class="status-badge completed">Completed</span>
+                                </td>
+                                <td class="action-cell">
+                                    <button class="action-btn">View Details</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
         </main>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+            // Chart instance
+            let revenueChart = null;
+
+            // Revenue data for different periods
+            const revenueData = {
+                daily: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    data: [1200, 1900, 1500, 2200, 1800, 2500, 2100],
+                    total: 14250
+                },
+                weekly: {
+                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                    data: [8500, 9200, 7850, 10500],
+                    total: 35850
+                },
+                monthly: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+                    data: [32000, 35200, 28500, 40200, 38900, 42100, 45320],
+                    total: 262220
+                }
+            };
+            //set the date
+            const today = new Date();
+
+            const options = {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric"
+            };
+
+            document.getElementById("current-date").textContent =
+            today.toLocaleDateString("en-US", options);
+
+            // Initialize chart
+            function initRevenueChart(period = 'weekly') {
+                const ctx = document.getElementById('revenueChart').getContext('2d');
+                const data = revenueData[period];
+
+                // Destroy existing chart if it exists
+                if (revenueChart) {
+                    revenueChart.destroy();
+                }
+
+                revenueChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            label: 'Revenue',
+                            data: data.data,
+                            borderColor: '#2563eb',
+                            backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 6,
+                            pointBackgroundColor: '#2563eb',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointHoverRadius: 8,
+                            pointHoverBackgroundColor: '#1e40af'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(30, 41, 59, 0.9)',
+                                padding: 12,
+                                titleFont: { size: 14, weight: 'bold' },
+                                bodyFont: { size: 13 },
+                                borderColor: '#2563eb',
+                                borderWidth: 1,
+                                displayColors: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        return 'R' + context.parsed.y.toLocaleString();
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(226, 232, 240, 0.5)',
+                                    drawBorder: false
+                                },
+                                ticks: {
+                                    color: '#64748b',
+                                    font: { size: 12 },
+                                    callback: function(value) {
+                                        return 'R' + value.toLocaleString();
+                                    }
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    display: false,
+                                    drawBorder: false
+                                },
+                                ticks: {
+                                    color: '#64748b',
+                                    font: { size: 12 }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Update revenue total
+                document.getElementById('revenueTotal').textContent = 'R' + data.total.toLocaleString();
+            }
+
+            // Handle period dropdown change
+            function handlePeriodChange(event) {
+                const period = event.target.value;
+                initRevenueChart(period);
+            }
+
+            // Run on page load
+            document.addEventListener('DOMContentLoaded', function() {
+                initRevenueChart('weekly');
+                document.getElementById('chartPeriod').addEventListener('change', handlePeriodChange);
+            });
+        </script>
     </body>
 </html>

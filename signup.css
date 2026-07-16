@@ -165,9 +165,10 @@ a:hover{
     color:#1d4ed8;
 }
 .choice{
-    text-align: center;
-    font-size: 1rem;
-    font-weight: 400;
+    text-align:center;
+    margin:20px 0;
+    color:#64748b;
+    font-weight:600;
 
 }
 .google-btn{

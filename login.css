@@ -1,265 +1,197 @@
+/* =========================
+   Business Boss Login CSS
+========================= */
+
 *{
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
 }
+
 :root{
     --brand-color:#2563eb;
     --primary-brand-color:#1d4ed8;
-    --secondary-background-color:#F8F9FA ;
-    --primary-background-color:#fefefe;
+    --secondary-background-color:#F8F9FA;
+    --primary-background-color:#ffffff;
     --font-color:#0f172a;
-   
 }
+
 html{
-    overflow-x: hidden;
+    overflow-x:hidden;
+    scroll-behavior:smooth;
 }
-::selection{
-    color:#f8fafc ;
-    background-color: var(--brand-color);
-}
+
 body{
-    display: flex;
-    flex-direction: column;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    justify-content: center;
-    align-items: center;
-    padding: 20px 8%;
-    background-color: var(--secondary-background-color);
-    overflow-x: hidden;
-    min-height: 100vh;
+    font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+    background:var(--secondary-background-color);
+    color:var(--font-color);
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
 }
+
+
 main{
-    padding: 40px 80px ;
-    display: flex;
-    flex-direction: column;
-    background-color: var(--primary-background-color);
-    max-width: 640px;
-    min-width: 280px;
-    border: 1px solid #e2e8f0;
-    width: 100%;
-    border-radius: 7px;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
-    height: auto;   
+    width:100%;
+    max-width:650px;
+    background:#fff;
+    padding:40px;
+    border-radius:14px;
+    box-shadow:0 8px 25px rgba(0,0,0,.08);
+    margin-bottom:40px;
 }
 
-.bussinessBoss-logo{
-    height: auto;
-    width: 150px;
-    margin-bottom: 10px;
-    border-radius: 5px;
-}
-.logo-container{
-    background-color: var(--secondary-background-color);
-}
 header{
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 15px;
+    text-align:center;
+    margin-bottom:25px;
 }
-.headings{
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
+
+.businessBoss-logo,
+.bussinessBoss-logo{
+    width:140px;
+    border-radius:8px;
 }
+
 header h1{
-    font-weight: 450;
-    font-size: 1.6rem;
-    padding: 10px;
-    color: var(--brand-color);
-
+    color:var(--brand-color);
+    margin:10px 0;
 }
+
 header h2{
-    font-size: 1.1rem;
-    color:  var(--brand-color);
-    padding: 10px;
-    font-weight: 400;
-}
-.login-container {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    width: 100%;
-    align-items: center;
+    font-weight:500;
+    margin-bottom:10px;
 }
 
-.input-container,
-.login-btn-container,
-.google-btn-container {
-    display: flex;
-    justify-content: center;
-    width: 100%;
+header p{
+    color:#64748b;
 }
+
+.login-container{
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+}
+
 .input-container input{
-    padding: 14px 16px;
-    border-radius: 10px;
-    border:1px solid #cbd5e1 ;
-    transition: 0.3s ease;
-    font-size: 1rem;
-    font-weight: 400;
+    width:100%;
+    padding:14px;
+    border:1px solid #cbd5e1;
+    border-radius:10px;
+    font-size:16px;
 }
+
 .input-container input:focus{
-    outline: none;
-    cursor: auto;
-    border-color:  var(--brand-color);
-    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
-}
-.signup-message {
-    font-size: 15px;
-    font-weight: 400;
-    margin-top: 15px;
-    margin-bottom: 20px;
-    text-align: center;
-    color: var(--font-color);
-}
-.signup-message{
-    text-align: center;
-}
-.signup-message a {
-    color: var(--brand-color);
-    font-weight: 500;
-    text-decoration: none;
-    margin-left: 4px;
-    transition: color 0.2s ease, text-decoration 0.2s ease;
-    
+    outline:none;
+    border-color:var(--brand-color);
+    box-shadow:0 0 0 4px rgba(37,99,235,.15);
 }
 
-.signup-message a:hover {
-    color: var(--primary-brand-color);
-    text-decoration: underline;
+.support{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:14px;
 }
 
-
-.input-container input,
-.support,
-.login-btn-container button,
-.google-btn {
-    width: 100%;
-    max-width: 400px;
+.checkbox-container{
+    display:flex;
+    gap:8px;
+    align-items:center;
 }
 
-.support {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin: 4px auto 12px auto;
+.forgot-password a,
+.signup-message a{
+    color:var(--brand-color);
+    text-decoration:none;
 }
 
-.checkbox-container {
-    display: flex;
-    align-items: center;           
-    gap: 8px;                      
+.forgot-password a:hover,
+.signup-message a:hover{
+    text-decoration:underline;
 }
 
-.checkbox-container input {
-    width: 16px;
-    height: 16px;
-    margin: 0;                      
-    cursor: pointer;
-    box-shadow:  0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
-.checkbox-container input:focus{
-    box-shadow:0 0 0 3px rgba(59, 130, 246, 0.5);
-}
-.checkbox-container label {
-    cursor: pointer;
-    user-select: none;              
-    color: #4a5568;               
+.login-btn-container button{
+    width:100%;
+    padding:15px;
+    border:none;
+    border-radius:10px;
+    background:var(--brand-color);
+    color:#fff;
+    font-size:16px;
+    font-weight:600;
+    cursor:pointer;
+    transition:.3s;
 }
 
-.forgot-password a {
-    color: var(--brand-color);               
-    text-decoration: none;         
-    font-weight: 500;
-    transition: color 0.2s ease;
+.login-btn-container button:hover{
+    background:var(--primary-brand-color);
 }
 
-.forgot-password a:hover {
-    text-decoration: underline;    
-    color: var(--primary-brand-color);                
-}
+.divider,
 .choice{
-    text-align: center;
-    color: var(--font-color);
-    padding: 20px 0;
-}
-.login-btn-container button {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: var(--brand-color);
-    color: white;
-    text-decoration: none;
-    padding: 15px 28px;
-    border-radius: 12px;
-    font-weight: 600;
-    transition: 0.3s ease;
-    border: 1px solid var(--brand-color);
-    margin-bottom: 10px;
-}
-.google-icon {
-    height: 18px;
-    width: 18px;
-    object-fit: contain;
-    flex-shrink: 0;
+    text-align:center;
+    margin:20px 0;
+    color:#64748b;
+    font-weight:600;
 }
 
-
-.login-btn-container button:hover {
-    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.2);
-    cursor: pointer;
-    background-color: var(--primary-brand-color);
-    transform: scale(1.02);
+.google-btn{
+    width:100%;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:12px;
+    padding:14px;
+    border:1px solid #dbe2ea;
+    background:#fff;
+    border-radius:10px;
+    cursor:pointer;
+    transition:.3s;
 }
 
-.login-btn-container button:active {
-    background-color: var(--brand-color);
+.google-btn:hover{
+    background:#f8fafc;
 }
 
-.google-btn {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 15px;
-    padding: 16px;
-    border: 1px solid #e2e8f0;
-    background-color: #ffffff;
-    border-radius: 12px;
-    margin-top: 10px;
-    cursor: pointer;
+.google-icon{
+    width:20px;
+    height:20px;
 }
 
-@media (max-width: 680px) {
-    body {
-        padding: 10px 4%;
+.signup-message{
+    text-align:center;
+    margin-top:20px;
+}
+
+footer{
+    width:100%;
+    padding:20px;
+    background:var(--brand-color);
+    color:#fff;
+    text-align:center;
+    margin-top:auto;
+}
+
+@media(max-width:768px){
+    .page-nav{
+        flex-direction:column;
+        gap:15px;
     }
 
-    main {
-        padding: 30px 24px;
-        border-radius: 12px;
+    .page-nav ul{
+        flex-wrap:wrap;
+        justify-content:center;
     }
 
-    header h1 {
-        font-size: 1.4rem;
+    main{
+        margin:15px;
+        padding:25px;
     }
 
-    header h2 {
-        font-size: 15px;
-    }
-
-    .support {
-        padding: 0 4px;
-    }
-}
-
-@media (max-width: 400px) {
-    .support {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
-        margin: 8px auto 16px auto;
+    .support{
+        flex-direction:column;
+        align-items:flex-start;
+        gap:10px;
     }
 }

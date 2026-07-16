@@ -1,53 +1,171 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <link rel="stylesheet" href="login.css">
-        <title>BusinessBoss | login </title>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width,initial-scale=1.0">
-        <meta name="description" content="login to your account to get staretd">
-    </head>
-    <body>
-        <header>
-            <div class="logo-container">
-                <img src="images/BussinessBoss-logo.png" alt="Bussiness Boss logo" class="bussinessBoss-logo">
-            </div>
-            <div class="headings">
-                <h1>Welcome Back</h1>
-                <h2>Login to your account.</h2>
-             </div>
-        </header>
-        <main>
-            <section>
-            <form action="" class="login-container"  method="POST">
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Login to your Business Boss account">
+
+    <title>Business Boss | Login</title>
+
+    <link rel="stylesheet" href="login.css">
+
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
+</head>
+
+<body>
+
+    <!-- =========================
+         HEADER
+    ========================== -->
+
+    <header>
+
+        <div class="logo-container">
+
+            <img src="images/BussinessBoss-logo.png"
+                alt="Business Boss Logo"
+                class="businessBoss-logo">
+
+        </div>
+
+        <div class="headings">
+
+            <h1>Welcome Back!</h1>
+
+            <h2>Login to your Business Boss account</h2>
+
+            <p>
+                Manage your customers, appointments,
+                invoices and reports from one dashboard.
+            </p>
+
+        </div>
+
+    </header>
+
+    <!-- =========================
+         LOGIN FORM
+    ========================== -->
+
+    <main>
+
+        <section>
+
+            <form action="dashboard.html"
+                method="POST"
+                class="login-container">
+
                 <div class="input-container">
-                    <input type="email" id="email" name="email" placeholder="Enter your email" minlength="12" maxlength="60" required>
+
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        placeholder="Email Address"
+                        required>
+
                 </div>
+
                 <div class="input-container">
-                    <input type="password" id="password" name="password" placeholder="Password" minlength="12" maxlength="40" required>
+
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        placeholder="Password"
+                        minlength="8"
+                        maxlength="40"
+                        required>
+
                 </div>
+
                 <div class="support">
+
                     <div class="checkbox-container">
-                    <input type="checkbox" name="remeber-me" value="yes" id="remember-me">
-                    <label for="remember-me">Remember me</label>
+
+                        <input
+                            type="checkbox"
+                            id="remember-me"
+                            name="remember-me">
+
+                        <label for="remember-me">
+                            Remember me
+                        </label>
+
+                    </div>
+
+                    <div class="forgot-password">
+
+                        <a href="forgot-password.html">
+                            Forgot Password?
+                        </a>
+
+                    </div>
+
                 </div>
-                <div class="forgot-password">
-                    <a href="#">Forgot password</a>
-                </div>
-                </div>
+
                 <div class="login-btn-container">
-                    <button>Login</button>
+
+                    <button type="submit">
+                        Login
+                    </button>
+
                 </div>
+
             </form>
-            <p class="signup-message">Don't have an accont? <a href="signup.html">create an account</a></p>
-                <p class="choice">or</p>
-                <div class="google-btn-container">
-                <button  class="google-btn">
-                    <img class="google-icon" src="images/Logo-google-icon-PNG.png" alt="Goggle logo icon">
-                    <span>Continue with Google</span>
-                </button>
+
+            <div class="divider">
+                <span>OR</span>
             </div>
+
+            <div class="google-btn-container">
+
+                <button class="google-btn">
+
+                    <img src="images/Logo-google-icon-PNG.png"
+                        alt="Google Logo"
+                        class="google-icon">
+
+                    <span>
+                        Continue with Google
+                    </span>
+
+                </button>
+
+            </div>
+
+            <p class="signup-message">
+
+                Don't have an account?
+
+                <a href="signup.html">
+
+                    Create one here
+
+                </a>
+
+            </p>
+
         </section>
-        </main>
-    </body>
+
+    </main>
+
+    <!-- =========================
+         FOOTER
+    ========================== -->
+
+    <footer>
+
+        <p>
+
+            © 2026 ShanDal Technologies. All Rights Reserved.
+
+        </p>
+
+    </footer>
+
+</body>
+
 </html>
