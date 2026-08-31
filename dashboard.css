@@ -1015,9 +1015,7 @@ button:not(.search-btn):hover{
     color: var(--text-secondary);
 }
 
-.status-cell{
-    /*text-align: center;*/
-}
+
 
 .status-badge{
     display: inline-block;
@@ -1043,9 +1041,6 @@ button:not(.search-btn):hover{
     color: var(--error);
 }
 
-.action-cell{
-    /*text-align: center;*/
-}
 
 .action-btn{
     padding: 0.5rem 1rem;
