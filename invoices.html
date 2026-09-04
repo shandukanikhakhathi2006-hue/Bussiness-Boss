@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Business Boss | Invoices</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+    <link rel="stylesheet" href="dashboard.css" />
+</head>
+<body>
+    <aside class="sidebar" id="sidebar">
+        <div class="brand">
+            <img src="images/BussinessBoss-logo-2.jpeg.jpeg" alt="Business Boss logo" class="logo" />
+            <div class="brand-name"><strong>Business</strong><span>Boss</span></div>
+        </div>
+
+        <nav class="navigation" aria-label="Main navigation">
+            <p class="nav-title">MAIN MENU</p>
+            <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i><span>Dashboard</span></a>
+            <a href="customers.html" class="nav-link"><i class="fa-solid fa-users"></i><span>Customers</span></a>
+            <a href="appointments.html" class="nav-link"><i class="fa-solid fa-calendar-days"></i><span>Appointments</span></a>
+            <a href="invoices.html" class="nav-link active"><i class="fa-solid fa-file-invoice"></i><span>Invoices</span></a>
+            <a href="payments.html" class="nav-link"><i class="fa-solid fa-credit-card"></i><span>Payments</span></a>
+            <a href="expenses.html" class="nav-link"><i class="fa-solid fa-wallet"></i><span>Expenses</span></a>
+
+            <p class="nav-title">MANAGEMENT</p>
+            <a href="reports.html" class="nav-link"><i class="fa-solid fa-chart-line"></i><span>Reports</span></a>
+            <a href="messages.html" class="nav-link"><i class="fa-regular fa-message"></i><span>Messages</span><span class="message-count">4</span></a>
+            <a href="settings.html" class="nav-link"><i class="fa-solid fa-gear"></i><span>Settings</span></a>
+            <a href="help.html" class="nav-link"><i class="fa-solid fa-circle-question"></i><span>Help &amp; Support</span></a>
+        </nav>
+
+        <div class="upgrade-card">
+            <div class="upgrade-icon"><i class="fa-solid fa-crown"></i></div>
+            <h4>Upgrade to Pro</h4>
+            <p>Unlock more features and grow your business faster.</p>
+            <button type="button">Upgrade Now</button>
+        </div>
+
+        <div class="sidebar-footer">© 2026 Business Boss</div>
+    </aside>
+
+    <main class="main-content">
+        <header class="top-header">
+            <button class="menu-button" id="menuButton" type="button" aria-label="Open navigation" aria-expanded="false">
+                <i class="fa-solid fa-bars"></i>
+                <img class="menu-logo" src="images/BussinessBoss-logo-2.jpeg.jpeg" alt="Business Boss logo" />
+            </button>
+
+            <div class="header-actions">
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" placeholder="Search anything..." />
+                </div>
+
+                    <time class="live-clock" id="liveClock" aria-label="Current local time"></time>
+
+                <div class="header-right">
+                    <button class="header-icon" type="button" aria-label="Notifications">
+                        <i class="fa-regular fa-bell"></i>
+                        <span class="notification-dot"></span>
+                    </button>
+
+                    <div class="profile-menu"><div class="profile" id="profileMenuButton" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-controls="profileDropdown"><label class="profile-avatar-upload" for="profileImageInput" title="Upload profile image"><div class="profile-avatar" id="profileAvatar">BM</div><span class="profile-camera" aria-hidden="true"><i class="fa-solid fa-camera"></i></span></label><input id="profileImageInput" type="file" accept="image/png,image/jpeg,image/webp" hidden><div class="profile-info"><strong>Business Manager</strong><span>Administrator</span></div><i class="fa-solid fa-chevron-down"></i></div><div class="profile-dropdown" id="profileDropdown" role="menu" hidden><div class="profile-dropdown-header"><strong id="profileDropdownName">Business Manager</strong><span id="profileDropdownEmail">Signed-in account</span></div><button class="profile-dropdown-item" id="profileDropdownLogout" type="button" role="menuitem"><i class="fa-solid fa-right-from-bracket"></i> Sign out</button></div></div><button class="header-icon" id="logoutButton" type="button" aria-label="Log out" title="Log out"><i class="fa-solid fa-right-from-bracket"></i></button>
+                </div>
+            </div>
+        </header>
+
+        <section class="page-shell">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Invoices</h1>
+                    <p class="page-subtitle">Create, manage and track all your invoices.</p>
+                </div>
+                <div class="page-actions">
+                    <button class="secondary-button" type="button">Export</button>
+                    <button class="primary-button" type="button"><i class="fa-solid fa-plus"></i> Create Invoice</button>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-top"><div class="stat-icon blue"><i class="fa-solid fa-file-invoice"></i></div><span class="trend positive">+8%</span></div><p>Total Invoices</p><h2>R156,450</h2><small><i class="fa-solid fa-arrow-up"></i> current</small></div>
+                <div class="stat-card"><div class="stat-top"><div class="stat-icon green"><i class="fa-solid fa-circle-check"></i></div><span class="trend positive">+10%</span></div><p>Paid Invoices</p><h2>R97,250</h2><small>paid this quarter</small></div>
+                <div class="stat-card"><div class="stat-top"><div class="stat-icon orange"><i class="fa-solid fa-clock"></i></div><span class="trend positive">+5%</span></div><p>Pending Invoices</p><h2>R45,600</h2><small>waiting approval</small></div>
+                <div class="stat-card"><div class="stat-top"><div class="stat-icon red"><i class="fa-solid fa-triangle-exclamation"></i></div><span class="trend negative">+3%</span></div><p>Overdue Invoices</p><h2>R22,600</h2><small>requires attention</small></div>
+            </div>
+
+            <section class="content-card">
+                <div class="card-header">
+                    <div><h2>Invoice List</h2><p>Monitor invoice performance and payment status.</p></div>
+                </div>
+
+                <div class="page-toolbar">
+                    <div class="toolbar-group">
+                        <div class="toolbar-search"><i class="fa-solid fa-magnifying-glass"></i><input type="text" placeholder="Search invoices" /></div>
+                        <select class="toolbar-select" aria-label="Filter by invoice status"><option>All Status</option><option>Paid</option><option>Pending</option><option>Overdue</option></select>
+                        <select class="toolbar-select" aria-label="Filter invoices by time"><option>All Time</option><option>This Month</option><option>Last 90 Days</option></select>
+                    </div>
+                    <button class="secondary-button" type="button">Filter</button>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>INVOICE</th>
+                                <th>CUSTOMER</th>
+                                <th>DATE</th>
+                                <th>DUE DATE</th>
+                                <th>AMOUNT</th>
+                                <th>STATUS</th>
+                                <th>ACTION</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><strong>INV-2048</strong></td><td>John Doe</td><td>Aug 03, 2026</td><td>Aug 12, 2026</td><td>R8,450</td><td><span class="status-badge paid">Paid</span></td><td><button class="view-button" type="button">View</button></td></tr>
+                            <tr><td><strong>INV-2047</strong></td><td>Jane Smith</td><td>Aug 05, 2026</td><td>Aug 18, 2026</td><td>R6,180</td><td><span class="status-badge pending">Pending</span></td><td><button class="view-button" type="button">View</button></td></tr>
+                            <tr><td><strong>INV-2046</strong></td><td>Michael Johnson</td><td>Aug 08, 2026</td><td>Aug 20, 2026</td><td>R12,500</td><td><span class="status-badge danger">Overdue</span></td><td><button class="view-button" type="button">View</button></td></tr>
+                            <tr><td><strong>INV-2045</strong></td><td>Sarah Williams</td><td>Aug 15, 2026</td><td>Aug 28, 2026</td><td>R4,900</td><td><span class="status-badge paid">Paid</span></td><td><button class="view-button" type="button">View</button></td></tr>
+                            <tr><td><strong>INV-2044</strong></td><td>David Brown</td><td>Aug 19, 2026</td><td>Sep 02, 2026</td><td>R9,250</td><td><span class="status-badge pending">Pending</span></td><td><button class="view-button" type="button">View</button></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="pagination">
+                    <button type="button">1</button>
+                    <button type="button" class="active">2</button>
+                    <button type="button">3</button>
+                    <button type="button">Next</button>
+                </div>
+            </section>
+        </section>
+    </main>
+
+    <script src="live-clock.js"></script>
+    <script src="script.js" type="module"></script>
+
+    <script>
+        const menuButton = document.getElementById('menuButton');
+        const sidebar = document.getElementById('sidebar');
+
+        if (menuButton && sidebar) {
+            menuButton.addEventListener('click', () => {
+                const isMobile = window.matchMedia('(max-width: 700px)').matches;
+                const isOpen = isMobile ? !sidebar.classList.contains('open') : document.body.classList.contains('sidebar-collapsed');
+                document.body.classList.toggle('sidebar-collapsed', !isOpen);
+                sidebar.classList.toggle('open', isOpen);
+                menuButton.setAttribute('aria-expanded', String(isOpen));
+                menuButton.setAttribute('aria-label', isOpen ? 'Close navigation' : 'Open navigation');
+            });
+        }
+    </script>
+</body>
+</html>

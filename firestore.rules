@@ -1,0 +1,35 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function ownsExisting() {
+      return signedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
+    function ownsNew() {
+      return signedIn() && request.resource.data.ownerId == request.auth.uid;
+    }
+
+    match /users/{userId} {
+      allow read, create: if signedIn() && request.auth.uid == userId;
+      allow update: if signedIn() && request.auth.uid == userId;
+      allow delete: if false;
+    }
+
+    match /{collectionName}/{documentId} {
+      allow read: if ownsExisting()
+        && collectionName in ['customers', 'bookings', 'invoices', 'expenses', 'payments', 'messages'];
+      allow create: if ownsNew()
+        && collectionName in ['customers', 'bookings', 'invoices', 'expenses', 'payments', 'messages'];
+      allow update: if ownsExisting()
+        && ownsNew()
+        && collectionName in ['customers', 'bookings', 'invoices', 'expenses', 'payments', 'messages'];
+      allow delete: if ownsExisting()
+        && collectionName in ['customers', 'bookings', 'invoices', 'expenses', 'payments', 'messages'];
+    }
+  }
+}

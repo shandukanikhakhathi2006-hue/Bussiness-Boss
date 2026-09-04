@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Business Boss | Help & Support</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+    <link rel="stylesheet" href="dashboard.css" />
+</head>
+<body>
+    <aside class="sidebar" id="sidebar">
+        <div class="brand">
+            <img src="images/BussinessBoss-logo-2.jpeg.jpeg" alt="Business Boss logo" class="logo" />
+            <div class="brand-name"><strong>Business</strong><span>Boss</span></div>
+        </div>
+
+        <nav class="navigation" aria-label="Main navigation">
+            <p class="nav-title">MAIN MENU</p>
+            <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i><span>Dashboard</span></a>
+            <a href="customers.html" class="nav-link"><i class="fa-solid fa-users"></i><span>Customers</span></a>
+            <a href="appointments.html" class="nav-link"><i class="fa-solid fa-calendar-days"></i><span>Appointments</span></a>
+            <a href="invoices.html" class="nav-link"><i class="fa-solid fa-file-invoice"></i><span>Invoices</span></a>
+            <a href="payments.html" class="nav-link"><i class="fa-solid fa-credit-card"></i><span>Payments</span></a>
+            <a href="expenses.html" class="nav-link"><i class="fa-solid fa-wallet"></i><span>Expenses</span></a>
+
+            <p class="nav-title">MANAGEMENT</p>
+            <a href="reports.html" class="nav-link"><i class="fa-solid fa-chart-line"></i><span>Reports</span></a>
+            <a href="messages.html" class="nav-link"><i class="fa-regular fa-message"></i><span>Messages</span><span class="message-count">4</span></a>
+            <a href="settings.html" class="nav-link"><i class="fa-solid fa-gear"></i><span>Settings</span></a>
+            <a href="help.html" class="nav-link active"><i class="fa-solid fa-circle-question"></i><span>Help &amp; Support</span></a>
+        </nav>
+
+        <div class="upgrade-card">
+            <div class="upgrade-icon"><i class="fa-solid fa-crown"></i></div>
+            <h4>Upgrade to Pro</h4>
+            <p>Unlock more features and grow your business faster.</p>
+            <button type="button">Upgrade Now</button>
+        </div>
+
+        <div class="sidebar-footer">© 2026 Business Boss</div>
+    </aside>
+
+    <main class="main-content">
+        <header class="top-header">
+            <button class="menu-button" id="menuButton" type="button" aria-label="Open navigation" aria-expanded="false">
+                <i class="fa-solid fa-bars"></i>
+                <img class="menu-logo" src="images/BussinessBoss-logo-2.jpeg.jpeg" alt="Business Boss logo" />
+            </button>
+
+            <div class="header-actions">
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" placeholder="Search anything..." />
+                </div>
+
+                    <time class="live-clock" id="liveClock" aria-label="Current local time"></time>
+
+                <div class="header-right">
+                    <button class="header-icon" type="button" aria-label="Notifications">
+                        <i class="fa-regular fa-bell"></i>
+                        <span class="notification-dot"></span>
+                    </button>
+
+                    <div class="profile-menu"><div class="profile" id="profileMenuButton" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-controls="profileDropdown"><label class="profile-avatar-upload" for="profileImageInput" title="Upload profile image"><div class="profile-avatar" id="profileAvatar">BM</div><span class="profile-camera" aria-hidden="true"><i class="fa-solid fa-camera"></i></span></label><input id="profileImageInput" type="file" accept="image/png,image/jpeg,image/webp" hidden><div class="profile-info"><strong>Business Manager</strong><span>Administrator</span></div><i class="fa-solid fa-chevron-down"></i></div><div class="profile-dropdown" id="profileDropdown" role="menu" hidden><div class="profile-dropdown-header"><strong id="profileDropdownName">Business Manager</strong><span id="profileDropdownEmail">Signed-in account</span></div><button class="profile-dropdown-item" id="profileDropdownLogout" type="button" role="menuitem"><i class="fa-solid fa-right-from-bracket"></i> Sign out</button></div></div><button class="header-icon" id="logoutButton" type="button" aria-label="Log out" title="Log out"><i class="fa-solid fa-right-from-bracket"></i></button>
+                </div>
+            </div>
+        </header>
+
+        <section class="page-shell">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Help &amp; Support</h1>
+                    <p class="page-subtitle">We're here to help you.</p>
+                </div>
+                <div class="page-actions">
+                    <button class="primary-button" type="button"><i class="fa-solid fa-headset"></i> Contact Support</button>
+                </div>
+            </div>
+
+            <div class="help-grid help-overview">
+                <article class="info-card help-card">
+                    <div class="help-icon blue"><i class="fa-regular fa-circle-question"></i></div>
+                    <div><h3>FAQ</h3><p>Find answers to common questions.</p></div>
+                </article>
+                <article class="info-card help-card">
+                    <div class="help-icon purple"><i class="fa-regular fa-file-lines"></i></div>
+                    <div><h3>Guides</h3><p>Step-by-step help articles.</p></div>
+                </article>
+                <article class="info-card help-card">
+                    <div class="help-icon green"><i class="fa-regular fa-envelope"></i></div>
+                    <div><h3>Contact Us</h3><p>Get in touch with our team.</p></div>
+                </article>
+            </div>
+
+            <div class="help-content-grid">
+                <section class="content-card help-panel">
+                    <div class="card-header"><div><h2>Popular Articles</h2></div></div>
+                    <ul class="article-list">
+                        <li><span>How to create an invoice</span><i class="fa-solid fa-chevron-right"></i></li>
+                        <li><span>How to add a new customer</span><i class="fa-solid fa-chevron-right"></i></li>
+                        <li><span>How to record a payment</span><i class="fa-solid fa-chevron-right"></i></li>
+                        <li><span>How to download reports</span><i class="fa-solid fa-chevron-right"></i></li>
+                        <li><span>How to update your profile</span><i class="fa-solid fa-chevron-right"></i></li>
+                    </ul>
+                </section>
+
+                <section class="content-card help-panel">
+                    <div class="card-header"><div><h2>Get in Touch</h2><p>Still need help? Our support team is ready to assist you.</p></div></div>
+                    <div class="contact-list">
+                        <div class="contact-row"><i class="fa-regular fa-envelope"></i><div><strong>Email</strong><a href="mailto:support@businessboss.com">support@businessboss.com</a></div></div>
+                        <div class="contact-row"><i class="fa-solid fa-phone"></i><div><strong>Phone</strong><span>083 123 4567</span></div></div>
+                        <div class="contact-row"><i class="fa-regular fa-clock"></i><div><strong>Hours</strong><span>Mon - Fri, 8:00 AM - 5:00 PM</span></div></div>
+                    </div>
+                </section>
+            </div>
+        </section>
+    </main>
+
+    <script src="live-clock.js"></script>
+    <script src="script.js" type="module"></script>
+
+    <script>
+        const menuButton = document.getElementById('menuButton');
+        const sidebar = document.getElementById('sidebar');
+
+        if (menuButton && sidebar) {
+            menuButton.addEventListener('click', () => {
+                const isMobile = window.matchMedia('(max-width: 700px)').matches;
+                const isOpen = isMobile ? !sidebar.classList.contains('open') : document.body.classList.contains('sidebar-collapsed');
+                document.body.classList.toggle('sidebar-collapsed', !isOpen);
+                sidebar.classList.toggle('open', isOpen);
+                menuButton.setAttribute('aria-expanded', String(isOpen));
+                menuButton.setAttribute('aria-label', isOpen ? 'Close navigation' : 'Open navigation');
+            });
+        }
+    </script>
+</body>
+</html>

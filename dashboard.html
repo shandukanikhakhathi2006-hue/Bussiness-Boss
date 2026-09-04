@@ -3,132 +3,1027 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BusinessBoss Dashboard</title>
+
+    <title>Business Boss | Dashboard</title>
+
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet"
+    >
+
+    <!-- Font Awesome -->
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+
     <link rel="stylesheet" href="dashboard.css">
 </head>
-<body>
-    <div class="sidebar">
-        <div class="logo">BusinessBoss</div>
-        <nav>
-            <ul>
-                <li><a href="#dashboard">Dashboard</a></li>
-                <li><a href="#bookings">Bookings</a></li>
-                <li><a href="#invoices">Invoices</a></li>
-                <li><a href="#customers">Customers</a></li>
-                <li><a href="#expenses">Expenses</a></li>
-            </ul>
-        </nav>
-    </div>
 
-    <div class="main-content">
-        <header class="dashboard-header">
-            <h1>Dashboard</h1>
-            <div class="search-container">
-                <input type="text" class="search-bar" placeholder="Search...">
-                <button class="search-btn">Search</button>
+<body>
+
+    <!-- ================= SIDEBAR ================= -->
+
+    <aside class="sidebar" id="sidebar">
+
+        <div class="brand">
+            <img src="images/BussinessBoss-logo-2.jpeg.jpeg" alt="Business Boss logo" class="logo">
+
+            <div class="brand-name">
+                <strong>Business</strong>
+                <span>Boss</span>
             </div>
-            <div class="profile-container">
-                <img src="profile.jpg" alt="Profile Picture" class="profile-picture">
+        </div>
+
+        <nav class="navigation">
+
+            <p class="nav-title">MAIN MENU</p>
+
+            <a href="dashboard.html" class="nav-link active">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>Dashboard</span>
+            </a>
+
+            <a href="customers.html" class="nav-link">
+                <i class="fa-solid fa-users"></i>
+                <span>Customers</span>
+            </a>
+
+            <a href="appointments.html" class="nav-link">
+                <i class="fa-solid fa-calendar-days"></i>
+                <span>Appointments</span>
+            </a>
+
+            <a href="invoices.html" class="nav-link">
+                <i class="fa-solid fa-file-invoice"></i>
+                <span>Invoices</span>
+            </a>
+
+            <a href="payments.html" class="nav-link">
+                <i class="fa-solid fa-credit-card"></i>
+                <span>Payments</span>
+            </a>
+
+            <a href="expenses.html" class="nav-link">
+                <i class="fa-solid fa-wallet"></i>
+                <span>Expenses</span>
+            </a>
+
+            <p class="nav-title">MANAGEMENT</p>
+
+            <a href="reports.html" class="nav-link">
+                <i class="fa-solid fa-chart-line"></i>
+                <span>Reports</span>
+            </a>
+
+            <a href="appointments.html" class="nav-link">
+                <i class="fa-regular fa-calendar"></i>
+                <span>Calendar</span>
+            </a>
+
+            <a href="messages.html" class="nav-link">
+                <i class="fa-regular fa-message"></i>
+                <span>Messages</span>
+                <span class="message-count">4</span>
+            </a>
+
+            <a href="settings.html" class="nav-link">
+                <i class="fa-solid fa-gear"></i>
+                <span>Settings</span>
+            </a>
+
+            <a href="help.html" class="nav-link">
+                <i class="fa-solid fa-circle-question"></i>
+                <span>Help & Support</span>
+            </a>
+
+        </nav>
+
+        <!-- Upgrade Card -->
+
+        <div class="upgrade-card">
+
+            <div class="upgrade-icon">
+                <i class="fa-solid fa-crown"></i>
             </div>
+
+            <h4>Upgrade to Pro</h4>
+
+            <p>
+                Unlock more features and grow your business faster.
+            </p>
+
+            <button>
+                Upgrade Now
+            </button>
+
+        </div>
+
+        <div class="sidebar-footer">
+            © 2026 Business Boss
+        </div>
+
+    </aside>
+
+
+    <!-- ================= MAIN ================= -->
+
+    <main class="main-content">
+
+        <!-- Top Header -->
+
+        <header class="top-header">
+
+            <button class="menu-button" id="menuButton" type="button" aria-label="Open navigation" aria-expanded="false">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+
+            <nav class="main-nav" aria-label="Dashboard navigation">
+                <a href="index.html" class="main-nav-link">Home</a>
+                <a href="dashboard.html" class="main-nav-link active">Dashboard</a>
+                <a href="customers.html" class="main-nav-link">Customers</a>
+                <a href="appointments.html" class="main-nav-link">Appointments</a>
+                <a href="invoices.html" class="main-nav-link">Invoices</a>
+                <a href="payments.html" class="main-nav-link">Payments</a>
+                <a href="expenses.html" class="main-nav-link">Expenses</a>
+                <a href="reports.html" class="main-nav-link">Reports</a>
+                <a href="messages.html" class="main-nav-link">Messages</a>
+                <a href="settings.html" class="main-nav-link">Settings</a>
+            </nav>
+
+            <div class="header-actions">
+                <div class="search-box">
+
+                    <i class="fa-solid fa-magnifying-glass"></i>
+
+                    <input
+                        type="text"
+                        id="searchInput"
+                        placeholder="Search anything..."
+                    >
+
+                    <span class="search-shortcut">⌘ K</span>
+
+                </div>
+
+                <div class="header-right">
+
+                    <button class="header-icon" type="button" aria-label="View notifications">
+                        <i class="fa-regular fa-bell"></i>
+                        <span class="notification-dot"></span>
+                    </button>
+
+                    <div class="profile-menu">
+
+                    <div class="profile" id="profileMenuButton" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-controls="profileDropdown">
+
+                        <label class="profile-avatar-upload" for="profileImageInput" title="Upload profile image">
+                            <div class="profile-avatar" id="profileAvatar">
+                            BM
+                            </div>
+                            <span class="profile-camera" aria-hidden="true">
+                                <i class="fa-solid fa-camera"></i>
+                            </span>
+                        </label>
+
+                        <input id="profileImageInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+
+                        <div class="profile-info">
+                            <strong>Business Manager</strong>
+                            <span>Administrator</span>
+                        </div>
+
+                        <i class="fa-solid fa-chevron-down"></i>
+
+                    </div>
+
+                    <div class="profile-dropdown" id="profileDropdown" role="menu" hidden>
+                        <div class="profile-dropdown-header">
+                            <strong id="profileDropdownName">Business Manager</strong>
+                            <span id="profileDropdownEmail">Signed-in account</span>
+                        </div>
+                        <button class="profile-dropdown-item" id="profileDropdownLogout" type="button" role="menuitem">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                            Sign out
+                        </button>
+                    </div>
+
+                    </div>
+
+                    <button class="header-icon" id="logoutButton" type="button" aria-label="Log out" title="Log out">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
+
+                </div>
+            </div>
+
         </header>
 
-        <section class="dashboard-summary">
-            <div class="dashboard-cards">
-                <div class="card">
-                    <div class="card-icon invoices">📄</div>
-                    <div class="card-content">
-                        <h3>Invoices</h3>
-                        <p class="card-description">Total Invoices</p>
-                        <div class="card-number">50</div>
-                    </div>
+
+        <!-- ================= DASHBOARD ================= -->
+
+        <section class="dashboard">
+
+            <!-- Welcome -->
+
+            <div class="welcome-section">
+
+                <div>
+                    <p class="date">
+                        Monday, August 31, 2026
+                    </p>
+
+                    <h1>
+                        Welcome back, Boss 👋
+                    </h1>
+
+                    <p class="welcome-text">
+                        Here's what's happening with your business today.
+                    </p>
                 </div>
-                <div class="card">
-                    <div class="card-icon appointments">📅</div>
-                    <div class="card-content">
-                        <h3>Appointments</h3>
-                        <p class="card-description">Total Appointments</p>
-                        <div class="card-number">30</div>
+
+                <button class="primary-button">
+                    <i class="fa-solid fa-plus"></i>
+                    New Transaction
+                </button>
+
+            </div>
+
+
+            <!-- ================= STATISTICS ================= -->
+
+            <div class="stats-grid">
+
+                <div class="stat-card">
+
+                    <div class="stat-top">
+
+                        <div class="stat-icon blue">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+
+                        <span class="trend positive" data-trend="customers">
+                            0%
+                        </span>
+
                     </div>
+
+                    <p>Total Customers</p>
+
+                    <h2>1,248</h2>
+
+                    <small>
+                        <i class="fa-solid fa-arrow-up"></i>
+                        vs last month
+                    </small>
+
                 </div>
-                <div class="card">
-                    <div class="card-icon customers">👥</div>
-                    <div class="card-content">
-                        <h3>Customers</h3>
-                        <p class="card-description">Total Customers</p>
-                        <div class="card-number">120</div>
+
+
+                <div class="stat-card">
+
+                    <div class="stat-top">
+
+                        <div class="stat-icon purple">
+                            <i class="fa-solid fa-calendar-check"></i>
+                        </div>
+
+                        <span class="trend positive" data-trend="bookings">
+                            0%
+                        </span>
+
                     </div>
+
+                    <p>Today's Appointments</p>
+
+                    <h2>24</h2>
+
+                    <small>
+                        <i class="fa-solid fa-arrow-up"></i>
+                        vs yesterday
+                    </small>
+
                 </div>
-                <div class="card">
-                    <div class="card-icon payments">💰</div>
-                    <div class="card-content">
-                        <h3>Payments</h3>
-                        <p class="card-description">Total Payments</p>
-                        <div class="card-number">$15,000</div>
+
+
+                <div class="stat-card revenue-card">
+
+                    <div class="stat-top">
+
+                        <div class="stat-icon green">
+                            <i class="fa-solid fa-money-bill-wave"></i>
+                        </div>
+
+                        <span class="trend positive" data-trend="revenue">
+                            0%
+                        </span>
+
                     </div>
+
+                    <p>Monthly Revenue</p>
+
+                    <h2>R45,320</h2>
+
+                    <small>
+                        <i class="fa-solid fa-arrow-up"></i>
+                        vs last month
+                    </small>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <div class="stat-top">
+
+                        <div class="stat-icon orange">
+                            <i class="fa-solid fa-file-invoice-dollar"></i>
+                        </div>
+
+                        <span class="trend positive" data-trend="outstanding">
+                            0%
+                        </span>
+
+                    </div>
+
+                    <p>Outstanding Invoices</p>
+
+                    <h2>R8,950</h2>
+
+                    <small>
+                        vs last month
+                    </small>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <div class="stat-top">
+
+                        <div class="stat-icon red">
+                            <i class="fa-solid fa-wallet"></i>
+                        </div>
+
+                        <span class="trend negative" data-trend="expenses">
+                            0%
+                        </span>
+
+                    </div>
+
+                    <p>Total Expenses</p>
+
+                    <h2>R12,840</h2>
+
+                    <small>
+                        vs last month
+                    </small>
+
+                </div>
+
+            </div>
+
+
+            <!-- ================= QUICK ACTIONS ================= -->
+
+            <section class="section">
+
+                <div class="section-header">
+
+                    <div>
+                        <h2>Quick Actions</h2>
+                        <p>Manage your business quickly.</p>
+                    </div>
+
+                </div>
+
+
+                <div class="quick-actions">
+
+                    <button class="action-card">
+
+                        <div class="action-icon blue">
+                            <i class="fa-solid fa-file-circle-plus"></i>
+                        </div>
+
+                        <div>
+                            <strong>Create Invoice</strong>
+                            <span>Generate a new invoice</span>
+                        </div>
+
+                        <i class="fa-solid fa-chevron-right arrow"></i>
+
+                    </button>
+
+
+                    <button class="action-card">
+
+                        <div class="action-icon purple">
+                            <i class="fa-solid fa-calendar-plus"></i>
+                        </div>
+
+                        <div>
+                            <strong>New Appointment</strong>
+                            <span>Schedule an appointment</span>
+                        </div>
+
+                        <i class="fa-solid fa-chevron-right arrow"></i>
+
+                    </button>
+
+
+                    <button class="action-card">
+
+                        <div class="action-icon green">
+                            <i class="fa-solid fa-user-plus"></i>
+                        </div>
+
+                        <div>
+                            <strong>Add Customer</strong>
+                            <span>Register a new customer</span>
+                        </div>
+
+                        <i class="fa-solid fa-chevron-right arrow"></i>
+
+                    </button>
+
+
+                    <button class="action-card">
+
+                        <div class="action-icon orange">
+                            <i class="fa-solid fa-money-check-dollar"></i>
+                        </div>
+
+                        <div>
+                            <strong>Record Payment</strong>
+                            <span>Record customer payment</span>
+                        </div>
+
+                        <i class="fa-solid fa-chevron-right arrow"></i>
+
+                    </button>
+
+                </div>
+
+            </section>
+
+
+            <!-- ================= APPOINTMENTS ================= -->
+
+            <section class="content-card">
+
+                <div class="card-header">
+
+                    <div>
+                        <h2>Today's Appointments</h2>
+                        <p>Manage your appointments for today.</p>
+                    </div>
+
+                    <button class="secondary-button" id="viewCalendarButton" type="button">
+                        View Calendar
+                    </button>
+
+                </div>
+
+
+                <div class="table-container">
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+                                <th>TIME</th>
+                                <th>CUSTOMER</th>
+                                <th>SERVICE</th>
+                                <th>STATUS</th>
+                                <th>ACTION</th>
+                            </tr>
+
+                        </thead>
+
+                        <tbody id="appointmentTableBody">
+
+                            <tr>
+                                <td>09:00 AM</td>
+
+                                <td>
+                                    <div class="customer">
+                                        <div class="customer-avatar">
+                                            JD
+                                        </div>
+                                        <span>John Doe</span>
+                                    </div>
+                                </td>
+
+                                <td>Consultation</td>
+
+                                <td>
+                                    <span class="status completed">
+                                        Completed
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <button class="view-button">
+                                        View Details
+                                    </button>
+                                </td>
+                            </tr>
+
+
+                            <tr>
+                                <td>10:30 AM</td>
+
+                                <td>
+                                    <div class="customer">
+                                        <div class="customer-avatar">
+                                            JS
+                                        </div>
+                                        <span>Jane Smith</span>
+                                    </div>
+                                </td>
+
+                                <td>Website Design</td>
+
+                                <td>
+                                    <span class="status pending">
+                                        Pending
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <button class="view-button">
+                                        View Details
+                                    </button>
+                                </td>
+                            </tr>
+
+
+                            <tr>
+                                <td>12:00 PM</td>
+
+                                <td>
+                                    <div class="customer">
+                                        <div class="customer-avatar">
+                                            MJ
+                                        </div>
+                                        <span>Michael Johnson</span>
+                                    </div>
+                                </td>
+
+                                <td>Development</td>
+
+                                <td>
+                                    <span class="status pending">
+                                        Pending
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <button class="view-button">
+                                        View Details
+                                    </button>
+                                </td>
+                            </tr>
+
+
+                            <tr>
+                                <td>02:00 PM</td>
+
+                                <td>
+                                    <div class="customer">
+                                        <div class="customer-avatar">
+                                            SW
+                                        </div>
+                                        <span>Sarah Williams</span>
+                                    </div>
+                                </td>
+
+                                <td>Marketing Review</td>
+
+                                <td>
+                                    <span class="status cancelled">
+                                        Cancelled
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <button class="view-button">
+                                        View Details
+                                    </button>
+                                </td>
+                            </tr>
+
+
+                            <tr>
+                                <td>03:30 PM</td>
+
+                                <td>
+                                    <div class="customer">
+                                        <div class="customer-avatar">
+                                            DB
+                                        </div>
+                                        <span>David Brown</span>
+                                    </div>
+                                </td>
+
+                                <td>Support Session</td>
+
+                                <td>
+                                    <span class="status completed">
+                                        Completed
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <button class="view-button">
+                                        View Details
+                                    </button>
+                                </td>
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+                <div class="table-footer">
+                    <button class="view-all" id="viewAllAppointmentsButton" type="button" aria-expanded="false">
+                        View all appointments
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+
+            </section>
+
+            <div class="calendar-modal" id="calendarModal" hidden>
+                <div class="calendar-dialog" role="dialog" aria-modal="true" aria-labelledby="calendarTitle">
+                    <div class="calendar-dialog-header">
+                        <div>
+                            <h2 id="calendarTitle">Business Calendar</h2>
+                            <p>Your scheduled bookings for this month.</p>
+                        </div>
+                        <button class="header-icon" id="closeCalendarButton" type="button" aria-label="Close calendar">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                    <div class="calendar-toolbar">
+                        <button class="secondary-button" id="previousMonthButton" type="button" aria-label="Previous month">
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </button>
+                        <strong id="calendarMonthLabel"></strong>
+                        <button class="secondary-button" id="nextMonthButton" type="button" aria-label="Next month">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+                    <div class="calendar-grid" id="calendarGrid" aria-live="polite"></div>
                 </div>
             </div>
+
+
+            <!-- ================= ANALYTICS ================= -->
+
+            <div class="analytics-grid">
+
+                <!-- Business Performance -->
+
+                <section class="content-card performance-card">
+
+                    <div class="card-header">
+
+                        <div>
+                            <h2>Business Performance</h2>
+                            <p>Track your financial performance.</p>
+                        </div>
+
+                        <label class="sr-only" for="periodSelect">Performance period</label>
+                        <select id="periodSelect">
+                            <option>This Month</option>
+                            <option>Last Month</option>
+                            <option>This Year</option>
+                        </select>
+
+                    </div>
+
+
+                    <div class="performance-summary">
+
+                        <div>
+                            <span>Revenue</span>
+                            <strong data-performance-value="revenue">R0</strong>
+                            <small class="green-text" data-performance-trend="revenue">0%</small>
+                        </div>
+
+                        <div>
+                            <span>Expenses</span>
+                            <strong data-performance-value="expenses">R0</strong>
+                            <small class="red-text" data-performance-trend="expenses">0%</small>
+                        </div>
+
+                        <div>
+                            <span>Profit</span>
+                            <strong data-performance-value="profit">R0</strong>
+                            <small class="green-text" data-performance-trend="profit">0%</small>
+                        </div>
+
+                    </div>
+
+
+                    <div class="chart">
+
+                        <div class="y-axis">
+                            <span>50K</span>
+                            <span>40K</span>
+                            <span>30K</span>
+                            <span>20K</span>
+                            <span>10K</span>
+                            <span>0</span>
+                        </div>
+
+                        <div class="chart-area">
+
+                            <div class="grid-lines">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+
+                            <svg
+                                class="line-chart"
+                                viewBox="0 0 700 250"
+                                preserveAspectRatio="none"
+                            >
+
+                                <polyline id="revenueChartLine"
+                                    points="0,190 100,155 200,170 300,105 400,120 500,65 600,80 700,35"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="4"
+                                />
+
+                            </svg>
+
+                            <div class="chart-labels" id="revenueChartLabels">
+                                <span>Revenue</span>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="chart-legend">
+
+                        <span>
+                            <i class="legend revenue"></i>
+                            Revenue
+                        </span>
+
+                        <span>
+                            <i class="legend expenses"></i>
+                            Expenses
+                        </span>
+
+                    </div>
+
+                </section>
+
+
+                <!-- Revenue By Service -->
+
+                <section class="content-card service-card">
+
+                    <div class="card-header">
+
+                        <div>
+                            <h2>Revenue by Service</h2>
+                            <p>This month's revenue.</p>
+                        </div>
+
+                    </div>
+
+
+                    <div class="donut-container">
+
+                        <div class="donut">
+
+                            <div class="donut-center">
+                                <strong id="serviceRevenueTotal">R0</strong>
+                                <span>Total Revenue</span>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="service-list" id="serviceRevenueList">
+
+                        <div>
+                            <span>
+                                <i class="service-dot blue-dot"></i>
+                                Consultation
+                            </span>
+
+                            <strong>33%</strong>
+                        </div>
+
+                        <div>
+                            <span>
+                                <i class="service-dot purple-dot"></i>
+                                Development
+                            </span>
+
+                            <strong>32%</strong>
+                        </div>
+
+                        <div>
+                            <span>
+                                <i class="service-dot green-dot"></i>
+                                Design
+                            </span>
+
+                            <strong>18%</strong>
+                        </div>
+
+                        <div>
+                            <span>
+                                <i class="service-dot orange-dot"></i>
+                                Marketing
+                            </span>
+
+                            <strong>10%</strong>
+                        </div>
+
+                        <div>
+                            <span>
+                                <i class="service-dot red-dot"></i>
+                                Support
+                            </span>
+
+                            <strong>7%</strong>
+                        </div>
+
+                    </div>
+
+                </section>
+
+            </div>
+
+
+            <!-- ================= INVOICES ================= -->
+
+            <section class="content-card">
+
+                <div class="card-header">
+
+                    <div>
+                        <h2>Recent Invoices</h2>
+                        <p>Latest invoices from your business.</p>
+                    </div>
+
+                    <button class="secondary-button" id="viewAllInvoicesButton" type="button" aria-expanded="false">
+                        View All
+                    </button>
+
+                </div>
+
+
+                <div class="table-container">
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+                                <th>INVOICE</th>
+                                <th>CUSTOMER</th>
+                                <th>AMOUNT</th>
+                                <th>DUE DATE</th>
+                                <th>STATUS</th>
+                                <th>ACTION</th>
+                            </tr>
+
+                        </thead>
+
+                        <tbody id="invoiceTableBody">
+
+                            <tr>
+                                <td><strong>INV-1005</strong></td>
+                                <td>John Doe</td>
+                                <td>R5,600</td>
+                                <td>Sep 05, 2026</td>
+                                <td>
+                                    <span class="status completed">Paid</span>
+                                </td>
+                                <td>
+                                    <button class="view-button">
+                                        View
+                                    </button>
+                                </td>
+                            </tr>
+
+
+                            <tr>
+                                <td><strong>INV-1004</strong></td>
+                                <td>Jane Smith</td>
+                                <td>R8,250</td>
+                                <td>Sep 07, 2026</td>
+                                <td>
+                                    <span class="status pending">Pending</span>
+                                </td>
+                                <td>
+                                    <button class="view-button">
+                                        View
+                                    </button>
+                                </td>
+                            </tr>
+
+
+                            <tr>
+                                <td><strong>INV-1003</strong></td>
+                                <td>Michael Johnson</td>
+                                <td>R12,500</td>
+                                <td>Sep 10, 2026</td>
+                                <td>
+                                    <span class="status overdue">Overdue</span>
+                                </td>
+                                <td>
+                                    <button class="view-button">
+                                        View
+                                    </button>
+                                </td>
+                            </tr>
+
+
+                            <tr>
+                                <td><strong>INV-1002</strong></td>
+                                <td>Sarah Williams</td>
+                                <td>R3,750</td>
+                                <td>Aug 28, 2026</td>
+                                <td>
+                                    <span class="status completed">Paid</span>
+                                </td>
+                                <td>
+                                    <button class="view-button">
+                                        View
+                                    </button>
+                                </td>
+                            </tr>
+
+
+                            <tr>
+                                <td><strong>INV-1001</strong></td>
+                                <td>David Brown</td>
+                                <td>R6,850</td>
+                                <td>Sep 12, 2026</td>
+                                <td>
+                                    <span class="status pending">Pending</span>
+                                </td>
+                                <td>
+                                    <button class="view-button">
+                                        View
+                                    </button>
+                                </td>
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </section>
+
+
+            <!-- Footer -->
+
+            <footer class="footer">
+
+                <span>
+                    © 2026 Business Boss. All rights reserved.
+                </span>
+
+                <div>
+                    <a href="#">Privacy Policy</a>
+                    <a href="#">Terms of Service</a>
+                    <a href="#">Support</a>
+                </div>
+
+            </footer>
+
         </section>
 
-        <section class="revenue-section">
-            <div class="revenue-header">
-                <h2>Revenue Overview</h2>
-                <select class="period-dropdown">
-                    <option value="monthly">Monthly</option>
-                    <option value="quarterly">Quarterly</option>
-                    <option value="yearly">Yearly</option>
-                </select>
-            </div>
-            <div class="chart-container">
-                <!-- Chart will be rendered here -->
-            </div>
-        </section>
+    </main>
 
-        <section class="recent-bookings">
-            <h2>Recent Bookings</h2>
-            <div class="table-wrapper">
-                <table class="appointments-table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Customer</th>
-                            <th>Service</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Sample data will be populated here -->
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <section class="recent-invoices">
-            <h2>Recent Invoices</h2>
-            <div class="table-wrapper">
-                <table class="appointments-table">
-                    <thead>
-                        <tr>
-                            <th>Invoice #</th>
-                            <th>Date</th>
-                            <th>Amount</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Sample data will be populated here -->
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <div class="quick-actions">
-            <button class="action-btn">Add Customer</button>
-            <button class="action-btn">Add Booking</button>
-            <button class="action-btn">Add Invoice</button>
-            <button class="action-btn">Add Expense</button>
-        </div>
-    </div>
-
-    <script src="script.js"></script>
+    <script src="script.js" type="module"></script>
 </body>
 </html>
