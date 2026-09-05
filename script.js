@@ -95,6 +95,16 @@ const getFirstRecordDate = (record, fields) => {
 // so "paid" is defined once, consistently, in one place.
 const isPaidInvoice = (invoice) => String(invoice.status || '').trim().toLowerCase() === 'paid';
 
+// Reduces a full name (or an email address, as a fallback) to just its first word, so the
+// compact header profile chip stays a consistent width no matter how long someone's full
+// name is. The full name still shows in the profile dropdown and on the Settings page.
+const getFirstDisplayName = (nameOrEmail) => {
+	const value = String(nameOrEmail || '').trim();
+	if (!value) return 'User';
+	const firstWord = value.split(/\s+/)[0];
+	return firstWord.includes('@') ? firstWord.split('@')[0] : firstWord;
+};
+
 // Rounds a revenue chart's highest value up to a clean number (1, 2, 5, or 10 times a power of
 // ten) so a y-axis reads "R2,000 / R1,500 / R1,000..." instead of an awkward exact figure.
 // Shared by the dashboard's revenue chart and the reports page's revenue chart.
@@ -258,6 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			messageElement.dataset.scriptMessage = 'true';
 			messageElement.setAttribute('role', 'status');
 			messageElement.style.marginTop = '1rem';
+			messageElement.style.marginBottom = '1rem';
 			messageElement.style.padding = '0.75rem 1rem';
 			messageElement.style.borderRadius = '6px';
 			messageElement.style.fontWeight = '600';
@@ -265,10 +276,193 @@ document.addEventListener('DOMContentLoaded', () => {
 			target.append(messageElement);
 		}
 
-		messageElement.textContent = message;
+		// If the page pre-places an icon + text layout (see login.html, signup.html), fill in
+		// just the text/icon so the rest survives; otherwise fall back to the plain message.
+		const textTarget = messageElement.querySelector('[data-script-message-text]') || messageElement;
+		textTarget.textContent = message;
+		const iconTarget = messageElement.querySelector('[data-script-message-icon]');
+		if (iconTarget) iconTarget.textContent = type === 'error' ? 'error' : 'check_circle';
+		messageElement.hidden = false;
 		messageElement.style.color = type === 'error' ? '#b42318' : '#067647';
 		messageElement.style.backgroundColor = type === 'error' ? '#fef3f2' : '#ecfdf3';
+		messageElement.style.borderLeftColor = type === 'error' ? '#b42318' : '#067647';
 	};
+
+	// ---- Upgrade to Pro ---------------------------------------------------
+	// The Pro plan name/price/features below are copied from pricing.html and
+	// should stay in sync with it. This is a dev/test upgrade only: it writes
+	// { plan: 'pro' } to the user's own Firestore profile (users/{uid}) and
+	// does not process any payment. Swap in a real payment provider later by
+	// only replacing the "confirm" step below with a checkout flow, then
+	// writing the plan once the payment provider confirms success.
+	const PRO_PLAN = {
+		name: 'Professional',
+		price: 'R199/month',
+		features: [
+			'Unlimited Customers',
+			'Unlimited Appointments',
+			'Advanced Reports',
+			'Inventory Management',
+			'WhatsApp Reminders',
+			'Priority Support'
+		]
+	};
+
+	const showUpgradeConfirmModal = () => new Promise((resolve) => {
+		const overlay = document.createElement('div');
+		overlay.className = 'app-modal-overlay';
+
+		const modal = document.createElement('div');
+		modal.className = 'app-modal';
+		modal.setAttribute('role', 'dialog');
+		modal.setAttribute('aria-modal', 'true');
+
+		const header = document.createElement('div');
+		header.className = 'app-modal-header';
+		const heading = document.createElement('h2');
+		heading.textContent = 'Upgrade to BusinessBoss Pro?';
+		const closeButton = document.createElement('button');
+		closeButton.type = 'button';
+		closeButton.className = 'app-modal-close';
+		closeButton.setAttribute('aria-label', 'Close');
+		closeButton.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+		header.append(heading, closeButton);
+
+		const body = document.createElement('div');
+		body.className = 'app-modal-fields';
+
+		const priceLine = document.createElement('p');
+		priceLine.className = 'upgrade-plan-summary';
+		priceLine.textContent = `${PRO_PLAN.name} Plan — ${PRO_PLAN.price}`;
+		body.append(priceLine);
+
+		const featuresList = document.createElement('ul');
+		featuresList.className = 'upgrade-feature-list';
+		PRO_PLAN.features.forEach((feature) => {
+			const item = document.createElement('li');
+			item.textContent = feature;
+			featuresList.append(item);
+		});
+		body.append(featuresList);
+
+		const note = document.createElement('p');
+		note.className = 'upgrade-note';
+		note.textContent = 'This is a test upgrade for development. No payment will be charged.';
+		body.append(note);
+
+		const actions = document.createElement('div');
+		actions.className = 'app-modal-actions';
+		const cancelButton = document.createElement('button');
+		cancelButton.type = 'button';
+		cancelButton.className = 'secondary-button';
+		cancelButton.textContent = 'Cancel';
+		const confirmButton = document.createElement('button');
+		confirmButton.type = 'button';
+		confirmButton.className = 'primary-button';
+		confirmButton.textContent = 'Upgrade to Pro';
+		actions.append(cancelButton, confirmButton);
+
+		modal.append(header, body, actions);
+		overlay.append(modal);
+		document.body.append(overlay);
+
+		let settled = false;
+		const close = (result) => {
+			if (settled) return;
+			settled = true;
+			document.removeEventListener('keydown', onKeydown);
+			overlay.remove();
+			resolve(result);
+		};
+
+		const onKeydown = (event) => { if (event.key === 'Escape') close(false); };
+		document.addEventListener('keydown', onKeydown);
+
+		overlay.addEventListener('mousedown', (event) => { if (event.target === overlay) close(false); });
+		closeButton.addEventListener('click', () => close(false));
+		cancelButton.addEventListener('click', () => close(false));
+		confirmButton.addEventListener('click', () => close(true));
+
+		confirmButton.focus();
+	});
+
+	// Reflects the Firestore-sourced plan on the sidebar "Upgrade to Pro" card
+	// (present on every internal page) and (re)binds the click handler once.
+	const renderUpgradeCard = (isPro) => {
+		const card = document.querySelector('.upgrade-card');
+		if (!card) return;
+		const button = card.querySelector('button');
+		const heading = card.querySelector('h4');
+		const description = card.querySelector('p');
+		if (!button) return;
+
+		card.classList.toggle('is-pro', isPro);
+		if (heading) heading.textContent = isPro ? 'Pro Plan' : 'Upgrade to Pro';
+		if (description) description.textContent = isPro
+			? 'You have full access to all Pro features.'
+			: 'Unlock more features and grow your business faster.';
+		button.textContent = isPro ? 'Current Plan' : 'Upgrade Now';
+		button.disabled = isPro;
+
+		if (!button.dataset.upgradeBound) {
+			button.dataset.upgradeBound = 'true';
+			button.addEventListener('click', handleUpgradeClick);
+		}
+	};
+
+	let upgradeInProgress = false;
+
+	// Looks up the CURRENT authenticated user itself (never trusts a plan value
+	// passed around in the UI), re-checks the Firestore plan right before
+	// writing, then confirms with the user before upgrading.
+	const handleUpgradeClick = async () => {
+		if (upgradeInProgress) return;
+
+		const user = auth.currentUser;
+		if (!user) {
+			showMessage('Please log in to upgrade your plan.', 'error');
+			return;
+		}
+
+		const card = document.querySelector('.upgrade-card');
+		const button = card?.querySelector('button');
+
+		upgradeInProgress = true;
+		try {
+			const profileSnapshot = await getDoc(doc(firestore, 'users', user.uid));
+			if (profileSnapshot.data()?.plan === 'pro') {
+				showMessage('You are already on the Pro plan.');
+				renderUpgradeCard(true);
+				return;
+			}
+
+			const confirmed = await showUpgradeConfirmModal();
+			if (!confirmed) return;
+
+			if (button) { button.disabled = true; button.textContent = 'Upgrading...'; }
+
+			await setDoc(doc(firestore, 'users', user.uid), {
+				plan: 'pro',
+				planUpdatedAt: serverTimestamp()
+			}, { merge: true });
+
+			showMessage('You are now on the BusinessBoss Pro plan.');
+			renderUpgradeCard(true);
+		} catch (error) {
+			console.error('Failed to upgrade plan', error);
+			const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+			showMessage(
+				offline
+					? 'You appear to be offline. Please check your connection and try again.'
+					: 'We could not upgrade your plan right now. Please try again.',
+				'error'
+			);
+			if (button) { button.disabled = false; button.textContent = 'Upgrade Now'; }
+		} finally {
+			upgradeInProgress = false;
+		}
+	};
+	// ------------------------------------------------------------------------
 
 	document.querySelectorAll('a[href="#"]').forEach((link) => {
 		link.addEventListener('click', (event) => event.preventDefault());
@@ -764,11 +958,12 @@ document.addEventListener('DOMContentLoaded', () => {
 				return;
 			}
 			const profile = document.querySelector('.profile-info strong');
-			if (profile) profile.textContent = user.displayName || user.email;
+			if (profile) profile.textContent = getFirstDisplayName(user.displayName || user.email);
 			if (profileDropdownName) profileDropdownName.textContent = user.displayName || 'Business Manager';
 			if (profileDropdownEmail) profileDropdownEmail.textContent = user.email || 'Signed-in account';
 			const profileDocument = await getDoc(doc(firestore, 'users', user.uid));
 			renderProfileAvatar(user, profileDocument.data()?.photoURL || user.photoURL);
+			renderUpgradeCard(profileDocument.data()?.plan === 'pro');
 			await updateDashboardData(user);
 		});
 
@@ -812,7 +1007,9 @@ document.addEventListener('DOMContentLoaded', () => {
 		});
 
 		document.addEventListener('keydown', (event) => {
-			if (event.key === 'Escape') setProfileDropdownOpen(false);
+			if (event.key === 'Escape') {
+				setProfileDropdownOpen(false);
+			}
 		});
 
 		profileImageInput?.addEventListener('change', async (event) => {
@@ -1253,7 +1450,7 @@ document.addEventListener('DOMContentLoaded', () => {
 						}, { merge: true });
 
 						const profile = pageShell.closest('.main-content')?.querySelector('.profile-info strong');
-						if (profile) profile.textContent = name || user.email;
+						if (profile) profile.textContent = getFirstDisplayName(name || user.email);
 
 						showMessage('Profile settings saved.');
 					} catch (error) {
@@ -1425,11 +1622,12 @@ document.addEventListener('DOMContentLoaded', () => {
 				return;
 			}
 			const userProfile = document.querySelector('.profile-info strong');
-			if (userProfile) userProfile.textContent = user.displayName || user.email;
+			if (userProfile) userProfile.textContent = getFirstDisplayName(user.displayName || user.email);
 			if (profileDropdownName) profileDropdownName.textContent = user.displayName || 'Business Manager';
 			if (profileDropdownEmail) profileDropdownEmail.textContent = user.email || 'Signed-in account';
 			const profileDocument = await getDoc(doc(firestore, 'users', user.uid));
 			renderPageProfile(user, profileDocument.data()?.photoURL || user.photoURL);
+			renderUpgradeCard(profileDocument.data()?.plan === 'pro');
 			if (collectionName) await loadPageRecords(user);
 			if (pageName === 'reports') await loadReports(user);
 			if (pageName === 'settings') await loadSettings(user);

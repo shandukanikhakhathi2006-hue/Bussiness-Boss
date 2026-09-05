@@ -210,7 +210,7 @@ body.sidebar-collapsed .sidebar {
 
     text-align: center;
 
-    font-size: 14px;
+    font-size: 15px;
 }
 
 
@@ -398,7 +398,7 @@ body.sidebar-collapsed .main-content {
 .main-nav {
     display: flex;
     align-items: center;
-    gap: clamp(12px, 1.5vw, 24px);
+    gap: clamp(8px, 1vw, 20px);
     margin-left: 14px;
     flex: 1;
     min-width: 0;
@@ -415,7 +415,7 @@ body.sidebar-collapsed .main-content {
     flex-shrink: 0;
     padding: 8px 0;
     color: var(--muted);
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 500;
     text-decoration: none;
     transition: color 0.2s ease;
@@ -444,7 +444,7 @@ body.sidebar-collapsed .main-content {
 
     align-items: center;
 
-    gap: 18px;
+    gap: 14px;
 
     margin-left: auto;
 }
@@ -460,7 +460,9 @@ body.sidebar-collapsed .main-content {
 
 .search-box {
 
-    width: 280px;
+    width: clamp(160px, 16vw, 280px);
+
+    flex-shrink: 1;
 
     height: 40px;
 
@@ -474,7 +476,7 @@ body.sidebar-collapsed .main-content {
 
     align-items: center;
 
-    padding: 0 12px;
+    padding: 0 15px;
 
     gap: 9px;
 
@@ -540,9 +542,9 @@ body.sidebar-collapsed .main-content {
 
     position: absolute;
 
-    width: 6px;
+    width: 8px;
 
-    height: 6px;
+    height: 8px;
 
     background: #ef4444;
 
@@ -645,12 +647,22 @@ body.sidebar-collapsed .main-content {
     display: flex;
 
     flex-direction: column;
+
+    min-width: 0;
+
+    max-width: 130px;
 }
 
 
 .profile-info strong {
 
     font-size: 11px;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+
+    white-space: nowrap;
 }
 
 
@@ -659,6 +671,12 @@ body.sidebar-collapsed .main-content {
     font-size: 10px;
 
     color: var(--muted);
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+
+    white-space: nowrap;
 }
 
 
@@ -3110,4 +3128,38 @@ select {
     justify-content: flex-end;
     gap: 10px;
     margin-top: 22px;
+}
+
+/* Upgrade to Pro: confirmation modal content + "already Pro" sidebar state. */
+.upgrade-plan-summary {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--dark);
+}
+
+.upgrade-feature-list {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 13px;
+    color: var(--dark);
+    line-height: 1.7;
+}
+
+.upgrade-note {
+    font-size: 12px;
+    color: var(--muted);
+    margin: 0;
+}
+
+.upgrade-card.is-pro {
+    background: #ecfdf3;
+}
+
+.upgrade-card.is-pro .upgrade-icon {
+    color: #067647;
+}
+
+.upgrade-card button:disabled {
+    background: #94a3b8;
+    cursor: default;
 }
