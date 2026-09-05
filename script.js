@@ -11,7 +11,11 @@ import {
 	signInWithEmailAndPassword,
 	signInWithPopup,
 	createUserWithEmailAndPassword,
-	updateProfile
+	updateProfile,
+	updateEmail,
+	updatePassword,
+	reauthenticateWithCredential,
+	EmailAuthProvider
 } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
 import {
 	addDoc,
@@ -51,10 +55,199 @@ const getFirebaseErrorMessage = (error) => {
 		'auth/weak-password': 'Choose a stronger password.',
 		'auth/popup-closed-by-user': 'Google sign-in was cancelled.',
 		'auth/popup-blocked': 'Allow popups in your browser to use Google Sign-In.',
-		'auth/unauthorized-domain': 'This website domain is not authorized for Firebase Sign-In.'
+		'auth/unauthorized-domain': 'This website domain is not authorized for Firebase Sign-In.',
+		'auth/wrong-password': 'Your current password is incorrect.',
+		'auth/missing-password': 'Enter your current password.',
+		'auth/requires-recent-login': 'Please log out and log back in, then try again.',
+		'auth/too-many-requests': 'Too many attempts. Please wait a moment and try again.'
 	};
 	return messages[error.code] || 'Something went wrong. Please try again.';
 };
+
+// Shared helper: converts a Firestore Timestamp, JS Date, number, or string into a JS Date.
+// "YYYY-MM-DD" strings are parsed as a LOCAL date (not UTC) so a booking entered for one day
+// never displays as the previous day for visitors in timezones behind UTC.
+const parseFlexibleDate = (value) => {
+	if (!value) return null;
+	if (typeof value.toDate === 'function') return value.toDate();
+	if (typeof value.seconds === 'number') return new Date(value.seconds * 1000);
+	if (typeof value === 'string') {
+		const dateOnlyMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+		if (dateOnlyMatch) {
+			const [, year, month, day] = dateOnlyMatch;
+			return new Date(Number(year), Number(month) - 1, Number(day));
+		}
+	}
+	const parsed = new Date(value);
+	return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+// Shared helper: finds the first usable date among several possible field names on a record.
+const getFirstRecordDate = (record, fields) => {
+	for (const field of fields) {
+		const date = parseFlexibleDate(record[field]);
+		if (date) return date;
+	}
+	return null;
+};
+
+// Shared helper used by both the dashboard page and the other pages (customers, reports, etc.)
+// so "paid" is defined once, consistently, in one place.
+const isPaidInvoice = (invoice) => String(invoice.status || '').trim().toLowerCase() === 'paid';
+
+// Rounds a revenue chart's highest value up to a clean number (1, 2, 5, or 10 times a power of
+// ten) so a y-axis reads "R2,000 / R1,500 / R1,000..." instead of an awkward exact figure.
+// Shared by the dashboard's revenue chart and the reports page's revenue chart.
+const getNiceAxisMaximum = (value) => {
+	if (value <= 0) return 10;
+	const magnitude = 10 ** Math.floor(Math.log10(value));
+	const normalized = value / magnitude;
+	const niceNormalized = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
+	return niceNormalized * magnitude;
+};
+
+// Compact axis label formatting (1200 -> "1.2K", 500 -> "500") so labels stay short no
+// matter how large or small the account's real revenue is.
+const formatAxisValue = (value) => {
+	if (value >= 1000000) return `${(value / 1000000).toFixed(value % 1000000 === 0 ? 0 : 1)}M`;
+	if (value >= 1000) return `${(value / 1000).toFixed(value % 1000 === 0 ? 0 : 1)}K`;
+	return `${Math.round(value)}`;
+};
+
+// Shared in-app dialog that replaces window.prompt() for creating/editing records.
+// Renders a small centered form (title + labeled fields + Save/Cancel) instead of the
+// browser's built-in prompt boxes, which look out of place next to the rest of the UI.
+// Resolves with an object of trimmed string values keyed by field name on Save, or null
+// if the person cancels (Escape, backdrop click, the X, or the Cancel button).
+// Required and numeric fields are validated inline before the dialog will close on Save.
+const showFormModal = ({ title, fields, values = {}, submitLabel = 'Save' }) => new Promise((resolve) => {
+	const overlay = document.createElement('div');
+	overlay.className = 'app-modal-overlay';
+
+	const modal = document.createElement('div');
+	modal.className = 'app-modal';
+	modal.setAttribute('role', 'dialog');
+	modal.setAttribute('aria-modal', 'true');
+
+	const form = document.createElement('form');
+	form.noValidate = true;
+
+	const header = document.createElement('div');
+	header.className = 'app-modal-header';
+	const heading = document.createElement('h2');
+	heading.textContent = title;
+	const closeButton = document.createElement('button');
+	closeButton.type = 'button';
+	closeButton.className = 'app-modal-close';
+	closeButton.setAttribute('aria-label', 'Close');
+	closeButton.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+	header.append(heading, closeButton);
+
+	const fieldsWrapper = document.createElement('div');
+	fieldsWrapper.className = 'app-modal-fields';
+
+	const inputs = {};
+	fields.forEach((field, index) => {
+		const wrapper = document.createElement('div');
+		wrapper.className = 'form-field';
+		const label = document.createElement('label');
+		label.textContent = field.label;
+		const inputId = `modal-field-${field.name}-${index}`;
+		label.setAttribute('for', inputId);
+		wrapper.append(label);
+
+		let input;
+		if (field.type === 'select') {
+			input = document.createElement('select');
+			(field.options || []).forEach((option) => {
+				const optionElement = document.createElement('option');
+				optionElement.value = option;
+				optionElement.textContent = option.charAt(0).toUpperCase() + option.slice(1);
+				input.append(optionElement);
+			});
+		} else {
+			input = document.createElement('input');
+			input.type = field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text';
+			if (field.type === 'number') input.step = 'any';
+			if (field.placeholder) input.placeholder = field.placeholder;
+		}
+		input.id = inputId;
+		input.name = field.name;
+		const existingValue = values[field.name];
+		input.value = existingValue !== undefined && existingValue !== null ? existingValue : (field.defaultValue ?? '');
+		wrapper.append(input);
+		fieldsWrapper.append(wrapper);
+		inputs[field.name] = input;
+	});
+
+	const errorMessage = document.createElement('p');
+	errorMessage.className = 'app-modal-error';
+
+	const actions = document.createElement('div');
+	actions.className = 'app-modal-actions';
+	const cancelButton = document.createElement('button');
+	cancelButton.type = 'button';
+	cancelButton.className = 'secondary-button';
+	cancelButton.textContent = 'Cancel';
+	const submitButton = document.createElement('button');
+	submitButton.type = 'submit';
+	submitButton.className = 'primary-button';
+	submitButton.textContent = submitLabel;
+	actions.append(cancelButton, submitButton);
+
+	form.append(header, fieldsWrapper, errorMessage, actions);
+	modal.append(form);
+	overlay.append(modal);
+	document.body.append(overlay);
+
+	const previouslyFocused = document.activeElement;
+	inputs[fields[0]?.name]?.focus();
+
+	let settled = false;
+	const close = (result) => {
+		if (settled) return;
+		settled = true;
+		document.removeEventListener('keydown', onKeydown);
+		overlay.remove();
+		if (previouslyFocused instanceof HTMLElement) previouslyFocused.focus();
+		resolve(result);
+	};
+
+	const onKeydown = (event) => {
+		if (event.key === 'Escape') close(null);
+	};
+	document.addEventListener('keydown', onKeydown);
+
+	overlay.addEventListener('mousedown', (event) => {
+		if (event.target === overlay) close(null);
+	});
+	closeButton.addEventListener('click', () => close(null));
+	cancelButton.addEventListener('click', () => close(null));
+
+	form.addEventListener('submit', (event) => {
+		event.preventDefault();
+		errorMessage.classList.remove('visible');
+		const result = {};
+		for (const field of fields) {
+			const input = inputs[field.name];
+			const rawValue = input.value.trim();
+			if (field.required && !rawValue) {
+				errorMessage.textContent = `${field.label} is required.`;
+				errorMessage.classList.add('visible');
+				input.focus();
+				return;
+			}
+			if (field.type === 'number' && rawValue && !Number.isFinite(Number(rawValue))) {
+				errorMessage.textContent = `${field.label} must be a number.`;
+				errorMessage.classList.add('visible');
+				input.focus();
+				return;
+			}
+			result[field.name] = rawValue;
+		}
+		close(result);
+	});
+});
 
 document.addEventListener('DOMContentLoaded', () => {
 	const showMessage = (message, type = 'success') => {
@@ -155,9 +348,12 @@ document.addEventListener('DOMContentLoaded', () => {
 				await signInWithPopup(auth, googleProvider);
 				const user = auth.currentUser;
 				if (user) {
-					await setDoc(doc(firestore, 'users', user.uid), {
+					const userDocRef = doc(firestore, 'users', user.uid);
+					const existingProfile = await getDoc(userDocRef);
+					await setDoc(userDocRef, {
 						fullName: user.displayName || '',
 						email: user.email || '',
+						...(existingProfile.exists() ? {} : { createdAt: serverTimestamp() }),
 						updatedAt: serverTimestamp()
 					}, { merge: true });
 				}
@@ -213,6 +409,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		const profileDropdownLogout = document.querySelector('#profileDropdownLogout');
 		const revenueChartLine = document.querySelector('#revenueChartLine');
 		const revenueChartLabels = document.querySelector('#revenueChartLabels');
+		const revenueYAxis = dashboard.querySelector('.chart .y-axis');
 		const serviceRevenueTotal = document.querySelector('#serviceRevenueTotal');
 		const serviceRevenueList = document.querySelector('#serviceRevenueList');
 		const appointmentTableBody = document.querySelector('#appointmentTableBody');
@@ -278,24 +475,12 @@ document.addEventListener('DOMContentLoaded', () => {
 			reader.readAsDataURL(file);
 		});
 
-		const getRecordDate = (record, fields = ['createdAt']) => {
-			for (const field of fields) {
-				const value = record[field];
-				if (!value) continue;
-				if (typeof value.toDate === 'function') return value.toDate();
-				if (typeof value.seconds === 'number') return new Date(value.seconds * 1000);
-				const date = new Date(value);
-				if (!Number.isNaN(date.getTime())) return date;
-			}
-			return null;
-		};
+		const getRecordDate = (record, fields = ['createdAt']) => getFirstRecordDate(record, fields);
 
 		const getPercentageChange = (current, previous) => {
 			if (previous === 0) return current === 0 ? 0 : 100;
 			return Math.round(((current - previous) / Math.abs(previous)) * 100);
 		};
-
-		const isPaidInvoice = (invoice) => String(invoice.status || '').trim().toLowerCase() === 'paid';
 
 		const formatTrend = (change) => `${change > 0 ? '+' : ''}${change}%`;
 
@@ -374,16 +559,21 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (serviceRevenueTotal) serviceRevenueTotal.textContent = `R${revenueTotals.current.toLocaleString()}`;
 
 			const monthlyRevenue = getMonthlyRevenue(records);
-			const maximumRevenue = Math.max(...monthlyRevenue.map((month) => month.total), 1);
+			const rawMaximum = Math.max(...monthlyRevenue.map((month) => month.total), 1);
+			const axisMaximum = getNiceAxisMaximum(rawMaximum);
 			if (revenueChartLine) {
 				revenueChartLine.setAttribute('points', monthlyRevenue.map((month, index) => {
 					const x = index * 100;
-					const y = 220 - (month.total / maximumRevenue) * 185;
+					const y = 220 - (month.total / axisMaximum) * 185;
 					return `${x},${y}`;
 				}).join(' '));
 			}
 			if (revenueChartLabels) {
 				revenueChartLabels.innerHTML = monthlyRevenue.map((month) => `<span>${new Intl.DateTimeFormat('en-ZA', { month: 'short' }).format(month.date)}</span>`).join('');
+			}
+			if (revenueYAxis) {
+				const steps = 5;
+				revenueYAxis.innerHTML = Array.from({ length: steps + 1 }, (_, index) => `<span>${formatAxisValue(axisMaximum * (1 - index / steps))}</span>`).join('');
 			}
 
 			if (serviceRevenueList) {
@@ -554,16 +744,12 @@ document.addEventListener('DOMContentLoaded', () => {
 			}
 		};
 
-		const addRecordFromPrompt = async (collectionName, fields, user) => {
+		const addRecordFromPrompt = async (collectionName, title, fields, user) => {
+			const values = await showFormModal({ title, fields });
+			if (!values) return;
 			const record = {};
 			for (const field of fields) {
-				const value = window.prompt(field.label);
-				if (value === null) return;
-				if (field.required && !value.trim()) {
-					showMessage(`${field.label} is required.`, 'error');
-					return;
-				}
-				record[field.name] = field.type === 'number' ? Number(value) : value.trim();
+				record[field.name] = field.type === 'number' ? Number(values[field.name]) : values[field.name];
 			}
 			record.ownerId = user.uid;
 			record.createdAt = serverTimestamp();
@@ -719,15 +905,32 @@ document.addEventListener('DOMContentLoaded', () => {
 				const user = auth.currentUser;
 				if (!user) return;
 				const action = button.textContent.trim();
-				const actionDetails = action.includes('Add Customer')
-					? ['customers', [{ name: 'name', label: 'Customer name', required: true }, { name: 'email', label: 'Customer email' }]]
-					: action.includes('New Appointment')
-						? ['bookings', [{ name: 'customerName', label: 'Customer name', required: true }, { name: 'date', label: 'Appointment date', required: true }]]
-						: action.includes('Create Invoice')
-							? ['invoices', [{ name: 'customerName', label: 'Customer name', required: true }, { name: 'amount', label: 'Invoice amount', type: 'number', required: true }, { name: 'status', label: 'Invoice status (paid or pending)', required: true }]]
-							: ['expenses', [{ name: 'description', label: 'Expense description', required: true }, { name: 'amount', label: 'Expense amount', type: 'number', required: true }]];
+				const quickActions = {
+					'Add Customer': ['customers', 'Add Customer', [
+						{ name: 'name', label: 'Customer name', required: true },
+						{ name: 'email', label: 'Customer email' }
+					]],
+					'New Appointment': ['bookings', 'New Appointment', [
+						{ name: 'customerName', label: 'Customer name', required: true },
+						{ name: 'date', label: 'Appointment date', type: 'date', required: true }
+					]],
+					'Create Invoice': ['invoices', 'Create Invoice', [
+						{ name: 'customerName', label: 'Customer name', required: true },
+						{ name: 'amount', label: 'Invoice amount', type: 'number', required: true },
+						{ name: 'status', label: 'Status', type: 'select', options: ['pending', 'paid', 'overdue'] }
+					]],
+					'Record Payment': ['payments', 'Record Payment', [
+						{ name: 'customerName', label: 'Customer name', required: true },
+						{ name: 'amount', label: 'Payment amount', type: 'number', required: true },
+						{ name: 'method', label: 'Payment method' },
+						{ name: 'status', label: 'Status', type: 'select', options: ['received', 'pending', 'refunded'] }
+					]]
+				};
+				const actionKey = Object.keys(quickActions).find((key) => action.includes(key));
+				if (!actionKey) return;
+				const [collectionName, title, fields] = quickActions[actionKey];
 				try {
-					await addRecordFromPrompt(actionDetails[0], actionDetails[1], user);
+					await addRecordFromPrompt(collectionName, title, fields, user);
 				} catch (error) {
 					showMessage('The record could not be saved to Firestore.', 'error');
 				}
@@ -769,16 +972,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		const profileInitials = (name) => String(name || 'Business Manager').split(' ').filter(Boolean).slice(0, 2).map((part) => part[0].toUpperCase()).join('');
 		const renderPageProfile = (user, imageUrl = user.photoURL) => {
-			if (!profileAvatar) return;
-			profileAvatar.textContent = '';
-			if (imageUrl) {
-				const image = document.createElement('img');
-				image.src = imageUrl;
-				image.alt = `${user.displayName || user.email || 'Business manager'} profile`;
-				profileAvatar.append(image);
-			} else {
-				profileAvatar.textContent = profileInitials(user.displayName || user.email);
-			}
+			const targets = [profileAvatar, pageShell.querySelector('#settingsAvatar')].filter(Boolean);
+			targets.forEach((target) => {
+				target.textContent = '';
+				if (imageUrl) {
+					const image = document.createElement('img');
+					image.src = imageUrl;
+					image.alt = `${user.displayName || user.email || 'Business manager'} profile`;
+					target.append(image);
+				} else {
+					target.textContent = profileInitials(user.displayName || user.email);
+				}
+			});
 		};
 		const resizePageProfileImage = (file) => new Promise((resolve, reject) => {
 			const reader = new FileReader();
@@ -850,14 +1055,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			.replaceAll('"', '&quot;')
 			.replaceAll("'", '&#039;');
 
-		const pageDate = (record) => {
-			const value = record.date || record.createdAt || record.issueDate;
-			if (!value) return null;
-			if (typeof value.toDate === 'function') return value.toDate();
-			if (typeof value.seconds === 'number') return new Date(value.seconds * 1000);
-			const parsed = new Date(value);
-			return Number.isNaN(parsed.getTime()) ? null : parsed;
-		};
+		const pageDate = (record) => getFirstRecordDate(record, ['date', 'createdAt', 'issueDate']);
 
 		const pageDateText = (record) => {
 			const date = pageDate(record);
@@ -979,6 +1177,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				percentageChange(currentMargin, previousMargin)
 			]);
 			const reportLine = pageShell.querySelector('.reports-analytics .line-chart polyline');
+			const reportYAxis = pageShell.querySelector('.reports-analytics .y-axis');
 			if (reportLine) {
 				const now = new Date();
 				const monthlyRevenue = Array.from({ length: 8 }, (_, index) => {
@@ -988,8 +1187,12 @@ document.addEventListener('DOMContentLoaded', () => {
 						return date && date.getMonth() === month.getMonth() && date.getFullYear() === month.getFullYear() ? sum + Number(invoice.amount || 0) : sum;
 					}, 0);
 				});
-				const maximum = Math.max(...monthlyRevenue, 1);
-				reportLine.setAttribute('points', monthlyRevenue.map((value, index) => `${index * 100},${220 - (value / maximum) * 185}`).join(' '));
+				const axisMaximum = getNiceAxisMaximum(Math.max(...monthlyRevenue, 1));
+				reportLine.setAttribute('points', monthlyRevenue.map((value, index) => `${index * 100},${220 - (value / axisMaximum) * 185}`).join(' '));
+				if (reportYAxis) {
+					const steps = 4;
+					reportYAxis.innerHTML = Array.from({ length: steps + 1 }, (_, index) => `<span>R${formatAxisValue(axisMaximum * (1 - index / steps))}</span>`).join('');
+				}
 			}
 			const serviceList = pageShell.querySelector('.reports-analytics .service-list');
 			if (serviceList) {
@@ -1010,21 +1213,93 @@ document.addEventListener('DOMContentLoaded', () => {
 			const fullName = pageShell.querySelector('#fullName');
 			const email = pageShell.querySelector('#email');
 			const phone = pageShell.querySelector('#phone');
+			const changePictureButton = pageShell.querySelector('#changePictureButton');
+			const currentPasswordInput = pageShell.querySelector('#currentPassword');
+			const newPasswordInput = pageShell.querySelector('#newPassword');
+			const confirmPasswordInput = pageShell.querySelector('#confirmPassword');
+			const isPasswordAccount = user.providerData.some((provider) => provider.providerId === 'password');
+
 			if (fullName) fullName.value = profileData.fullName || user.displayName || '';
 			if (email) email.value = user.email || profileData.email || '';
 			if (phone) phone.value = profileData.phone || '';
-			const saveButton = pageShell.querySelector('#profileSaveButton') || pageShell.querySelector('.settings-actions .primary-button');
+			renderPageProfile(user, profileData.photoURL || user.photoURL);
+
+			// "Change Picture" reuses the same hidden file input and upload logic as the
+			// header avatar, so there is only one place that resizes and saves photos.
+			if (changePictureButton && !changePictureButton.dataset.bound) {
+				changePictureButton.dataset.bound = 'true';
+				changePictureButton.addEventListener('click', () => profileImageInput?.click());
+			}
+
+			const saveButton = pageShell.querySelector('#profileSaveButton');
 			if (saveButton && !saveButton.dataset.bound) {
 				saveButton.dataset.bound = 'true';
 				saveButton.addEventListener('click', async () => {
 					try {
 						const name = fullName?.value.trim() || '';
+						const newEmail = email?.value.trim() || '';
+
 						await updateProfile(user, { displayName: name });
-						await setDoc(doc(firestore, 'users', user.uid), { fullName: name, phone: phone?.value.trim() || '', email: user.email, updatedAt: serverTimestamp() }, { merge: true });
+
+						if (newEmail && newEmail !== user.email) {
+							await updateEmail(user, newEmail);
+						}
+
+						await setDoc(doc(firestore, 'users', user.uid), {
+							fullName: name,
+							phone: phone?.value.trim() || '',
+							email: auth.currentUser?.email || newEmail || user.email,
+							updatedAt: serverTimestamp()
+						}, { merge: true });
+
+						const profile = pageShell.closest('.main-content')?.querySelector('.profile-info strong');
+						if (profile) profile.textContent = name || user.email;
+
 						showMessage('Profile settings saved.');
 					} catch (error) {
 						console.error('Failed to save settings', error);
-						showMessage('Your settings could not be saved.', 'error');
+						showMessage(getFirebaseErrorMessage(error), 'error');
+					}
+				});
+			}
+
+			const updatePasswordButton = pageShell.querySelector('#updatePasswordButton');
+			if (updatePasswordButton && !updatePasswordButton.dataset.bound) {
+				updatePasswordButton.dataset.bound = 'true';
+				updatePasswordButton.addEventListener('click', async () => {
+					if (!isPasswordAccount) {
+						showMessage('This account signs in with Google, so there is no password to change here.', 'error');
+						return;
+					}
+
+					const currentPassword = currentPasswordInput?.value || '';
+					const newPassword = newPasswordInput?.value || '';
+					const confirmPassword = confirmPasswordInput?.value || '';
+
+					if (!currentPassword || !newPassword || !confirmPassword) {
+						showMessage('Fill in all three password fields.', 'error');
+						return;
+					}
+					if (newPassword.length < 6) {
+						showMessage('Your new password must be at least 6 characters.', 'error');
+						return;
+					}
+					if (newPassword !== confirmPassword) {
+						showMessage('New password and confirmation do not match.', 'error');
+						return;
+					}
+
+					try {
+						const credential = EmailAuthProvider.credential(user.email, currentPassword);
+						await reauthenticateWithCredential(user, credential);
+						await updatePassword(user, newPassword);
+						if (currentPasswordInput) currentPasswordInput.value = '';
+						if (newPasswordInput) newPasswordInput.value = '';
+						if (confirmPasswordInput) confirmPasswordInput.value = '';
+						showMessage('Password updated.');
+					} catch (error) {
+						console.error('Failed to update password', error);
+						showMessage(getFirebaseErrorMessage(error), 'error');
 					}
 				});
 			}
@@ -1051,31 +1326,72 @@ document.addEventListener('DOMContentLoaded', () => {
 			}
 		};
 
-		const promptRecord = async (user, existing = {}) => {
+		const recordFieldSets = {
+			customers: [
+				{ name: 'name', label: 'Customer name', required: true },
+				{ name: 'email', label: 'Customer email' },
+				{ name: 'phone', label: 'Customer phone' },
+				{ name: 'status', label: 'Status', type: 'select', options: ['active', 'inactive'] }
+			],
+			bookings: (customerHint) => [
+				{ name: 'customerName', label: 'Customer name', required: true, placeholder: customerHint },
+				{ name: 'date', label: 'Booking date', type: 'date', required: true },
+				{ name: 'time', label: 'Booking time' },
+				{ name: 'service', label: 'Service' },
+				{ name: 'staff', label: 'Staff member' },
+				{ name: 'status', label: 'Status', type: 'select', options: ['pending', 'completed', 'cancelled'] }
+			],
+			invoices: (customerHint, existing) => [
+				{ name: 'invoiceNumber', label: 'Invoice number', defaultValue: existing.invoiceNumber || `INV-${Date.now()}` },
+				{ name: 'customerName', label: 'Customer name', required: true, placeholder: customerHint },
+				{ name: 'issueDate', label: 'Issue date', type: 'date' },
+				{ name: 'dueDate', label: 'Due date', type: 'date' },
+				{ name: 'amount', label: 'Invoice amount', type: 'number', required: true },
+				{ name: 'status', label: 'Status', type: 'select', options: ['pending', 'paid', 'overdue'] },
+				{ name: 'service', label: 'Service/category' }
+			],
+			expenses: (customerHint, existing) => [
+				{ name: 'expenseNumber', label: 'Expense number', defaultValue: existing.expenseNumber || `EXP-${Date.now()}` },
+				{ name: 'description', label: 'Description', required: true },
+				{ name: 'category', label: 'Category' },
+				{ name: 'vendor', label: 'Vendor' },
+				{ name: 'date', label: 'Date', type: 'date' },
+				{ name: 'amount', label: 'Amount', type: 'number', required: true },
+				{ name: 'status', label: 'Status', type: 'select', options: ['approved', 'pending'] }
+			],
+			payments: (customerHint, existing) => [
+				{ name: 'paymentNumber', label: 'Payment number', defaultValue: existing.paymentNumber || `PMT-${Date.now()}` },
+				{ name: 'customerName', label: 'Customer name', required: true, placeholder: customerHint },
+				{ name: 'invoiceNumber', label: 'Invoice number' },
+				{ name: 'date', label: 'Payment date', type: 'date' },
+				{ name: 'method', label: 'Payment method' },
+				{ name: 'amount', label: 'Amount', type: 'number', required: true },
+				{ name: 'status', label: 'Status', type: 'select', options: ['received', 'pending', 'refunded'] }
+			]
+		};
+
+		const pageSingularTitles = { customers: 'Customer', bookings: 'Appointment', invoices: 'Invoice', expenses: 'Expense', payments: 'Payment' };
+
+		const promptRecord = async (user, existing = {}, isEditing = false) => {
 			const customerSnapshot = await getDocs(query(collection(firestore, 'customers'), where('ownerId', '==', user.uid)));
 			const customers = customerSnapshot.docs.map((record) => ({ id: record.id, ...record.data() }));
-			const customerHint = customers.length ? ` (available: ${customers.map((customer) => customer.name).join(', ')})` : '';
-			if (collectionName === 'customers') return { name: window.prompt('Customer name', existing.name || ''), email: window.prompt('Customer email', existing.email || ''), phone: window.prompt('Customer phone', existing.phone || ''), status: window.prompt('Status (active or inactive)', existing.status || 'active') };
-			if (collectionName === 'bookings') {
-				const customerName = window.prompt(`Customer name${customerHint}`, existing.customerName || '');
-				return { customerName, customerId: customers.find((customer) => String(customer.name || '').toLowerCase() === String(customerName || '').toLowerCase())?.id || '', date: window.prompt('Booking date (YYYY-MM-DD)', existing.date || ''), time: window.prompt('Booking time', existing.time || ''), service: window.prompt('Service', existing.service || ''), staff: window.prompt('Staff member', existing.staff || ''), status: window.prompt('Status (pending, completed or cancelled)', existing.status || 'pending') };
+			const customerHint = customers.length ? `e.g. ${customers.map((customer) => customer.name).join(', ')}` : '';
+			const fieldSet = recordFieldSets[collectionName];
+			const fields = typeof fieldSet === 'function' ? fieldSet(customerHint, existing) : fieldSet;
+			const title = `${isEditing ? 'Edit' : 'Add'} ${pageSingularTitles[collectionName] || 'Record'}`;
+			const values = await showFormModal({ title, fields, values: existing, submitLabel: isEditing ? 'Save changes' : 'Add' });
+			if (!values) return null;
+			if (values.amount !== undefined) values.amount = Number(values.amount);
+			if ('customerName' in values) {
+				values.customerId = customers.find((customer) => String(customer.name || '').toLowerCase() === values.customerName.toLowerCase())?.id || '';
 			}
-			if (collectionName === 'invoices') {
-				const customerName = window.prompt(`Customer name${customerHint}`, existing.customerName || '');
-				return { invoiceNumber: window.prompt('Invoice number', existing.invoiceNumber || `INV-${Date.now()}`), customerName, customerId: customers.find((customer) => String(customer.name || '').toLowerCase() === String(customerName || '').toLowerCase())?.id || '', issueDate: window.prompt('Issue date (YYYY-MM-DD)', existing.issueDate || ''), dueDate: window.prompt('Due date (YYYY-MM-DD)', existing.dueDate || ''), amount: Number(window.prompt('Invoice amount', existing.amount || 0)), status: window.prompt('Status (paid, pending or overdue)', existing.status || 'pending'), service: window.prompt('Service/category', existing.service || '') };
-			}
-			if (collectionName === 'expenses') return { expenseNumber: window.prompt('Expense number', existing.expenseNumber || `EXP-${Date.now()}`), description: window.prompt('Description', existing.description || ''), category: window.prompt('Category', existing.category || ''), vendor: window.prompt('Vendor', existing.vendor || ''), date: window.prompt('Date (YYYY-MM-DD)', existing.date || ''), amount: Number(window.prompt('Amount', existing.amount || 0)), status: window.prompt('Status', existing.status || 'approved') };
-			const customerName = window.prompt(`Customer name${customerHint}`, existing.customerName || '');
-			return { paymentNumber: window.prompt('Payment number', existing.paymentNumber || `PMT-${Date.now()}`), customerName, customerId: customers.find((customer) => String(customer.name || '').toLowerCase() === String(customerName || '').toLowerCase())?.id || '', invoiceNumber: window.prompt('Invoice number', existing.invoiceNumber || ''), date: window.prompt('Payment date (YYYY-MM-DD)', existing.date || ''), method: window.prompt('Payment method', existing.method || ''), amount: Number(window.prompt('Amount', existing.amount || 0)), status: window.prompt('Status (received, pending or refunded)', existing.status || 'received') };
+			return values;
 		};
 
 		const savePageRecord = async (user, recordId = null) => {
-			const values = await promptRecord(user, recordId ? pageRecords.find((record) => record.id === recordId) || {} : {});
-			if (Object.values(values).some((value) => value === null)) return;
-			if (collectionName === 'customers' && !values.name?.trim()) return showMessage('Customer name is required.', 'error');
-			if (collectionName === 'bookings' && (!values.customerName?.trim() || !values.date?.trim())) return showMessage('Customer and booking date are required.', 'error');
-			if (collectionName === 'invoices' && (!values.customerName?.trim() || !Number.isFinite(values.amount))) return showMessage('Customer and invoice amount are required.', 'error');
-			if (collectionName === 'expenses' && (!values.description?.trim() || !Number.isFinite(values.amount))) return showMessage('Description and expense amount are required.', 'error');
+			const existing = recordId ? pageRecords.find((record) => record.id === recordId) || {} : {};
+			const values = await promptRecord(user, existing, Boolean(recordId));
+			if (!values) return;
 			try {
 				const record = { ...values, ownerId: user.uid, updatedAt: serverTimestamp() };
 				if (!recordId) record.createdAt = serverTimestamp();
@@ -1148,4 +1464,3 @@ document.addEventListener('DOMContentLoaded', () => {
 		});
 	}
 });
-

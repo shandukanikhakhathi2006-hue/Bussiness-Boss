@@ -1531,7 +1531,7 @@ td {
 
 .y-axis {
 
-    width: 35px;
+    width: 44px;
 
     display: flex;
 
@@ -1541,9 +1541,11 @@ td {
 
     padding-bottom: 25px;
 
-    color: #94a3b8;
+    color: #64748b;
 
-    font-size: 10px;
+    font-size: 13px;
+
+    font-weight: 600;
 }
 
 
@@ -1609,9 +1611,11 @@ td {
 
     justify-content: space-between;
 
-    color: #94a3b8;
+    color: #64748b;
 
-    font-size: 10px;
+    font-size: 13px;
+
+    font-weight: 600;
 }
 
 
@@ -2241,7 +2245,7 @@ select {
     border-radius: 7px;
     color: var(--muted);
     text-decoration: none;
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 600;
 }
 
@@ -2268,7 +2272,7 @@ select {
 }
 
 .settings-section h3 {
-    font-size: 13px;
+    font-size: 16px;
     margin-bottom: 14px;
 }
 
@@ -2289,7 +2293,7 @@ select {
 }
 
 .form-field label {
-    font-size: 11px;
+    font-size: 13px;
     color: var(--muted);
     font-weight: 600;
 }
@@ -2301,7 +2305,7 @@ select {
     background: #fff;
     padding: 9px 10px;
     font-family: inherit;
-    font-size: 11px;
+    font-size: 14px;
     color: var(--dark);
 }
 
@@ -2330,7 +2334,7 @@ select {
 
 .settings-actions .primary-button {
     padding: 8px 12px;
-    font-size: 10px;
+    font-size: 13px;
 }
 
 .avatar-large {
@@ -2344,6 +2348,14 @@ select {
     justify-content: center;
     font-size: 15px;
     font-weight: 700;
+    overflow: hidden;
+}
+
+.avatar-large img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .messaging-layout {
@@ -3025,4 +3037,77 @@ select {
         display: none;
     }
 
+}
+
+/* App-native modal used for quick-action and record forms across the app (replaces window.prompt). */
+.app-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 1000;
+}
+
+.app-modal {
+    background: var(--white);
+    border-radius: 12px;
+    box-shadow: var(--shadow-soft);
+    width: 100%;
+    max-width: 420px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 24px;
+}
+
+.app-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+}
+
+.app-modal-header h2 {
+    font-size: 18px;
+    color: var(--dark);
+}
+
+.app-modal-close {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px;
+    line-height: 1;
+}
+
+.app-modal-close:hover {
+    color: var(--dark);
+}
+
+.app-modal-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.app-modal-error {
+    display: none;
+    color: var(--danger);
+    font-size: 13px;
+    margin-top: 12px;
+}
+
+.app-modal-error.visible {
+    display: block;
+}
+
+.app-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 22px;
 }

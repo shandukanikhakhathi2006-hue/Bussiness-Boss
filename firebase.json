@@ -13,5 +13,19 @@
     "location": "africa-south1",
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
+  },
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "firestore.rules",
+      "firestore.indexes.json",
+      ".firebaserc",
+      ".git/**",
+      ".gitignore",
+      ".agents/**",
+      "skills-lock.json",
+      "**/.*"
+    ]
   }
 }
