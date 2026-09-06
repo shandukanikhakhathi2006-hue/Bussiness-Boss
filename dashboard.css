@@ -517,6 +517,87 @@ body.sidebar-collapsed .main-content {
     gap: 22px;
 }
 
+.notifications-menu {
+    position: relative;
+}
+
+.notifications-panel {
+    position: absolute;
+    z-index: 30;
+    top: 46px;
+    right: 0;
+    width: min(330px, calc(100vw - 32px));
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--white);
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.16);
+}
+
+.notifications-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 4px 4px 10px;
+    color: var(--dark);
+    font-size: 13px;
+}
+
+.notifications-header span {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.notification-item {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 8px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.notification-item:hover {
+    background: #f8fafc;
+}
+
+.notification-item-icon {
+    display: grid;
+    flex: 0 0 30px;
+    height: 30px;
+    place-items: center;
+    border-radius: 50%;
+    background: #eff6ff;
+    color: var(--primary);
+    font-size: 12px;
+}
+
+.notification-item.warning .notification-item-icon {
+    background: #fff7ed;
+    color: #c2410c;
+}
+
+.notification-item strong,
+.notification-item span {
+    display: block;
+}
+
+.notification-item strong {
+    color: var(--dark);
+    font-size: 12px;
+}
+
+.notification-item span {
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.35;
+}
+
 
 .header-icon {
 
@@ -1964,32 +2045,6 @@ select {
     margin-bottom: 14px;
 }
 
-.inline-label {
-    font-size: 12px;
-    color: var(--muted);
-    font-weight: 600;
-}
-
-.date-nav {
-    display: inline-flex;
-    align-items: center;
-    gap: 12px;
-    background: var(--white);
-    border: 1px solid var(--border);
-    border-radius: 11px;
-    padding: 8px 12px;
-}
-
-.date-arrow {
-    width: 28px;
-    height: 28px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: #fff;
-    color: var(--dark);
-    cursor: pointer;
-}
-
 .table-actions {
     display: flex;
     align-items: center;
@@ -2073,6 +2128,30 @@ select {
     background: var(--primary);
     color: #fff;
     border-color: var(--primary);
+}
+
+/* Appointments page: calendar embedded inline in the content card (reuses the
+   .calendar-toolbar / .calendar-grid / .calendar-day-view rules defined above
+   for the Dashboard's calendar modal, so both calendars look and behave alike). */
+.calendar-embed {
+    padding-top: 6px;
+}
+
+.done-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: 10px;
+    font-size: 13px;
+    color: var(--text);
+    cursor: pointer;
+}
+
+.done-toggle input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary);
+    cursor: pointer;
 }
 
 .content-surface {
@@ -3092,6 +3171,13 @@ select {
     color: var(--dark);
 }
 
+.app-modal-description {
+    margin: -2px 0 16px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
 .app-modal-close {
     background: none;
     border: none;
@@ -3130,6 +3216,23 @@ select {
     margin-top: 22px;
 }
 
+.danger-button {
+    border: 1px solid #dc2626;
+    background: #dc2626;
+    color: #fff;
+    border-radius: 7px;
+    padding: 9px 13px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.danger-button:hover {
+    background: #b91c1c;
+    border-color: #b91c1c;
+}
+
 /* Upgrade to Pro: confirmation modal content + "already Pro" sidebar state. */
 .upgrade-plan-summary {
     font-size: 15px;
@@ -3162,4 +3265,191 @@ select {
 .upgrade-card button:disabled {
     background: #94a3b8;
     cursor: default;
+}
+
+/* Business Calendar modal (previously had no styling at all) */
+.calendar-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 1000;
+}
+
+.calendar-modal[hidden] {
+    display: none;
+}
+
+.calendar-dialog {
+    background: var(--white);
+    border-radius: 14px;
+    box-shadow: var(--shadow-soft);
+    width: 100%;
+    max-width: 480px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 24px;
+}
+
+.calendar-dialog-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 18px;
+}
+
+.calendar-dialog-header h2 {
+    font-size: 18px;
+    color: var(--dark);
+}
+
+.calendar-dialog-header p {
+    margin-top: 4px;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.calendar-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.calendar-toolbar[hidden] {
+    display: none;
+}
+
+.calendar-toolbar strong {
+    font-size: 15px;
+    color: var(--dark);
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+}
+
+.calendar-grid[hidden] {
+    display: none;
+}
+
+.calendar-day-name {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    padding-bottom: 6px;
+}
+
+.calendar-day {
+    aspect-ratio: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    background: var(--background);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.calendar-day:hover {
+    border-color: var(--primary);
+}
+
+.calendar-day strong {
+    font-size: 13px;
+    color: var(--dark);
+}
+
+.calendar-day span {
+    font-size: 9px;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.2;
+}
+
+.calendar-day.has-bookings {
+    background: #eff6ff;
+}
+
+.calendar-day.has-bookings span {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.calendar-day.empty {
+    background: transparent;
+    cursor: default;
+}
+
+/* Day view: hourly 08:00-17:00 schedule shown after clicking a day */
+.calendar-day-view-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.calendar-day-view-header strong {
+    font-size: 14px;
+    color: var(--dark);
+}
+
+.calendar-day-slots {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.calendar-slot {
+    display: flex;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.calendar-slot:last-child {
+    border-bottom: none;
+}
+
+.calendar-slot-time {
+    flex-shrink: 0;
+    width: 56px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+}
+
+.calendar-slot-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.calendar-slot-booking {
+    font-size: 13px;
+    color: var(--text);
+    background: #eff6ff;
+    border-radius: 6px;
+    padding: 6px 10px;
+}
+
+.calendar-slot-booking strong {
+    color: var(--primary);
+    margin-right: 6px;
+}
+
+.calendar-slot-empty {
+    font-size: 12px;
+    color: var(--muted);
 }

@@ -158,18 +158,26 @@
                         type="text"
                         id="searchInput"
                         placeholder="Search anything..."
+                        aria-label="Search dashboard records"
+                        aria-keyshortcuts="Control+K"
                     >
 
-                    <span class="search-shortcut">⌘ K</span>
+                    <span class="search-shortcut" aria-hidden="true">Ctrl K</span>
 
                 </div>
 
                 <div class="header-right">
 
-                    <button class="header-icon" type="button" aria-label="View notifications">
-                        <i class="fa-regular fa-bell"></i>
-                        <span class="notification-dot"></span>
-                    </button>
+                    <div class="notifications-menu">
+                        <button class="header-icon" id="notificationsButton" type="button" aria-label="View notifications" aria-expanded="false" aria-controls="notificationsPanel">
+                            <i class="fa-regular fa-bell"></i>
+                            <span class="notification-dot" id="notificationDot"></span>
+                        </button>
+                        <div class="notifications-panel" id="notificationsPanel" role="dialog" aria-label="Notifications" hidden>
+                            <div class="notifications-header"><strong>Notifications</strong><span id="notificationsSummary"></span></div>
+                            <div class="notifications-list" id="notificationsList" aria-live="polite"></div>
+                        </div>
+                    </div>
 
                     <div class="profile-menu">
 
@@ -240,7 +248,7 @@
                     </p>
                 </div>
 
-                <button class="primary-button">
+                <button class="primary-button" id="newTransactionButton" type="button">
                     <i class="fa-solid fa-plus"></i>
                     New Transaction
                 </button>
@@ -398,7 +406,7 @@
 
                 <div class="quick-actions">
 
-                    <button class="action-card">
+                    <button class="action-card" type="button">
 
                         <div class="action-icon blue">
                             <i class="fa-solid fa-file-circle-plus"></i>
@@ -414,7 +422,7 @@
                     </button>
 
 
-                    <button class="action-card">
+                    <button class="action-card" type="button">
 
                         <div class="action-icon purple">
                             <i class="fa-solid fa-calendar-plus"></i>
@@ -430,7 +438,7 @@
                     </button>
 
 
-                    <button class="action-card">
+                    <button class="action-card" type="button">
 
                         <div class="action-icon green">
                             <i class="fa-solid fa-user-plus"></i>
@@ -446,7 +454,7 @@
                     </button>
 
 
-                    <button class="action-card">
+                    <button class="action-card" type="button">
 
                         <div class="action-icon orange">
                             <i class="fa-solid fa-money-check-dollar"></i>
@@ -667,7 +675,7 @@
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </div>
-                    <div class="calendar-toolbar">
+                    <div class="calendar-toolbar" id="calendarToolbar">
                         <button class="secondary-button" id="previousMonthButton" type="button" aria-label="Previous month">
                             <i class="fa-solid fa-chevron-left"></i>
                         </button>
@@ -677,6 +685,16 @@
                         </button>
                     </div>
                     <div class="calendar-grid" id="calendarGrid" aria-live="polite"></div>
+
+                    <div class="calendar-day-view" id="calendarDayView" hidden>
+                        <div class="calendar-day-view-header">
+                            <button class="secondary-button" id="backToMonthButton" type="button">
+                                <i class="fa-solid fa-arrow-left"></i> Back to month
+                            </button>
+                            <strong id="calendarDayViewLabel"></strong>
+                        </div>
+                        <div class="calendar-day-slots" id="calendarDaySlots" aria-live="polite"></div>
+                    </div>
                 </div>
             </div>
 
@@ -698,7 +716,13 @@
 
                         <label class="sr-only" for="periodSelect">Performance period</label>
                         <select id="periodSelect">
-                            <option>This Month</option>
+                            <option>Today</option>
+                            <option>Tomorrow</option>
+                            <option>This Week</option>
+                            <option>Next Week</option>
+                            <option>Last Week</option>
+                            <option selected>This Month</option>
+                            <option>Next Month</option>
                             <option>Last Month</option>
                             <option>This Year</option>
                         </select>
@@ -1007,9 +1031,7 @@
                 </span>
 
                 <div>
-                    <a href="#">Privacy Policy</a>
-                    <a href="#">Terms of Service</a>
-                    <a href="#">Support</a>
+                    <a href="help.html">Help &amp; Support</a>
                 </div>
 
             </footer>

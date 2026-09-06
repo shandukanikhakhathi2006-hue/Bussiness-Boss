@@ -96,10 +96,10 @@
                 <div class="page-toolbar">
                     <div class="toolbar-group">
                         <div class="toolbar-search"><i class="fa-solid fa-magnifying-glass"></i><input type="text" placeholder="Search invoices" /></div>
-                        <select class="toolbar-select" aria-label="Filter by invoice status"><option>All Status</option><option>Paid</option><option>Pending</option><option>Overdue</option></select>
-                        <select class="toolbar-select" aria-label="Filter invoices by time"><option>All Time</option><option>This Month</option><option>Last 90 Days</option></select>
+                        <select class="toolbar-select" id="invoiceStatusFilter" aria-label="Filter by invoice status"><option value="all">All Status</option><option value="paid">Paid</option><option value="pending">Pending</option><option value="overdue">Overdue</option></select>
+                        <select class="toolbar-select" id="invoiceTimeFilter" aria-label="Filter invoices by time"><option value="all">All Time</option><option value="month">This Month</option><option value="90days">Last 90 Days</option></select>
                     </div>
-                    <button class="secondary-button" type="button">Filter</button>
+                    <button class="secondary-button" type="button" data-clear-filters>Clear filters</button>
                 </div>
 
                 <div class="table-container">

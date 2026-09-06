@@ -1,70 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta name="description" content="Create a BusinessBoss account to manage your business.">
-        <title>BusinessBoss |sign up</title>
-        <link rel="stylesheet" href="signup.css">
-        <link rel="stylesheet"
-            href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
-    </head>
-    <body>
-        <header class="header">
-            <div class="logo-container">
-                <img src="images/BussinessBoss-logo.jpeg" alt="Bussiness Boss logo" class="bussinessBoss-logo">
-            </div>
-            <div class="headings">
-                <h1>Create Your Account</h1>
-                <h2>Start managing your business smarter today.</h2>
-             </div>
-        </header>
-        <main class="main">
-            <section class="signup-section">
-                <form action="" class="signup-form">
-                    <p data-script-message role="alert" class="form-alert" hidden>
-                        <span class="material-symbols-outlined form-alert-icon" data-script-message-icon aria-hidden="true">error</span>
-                        <span data-script-message-text></span>
-                    </p>
-                    <div class="input-container">
-                        <label for="fullname">
-                            Full name
-                        </label>
-                        <input type="text" name="full-name" id="fullname" placeholder="e.g John smith" required minlength="6" maxlength="40">
-                    </div>
-                    <div class="input-container">
-                        <label for="email">
-                            Email
-                        </label>
-                        <input type="email" name="email" id="email" placeholder="example@gmail.com" minlength="6" maxlength="40" required>
-                    </div>
-                    <div class="input-container">
-                        <label for="password">
-                           Password
-                        </label>
-                        <input type="password" name="password" id="password" placeholder="Enter a strong password" minlength="12" maxlength="40" required>
-                    </div>
-                    <div class="input-container">
-                        <label for="confirm-password">
-                            Confirm password
-                        </label>
-                        <input type="password" id="confirm-password" name="confirm-password" placeholder="Re-enter your password" required>
-                    </div>
-                    <div class="signup-btn-container">
-                    <button type="submit" class="signup-btn">Create Account</button>
-                    </div>
-                </form>
-                <p class="login">Already have an account? <a href="login.html">Login</a></p>
-                <p class="choice">OR</p>
-                <div class="google-btn-container">
-                <button  class="google-btn">
-                    <img class="google-icon" src="images/Logo-google-icon-PNG.png" alt="Google-logo-icon">
-                    <span>Continue with Google</span>
-                </button>
-            </div>
-            </section>
-
-        </main>
-        <script src="script.js" type="module"></script>
-    </body>
-</html>
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Create a BusinessBoss account and bring your business into one workspace."><title>BusinessBoss | Create your account</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="auth.css">
+</head>
+<body>
+  <main class="auth-layout"><section class="auth-intro"><a href="index.html" class="brand"><img src="images/BussinessBoss-logo-2.jpeg.jpeg" alt="" class="brand-mark"><span>Business<span>Boss</span></span></a><div><p class="eyebrow">Start simply</p><h1>A better way to<br><em>run your day.</em></h1><p>Set up your BusinessBoss workspace in a few minutes. No card required.</p></div><div class="intro-points"><span>✓ Your data stays private</span><span>✓ Built for small businesses</span><span>✓ Upgrade when you’re ready</span></div></section>
+    <section class="auth-panel"><div class="auth-card"><a href="index.html" class="mobile-brand brand"><img src="images/BussinessBoss-logo-2.jpeg.jpeg" alt="" class="brand-mark"><span>Business<span>Boss</span></span></a><div class="auth-heading"><p class="eyebrow">Create your account</p><h2>Let’s get you set up.</h2><p>Start organising your business with one secure account.</p></div>
+      <form class="signup-form"><p data-script-message role="alert" class="form-alert" hidden><span data-script-message-text></span></p><label>Full name<input type="text" name="full-name" id="fullname" autocomplete="name" required minlength="2" maxlength="80"></label><label>Email address<input type="email" name="email" id="email" autocomplete="email" required></label><div class="form-grid"><label>Password<input type="password" name="password" id="password" autocomplete="new-password" required minlength="12"></label><label>Confirm password<input type="password" name="confirm-password" id="confirm-password" autocomplete="new-password" required></label></div><button type="submit" class="signup-btn">Create account <span aria-hidden="true">→</span></button></form>
+      <div class="divider"><span>or continue with</span></div><button class="google-btn" type="button"><img src="images/Logo-google-icon-PNG.png" alt="" class="google-icon">Continue with Google</button><p class="auth-switch">Already have an account? <a href="login.html">Log in</a></p>
+    </div></section>
+  </main><script src="script.js" type="module"></script>
+</body></html>

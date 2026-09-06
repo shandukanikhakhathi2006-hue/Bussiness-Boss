@@ -94,8 +94,13 @@
                 <div class="page-toolbar">
                     <div class="toolbar-group">
                         <div class="toolbar-search"><i class="fa-solid fa-magnifying-glass"></i><input type="text" placeholder="Search payment ID" /></div>
+                        <select class="toolbar-select" id="paymentMethodFilter" aria-label="Filter by payment method">
+                            <option value="all">All Methods</option>
+                            <option value="cash">Cash</option>
+                            <option value="bank">Bank</option>
+                        </select>
                     </div>
-                    <button class="secondary-button" type="button">Filter by Method</button>
+                    <button class="secondary-button" type="button" data-clear-filters>Clear filters</button>
                 </div>
 
                 <div class="table-container">

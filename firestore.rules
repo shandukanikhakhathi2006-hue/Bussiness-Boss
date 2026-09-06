@@ -3,10 +3,14 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // ---- Shared helpers -----------------------------------------------
+
     function signedIn() {
       return request.auth != null;
     }
 
+    // Ownership checks (unchanged from before — still the basis of all
+    // cross-user isolation).
     function ownsExisting() {
       return signedIn()
         && resource.data.ownerId == request.auth.uid;
@@ -17,47 +21,125 @@ service cloud.firestore {
         && request.resource.data.ownerId == request.auth.uid;
     }
 
+    // The set of field names actually being changed by this write,
+    // compared to what's already stored. Used to allow "the owner can
+    // edit their own document" while still forbidding specific fields
+    // from ever being part of that edit.
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    // True only if none of `fields` are being touched by this update.
+    function keepsProtected(fields) {
+      return !changedKeys().hasAny(fields);
+    }
+
+    // True only if none of `fields` are present anywhere in this create.
+    function forbidsOnCreate(fields) {
+      return !request.resource.data.keys().hasAny(fields);
+    }
+
+    // ---- users/{userId} -------------------------------------------------
+    // A user may read and maintain their own profile, but plan/billing
+    // fields are not settable by the client at all today — BusinessBoss
+    // has no server-side billing process yet, so there is no value that
+    // would ever be legitimate for a client to write here. Once a real
+    // upgrade flow exists (Cloud Function / webhook), it will write these
+    // fields with elevated (admin) credentials that bypass these rules.
     match /users/{userId} {
-      allow read, create, update: if signedIn()
-        && request.auth.uid == userId;
+      allow read: if signedIn() && request.auth.uid == userId;
+
+      allow create: if signedIn() && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly([
+          'fullName', 'email', 'phone', 'photoURL', 'createdAt', 'updatedAt'
+        ]);
+
+      allow update: if signedIn() && request.auth.uid == userId
+        && changedKeys().hasOnly([
+          'fullName', 'phone', 'email', 'photoURL', 'updatedAt'
+        ]);
 
       allow delete: if false;
     }
 
+    // ---- customers/{documentId} -----------------------------------------
+    // Low-risk collection: any field the owner sets today (name, email,
+    // phone, status) is legitimately theirs to change. Only ownership and
+    // the original creation record are protected.
     match /customers/{documentId} {
       allow read, delete: if ownsExisting();
       allow create: if ownsNew();
-      allow update: if ownsExisting() && ownsNew();
+      allow update: if ownsExisting() && ownsNew()
+        && keepsProtected(['ownerId', 'createdAt']);
     }
 
+    // ---- bookings/{documentId} (Appointments) ---------------------------
+    // Same as customers. Marking an appointment "completed" is a normal
+    // update to `status`/`completedAt`, which stays allowed.
     match /bookings/{documentId} {
       allow read, delete: if ownsExisting();
       allow create: if ownsNew();
-      allow update: if ownsExisting() && ownsNew();
+      allow update: if ownsExisting() && ownsNew()
+        && keepsProtected(['ownerId', 'createdAt']);
     }
 
-    match /invoices/{documentId} {
-      allow read, delete: if ownsExisting();
-      allow create: if ownsNew();
-      allow update: if ownsExisting() && ownsNew();
-    }
-
+    // ---- expenses/{documentId} -------------------------------------------
     match /expenses/{documentId} {
       allow read, delete: if ownsExisting();
       allow create: if ownsNew();
-      allow update: if ownsExisting() && ownsNew();
+      allow update: if ownsExisting() && ownsNew()
+        && keepsProtected(['ownerId', 'createdAt']);
     }
 
+    // ---- invoices/{documentId} -------------------------------------------
+    // `status` (pending/paid/overdue) remains client-editable for now: in
+    // the current app it is a manual bookkeeping action performed by the
+    // business owner about their own record, not a customer-facing
+    // payment claim, so this is a legitimate (if temporary) use of the
+    // field. What must never happen — now or later — is a browser write
+    // masquerading as a *verified* payment. Since BusinessBoss doesn't
+    // write paidAt/paymentId/paymentReference/paymentProvider anywhere
+    // today, those are locked out completely so a future Peach Payments
+    // integration can safely treat them as server-only from day one.
+    match /invoices/{documentId} {
+      allow read, delete: if ownsExisting();
+
+      allow create: if ownsNew()
+        && forbidsOnCreate(['paidAt', 'paymentId', 'paymentReference', 'paymentProvider']);
+
+      allow update: if ownsExisting() && ownsNew()
+        && keepsProtected([
+          'ownerId', 'createdAt',
+          'paidAt', 'paymentId', 'paymentReference', 'paymentProvider'
+        ]);
+    }
+
+    // ---- payments/{documentId} --------------------------------------------
+    // Today this is a manual record of a Cash/Bank payment the owner
+    // received, so `amount`/`status`/`method` legitimately need to stay
+    // owner-editable — there is no verification step to protect them
+    // from yet. Provider/webhook fields don't exist yet either; they are
+    // locked out now so the future Peach integration can rely on them
+    // being untouched by any client.
     match /payments/{documentId} {
       allow read, delete: if ownsExisting();
-      allow create: if ownsNew();
-      allow update: if ownsExisting() && ownsNew();
+
+      allow create: if ownsNew()
+        && forbidsOnCreate(['provider', 'providerTransactionId', 'paymentReference']);
+
+      allow update: if ownsExisting() && ownsNew()
+        && keepsProtected([
+          'ownerId', 'createdAt',
+          'provider', 'providerTransactionId', 'paymentReference'
+        ]);
     }
 
+    // ---- messages/{documentId} --------------------------------------------
     match /messages/{documentId} {
       allow read, delete: if ownsExisting();
       allow create: if ownsNew();
-      allow update: if ownsExisting() && ownsNew();
+      allow update: if ownsExisting() && ownsNew()
+        && keepsProtected(['ownerId', 'createdAt']);
     }
   }
 }

@@ -84,7 +84,12 @@
                     <p class="page-subtitle">Schedule and manage your appointments.</p>
                 </div>
                 <div class="page-actions">
-                    <button class="secondary-button" type="button">Calendar View</button>
+                    <select class="toolbar-select" id="appointmentPeriodFilter" aria-label="Filter appointments by period">
+                        <option value="today" selected>Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                    </select>
+                    <button class="secondary-button" id="appointmentsCalendarViewButton" type="button">Calendar View</button>
                     <button class="primary-button" type="button"><i class="fa-solid fa-plus"></i> New Appointment</button>
                 </div>
             </div>
@@ -98,19 +103,14 @@
 
             <section class="content-card">
                 <div class="card-header">
-                    <div><h2>Calendar Schedule</h2><p>Plan and track upcoming bookings.</p></div>
-                    <div class="date-nav">
-                        <button class="date-arrow" type="button" aria-label="Previous date"><i class="fa-solid fa-chevron-left"></i></button>
-                        <span class="inline-label">Today</span>
-                        <button class="date-arrow" type="button" aria-label="Next date"><i class="fa-solid fa-chevron-right"></i></button>
-                    </div>
+                    <div><h2>Appointment Schedule</h2><p>Plan and track upcoming bookings.</p></div>
                 </div>
 
                 <div class="section-title-row">
                     <h3 class="live-date calendar-date"></h3>
-                    <button class="secondary-button" type="button">Filter</button>
                 </div>
 
+                <div id="appointmentsTableView">
                 <div class="table-container">
                     <table>
                         <thead>
@@ -133,10 +133,25 @@
                     </table>
                 </div>
 
-                <div class="pagination">
-                    <button type="button">1</button>
-                    <button type="button" class="active">2</button>
-                    <button type="button">3</button>
+                <div class="pagination" id="appointmentsPagination" hidden></div>
+                </div>
+
+                <div class="calendar-embed" id="appointmentsCalendarView" hidden>
+                    <div class="calendar-toolbar" id="appointmentsCalendarToolbar">
+                        <button class="secondary-button" id="appointmentsPrevMonthButton" type="button" aria-label="Previous month"><i class="fa-solid fa-chevron-left"></i></button>
+                        <strong id="appointmentsCalendarMonthLabel"></strong>
+                        <button class="secondary-button" id="appointmentsNextMonthButton" type="button" aria-label="Next month"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                    <div class="calendar-grid" id="appointmentsCalendarGrid" aria-live="polite"></div>
+                    <div class="calendar-day-view" id="appointmentsCalendarDayView" hidden>
+                        <div class="calendar-day-view-header">
+                            <button class="secondary-button" id="appointmentsBackToMonthButton" type="button">
+                                <i class="fa-solid fa-arrow-left"></i> Back to month
+                            </button>
+                            <strong id="appointmentsCalendarDayViewLabel"></strong>
+                        </div>
+                        <div class="calendar-day-slots" id="appointmentsCalendarDaySlots" aria-live="polite"></div>
+                    </div>
                 </div>
             </section>
         </section>
@@ -153,12 +168,5 @@
             menuButton.addEventListener('click', () => {
                 const isMobile = window.matchMedia('(max-width: 700px)').matches;
                 const isOpen = isMobile ? !sidebar.classList.contains('open') : document.body.classList.contains('sidebar-collapsed');
-                document.body.classList.toggle('sidebar-collapsed', !isOpen);
-                sidebar.classList.toggle('open', isOpen);
-                menuButton.setAttribute('aria-expanded', String(isOpen));
-                menuButton.setAttribute('aria-label', isOpen ? 'Close navigation' : 'Open navigation');
             });
         }
-    </script>
-</body>
-</html>

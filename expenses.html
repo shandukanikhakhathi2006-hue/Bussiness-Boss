@@ -94,9 +94,9 @@
                 <div class="page-toolbar">
                     <div class="toolbar-group">
                         <div class="toolbar-search"><i class="fa-solid fa-magnifying-glass"></i><input type="text" placeholder="Search expenses" /></div>
-                        <select class="toolbar-select" aria-label="Filter by expense category"><option>All Categories</option><option>Operations</option><option>Marketing</option><option>Payroll</option></select>
+                        <select class="toolbar-select" id="expenseCategoryFilter" aria-label="Filter by expense category"><option value="all">All Categories</option><option value="operations">Operations</option><option value="marketing">Marketing</option><option value="payroll">Payroll</option></select>
                     </div>
-                    <button class="secondary-button" type="button">Filter</button>
+                    <button class="secondary-button" type="button" data-clear-filters>Clear filters</button>
                 </div>
 
                 <div class="table-container">

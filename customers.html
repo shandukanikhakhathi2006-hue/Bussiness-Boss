@@ -107,16 +107,15 @@
             <section class="content-card">
                 <div class="card-header">
                     <div><h2>Customer Directory</h2><p>Search, filter and manage customer records.</p></div>
-                    <button class="secondary-button" type="button">Filters</button>
+                    <button class="secondary-button" type="button" data-clear-filters>Clear filters</button>
                 </div>
 
                 <div class="page-toolbar">
                     <div class="toolbar-group">
                         <div class="toolbar-search"><i class="fa-solid fa-magnifying-glass"></i><input type="text" placeholder="Search customers" /></div>
-                        <select class="toolbar-select" aria-label="Filter by customer group"><option>All Groups</option><option>VIP</option><option>Retail</option><option>Corporate</option></select>
-                        <select class="toolbar-select" aria-label="Filter by customer status"><option>All Status</option><option>Active</option><option>Inactive</option><option>Pending</option></select>
+                        <select class="toolbar-select" id="customerStatusFilter" aria-label="Filter by customer status"><option value="all">All Status</option><option value="active">Active</option><option value="inactive">Inactive</option></select>
                     </div>
-                    <button class="primary-button" type="button"><i class="fa-solid fa-plus"></i> Add Customer</button>
+                    <button class="secondary-button" type="button" data-clear-filters>Clear filters</button>
                 </div>
 
                 <div class="table-container">
