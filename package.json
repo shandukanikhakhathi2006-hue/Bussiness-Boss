@@ -1,0 +1,19 @@
+{
+  "name": "businessboss",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test:finance": "node --test tests/invoiceCalculations.test.mjs tests/invoiceDraftValidator.test.mjs tests/invoiceIssueValidator.test.mjs",
+    "test:rules": "node tests/runRules.mjs",
+    "test": "npm run test:finance && npm run test:backend && npm run test:rules",
+    "test:backend": "node --test tests/invoiceDraftCommand.test.mjs"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "5.0.2",
+    "firebase": "12.18.0",
+    "firebase-tools": "15.29.0"
+  }
+}

@@ -24,7 +24,7 @@
     <link rel="stylesheet" href="dashboard.css">
 </head>
 
-<body>
+<body class="workspace-refined">
 
     <!-- ================= SIDEBAR ================= -->
 
@@ -80,15 +80,12 @@
                 <span>Reports</span>
             </a>
 
-            <a href="appointments.html" class="nav-link">
-                <i class="fa-regular fa-calendar"></i>
-                <span>Calendar</span>
-            </a>
+
 
             <a href="messages.html" class="nav-link">
                 <i class="fa-regular fa-message"></i>
                 <span>Messages</span>
-                <span class="message-count">4</span>
+
             </a>
 
             <a href="settings.html" class="nav-link">
@@ -105,23 +102,7 @@
 
         <!-- Upgrade Card -->
 
-        <div class="upgrade-card">
 
-            <div class="upgrade-icon">
-                <i class="fa-solid fa-crown"></i>
-            </div>
-
-            <h4>Upgrade to Pro</h4>
-
-            <p>
-                Unlock more features and grow your business faster.
-            </p>
-
-            <button>
-                Upgrade Now
-            </button>
-
-        </div>
 
         <div class="sidebar-footer">
             © 2026 Business Boss
@@ -142,12 +123,7 @@
                 <i class="fa-solid fa-bars"></i>
             </button>
 
-            <nav class="main-nav" aria-label="Dashboard navigation">
-                <a href="customers.html" class="main-nav-link">Customers</a>
-                <a href="appointments.html" class="main-nav-link">Appointments</a>
-                <a href="invoices.html" class="main-nav-link">Invoices</a>
-                <a href="expenses.html" class="main-nav-link">Expenses</a>
-            </nav>
+
 
             <div class="header-actions">
                 <div class="search-box">
@@ -157,7 +133,7 @@
                     <input
                         type="text"
                         id="searchInput"
-                        placeholder="Search anything..."
+                        placeholder="Search dashboard"
                         aria-label="Search dashboard records"
                         aria-keyshortcuts="Control+K"
                     >
@@ -171,7 +147,7 @@
                     <div class="notifications-menu">
                         <button class="header-icon" id="notificationsButton" type="button" aria-label="View notifications" aria-expanded="false" aria-controls="notificationsPanel">
                             <i class="fa-regular fa-bell"></i>
-                            <span class="notification-dot" id="notificationDot"></span>
+                            <span class="notification-dot" id="notificationDot" hidden></span>
                         </button>
                         <div class="notifications-panel" id="notificationsPanel" role="dialog" aria-label="Notifications" hidden>
                             <div class="notifications-header"><strong>Notifications</strong><span id="notificationsSummary"></span></div>
@@ -216,9 +192,7 @@
 
                     </div>
 
-                    <button class="header-icon" id="logoutButton" type="button" aria-label="Log out" title="Log out">
-                        <i class="fa-solid fa-right-from-bracket"></i>
-                    </button>
+
 
                 </div>
             </div>
@@ -236,15 +210,15 @@
 
                 <div>
                     <p class="date">
-                        Monday, August 31, 2026
+                        Business workspace
                     </p>
 
                     <h1>
-                        Welcome back, Boss 👋
+                        Business overview
                     </h1>
 
                     <p class="welcome-text">
-                        Here's what's happening with your business today.
+                        Your customers, schedule and finances at a glance.
                     </p>
                 </div>
 
@@ -268,15 +242,13 @@
                             <i class="fa-solid fa-users"></i>
                         </div>
 
-                        <span class="trend positive" data-trend="customers">
-                            0%
-                        </span>
+                        <span class="trend positive" data-trend="customers"></span>
 
                     </div>
 
                     <p>Total Customers</p>
 
-                    <h2>1,248</h2>
+                    <h2>—</h2>
 
                     <small>
                         <i class="fa-solid fa-arrow-up"></i>
@@ -294,15 +266,13 @@
                             <i class="fa-solid fa-calendar-check"></i>
                         </div>
 
-                        <span class="trend positive" data-trend="bookings">
-                            0%
-                        </span>
+                        <span class="trend positive" data-trend="bookings"></span>
 
                     </div>
 
                     <p>Today's Appointments</p>
 
-                    <h2>24</h2>
+                    <h2>—</h2>
 
                     <small>
                         <i class="fa-solid fa-arrow-up"></i>
@@ -320,15 +290,13 @@
                             <i class="fa-solid fa-money-bill-wave"></i>
                         </div>
 
-                        <span class="trend positive" data-trend="revenue">
-                            0%
-                        </span>
+                        <span class="trend positive" data-trend="revenue"></span>
 
                     </div>
 
                     <p>Monthly Revenue</p>
 
-                    <h2>R45,320</h2>
+                    <h2>—</h2>
 
                     <small>
                         <i class="fa-solid fa-arrow-up"></i>
@@ -346,15 +314,13 @@
                             <i class="fa-solid fa-file-invoice-dollar"></i>
                         </div>
 
-                        <span class="trend positive" data-trend="outstanding">
-                            0%
-                        </span>
+                        <span class="trend positive" data-trend="outstanding"></span>
 
                     </div>
 
                     <p>Outstanding Invoices</p>
 
-                    <h2>R8,950</h2>
+                    <h2>—</h2>
 
                     <small>
                         vs last month
@@ -371,15 +337,13 @@
                             <i class="fa-solid fa-wallet"></i>
                         </div>
 
-                        <span class="trend negative" data-trend="expenses">
-                            0%
-                        </span>
+                        <span class="trend negative" data-trend="expenses"></span>
 
                     </div>
 
                     <p>Total Expenses</p>
 
-                    <h2>R12,840</h2>
+                    <h2>—</h2>
 
                     <small>
                         vs last month
@@ -394,17 +358,10 @@
 
             <section class="section">
 
-                <div class="section-header">
-
-                    <div>
-                        <h2>Quick Actions</h2>
-                        <p>Manage your business quickly.</p>
-                    </div>
-
-                </div>
 
 
-                <div class="quick-actions">
+
+                <div class="quick-actions" role="group" aria-label="Quick actions">
 
                     <button class="action-card" type="button">
 
@@ -414,10 +371,10 @@
 
                         <div>
                             <strong>Create Invoice</strong>
-                            <span>Generate a new invoice</span>
+
                         </div>
 
-                        <i class="fa-solid fa-chevron-right arrow"></i>
+
 
                     </button>
 
@@ -430,10 +387,10 @@
 
                         <div>
                             <strong>New Appointment</strong>
-                            <span>Schedule an appointment</span>
+
                         </div>
 
-                        <i class="fa-solid fa-chevron-right arrow"></i>
+
 
                     </button>
 
@@ -446,10 +403,10 @@
 
                         <div>
                             <strong>Add Customer</strong>
-                            <span>Register a new customer</span>
+
                         </div>
 
-                        <i class="fa-solid fa-chevron-right arrow"></i>
+
 
                     </button>
 
@@ -462,10 +419,10 @@
 
                         <div>
                             <strong>Record Payment</strong>
-                            <span>Record customer payment</span>
+
                         </div>
 
-                        <i class="fa-solid fa-chevron-right arrow"></i>
+
 
                     </button>
 
@@ -508,148 +465,7 @@
 
                         </thead>
 
-                        <tbody id="appointmentTableBody">
-
-                            <tr>
-                                <td>09:00 AM</td>
-
-                                <td>
-                                    <div class="customer">
-                                        <div class="customer-avatar">
-                                            JD
-                                        </div>
-                                        <span>John Doe</span>
-                                    </div>
-                                </td>
-
-                                <td>Consultation</td>
-
-                                <td>
-                                    <span class="status completed">
-                                        Completed
-                                    </span>
-                                </td>
-
-                                <td>
-                                    <button class="view-button">
-                                        View Details
-                                    </button>
-                                </td>
-                            </tr>
-
-
-                            <tr>
-                                <td>10:30 AM</td>
-
-                                <td>
-                                    <div class="customer">
-                                        <div class="customer-avatar">
-                                            JS
-                                        </div>
-                                        <span>Jane Smith</span>
-                                    </div>
-                                </td>
-
-                                <td>Website Design</td>
-
-                                <td>
-                                    <span class="status pending">
-                                        Pending
-                                    </span>
-                                </td>
-
-                                <td>
-                                    <button class="view-button">
-                                        View Details
-                                    </button>
-                                </td>
-                            </tr>
-
-
-                            <tr>
-                                <td>12:00 PM</td>
-
-                                <td>
-                                    <div class="customer">
-                                        <div class="customer-avatar">
-                                            MJ
-                                        </div>
-                                        <span>Michael Johnson</span>
-                                    </div>
-                                </td>
-
-                                <td>Development</td>
-
-                                <td>
-                                    <span class="status pending">
-                                        Pending
-                                    </span>
-                                </td>
-
-                                <td>
-                                    <button class="view-button">
-                                        View Details
-                                    </button>
-                                </td>
-                            </tr>
-
-
-                            <tr>
-                                <td>02:00 PM</td>
-
-                                <td>
-                                    <div class="customer">
-                                        <div class="customer-avatar">
-                                            SW
-                                        </div>
-                                        <span>Sarah Williams</span>
-                                    </div>
-                                </td>
-
-                                <td>Marketing Review</td>
-
-                                <td>
-                                    <span class="status cancelled">
-                                        Cancelled
-                                    </span>
-                                </td>
-
-                                <td>
-                                    <button class="view-button">
-                                        View Details
-                                    </button>
-                                </td>
-                            </tr>
-
-
-                            <tr>
-                                <td>03:30 PM</td>
-
-                                <td>
-                                    <div class="customer">
-                                        <div class="customer-avatar">
-                                            DB
-                                        </div>
-                                        <span>David Brown</span>
-                                    </div>
-                                </td>
-
-                                <td>Support Session</td>
-
-                                <td>
-                                    <span class="status completed">
-                                        Completed
-                                    </span>
-                                </td>
-
-                                <td>
-                                    <button class="view-button">
-                                        View Details
-                                    </button>
-                                </td>
-                            </tr>
-
-                        </tbody>
+                        <tbody id="appointmentTableBody"><tr><td colspan="10" class="loading-cell" role="status">Loading records…</td></tr></tbody>
 
                     </table>
 
@@ -717,12 +533,12 @@
                         <label class="sr-only" for="periodSelect">Performance period</label>
                         <select id="periodSelect">
                             <option>Today</option>
-                            <option>Tomorrow</option>
+
                             <option>This Week</option>
-                            <option>Next Week</option>
+
                             <option>Last Week</option>
                             <option selected>This Month</option>
-                            <option>Next Month</option>
+
                             <option>Last Month</option>
                             <option>This Year</option>
                         </select>
@@ -782,7 +598,7 @@
                             >
 
                                 <polyline id="revenueChartLine"
-                                    points="0,190 100,155 200,170 300,105 400,120 500,65 600,80 700,35"
+                                    points=""
                                     fill="none"
                                     stroke="currentColor"
                                     stroke-width="4"
@@ -829,68 +645,9 @@
                     </div>
 
 
-                    <div class="donut-container">
+                    <div class="service-total"><span>Total revenue</span><strong id="serviceRevenueTotal">—</strong></div>
+<div class="service-list" id="serviceRevenueList"><p class="loading-cell" role="status">Loading service breakdown…</p></div>
 
-                        <div class="donut">
-
-                            <div class="donut-center">
-                                <strong id="serviceRevenueTotal">R0</strong>
-                                <span>Total Revenue</span>
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="service-list" id="serviceRevenueList">
-
-                        <div>
-                            <span>
-                                <i class="service-dot blue-dot"></i>
-                                Consultation
-                            </span>
-
-                            <strong>33%</strong>
-                        </div>
-
-                        <div>
-                            <span>
-                                <i class="service-dot purple-dot"></i>
-                                Development
-                            </span>
-
-                            <strong>32%</strong>
-                        </div>
-
-                        <div>
-                            <span>
-                                <i class="service-dot green-dot"></i>
-                                Design
-                            </span>
-
-                            <strong>18%</strong>
-                        </div>
-
-                        <div>
-                            <span>
-                                <i class="service-dot orange-dot"></i>
-                                Marketing
-                            </span>
-
-                            <strong>10%</strong>
-                        </div>
-
-                        <div>
-                            <span>
-                                <i class="service-dot red-dot"></i>
-                                Support
-                            </span>
-
-                            <strong>7%</strong>
-                        </div>
-
-                    </div>
 
                 </section>
 
@@ -932,88 +689,7 @@
 
                         </thead>
 
-                        <tbody id="invoiceTableBody">
-
-                            <tr>
-                                <td><strong>INV-1005</strong></td>
-                                <td>John Doe</td>
-                                <td>R5,600</td>
-                                <td>Sep 05, 2026</td>
-                                <td>
-                                    <span class="status completed">Paid</span>
-                                </td>
-                                <td>
-                                    <button class="view-button">
-                                        View
-                                    </button>
-                                </td>
-                            </tr>
-
-
-                            <tr>
-                                <td><strong>INV-1004</strong></td>
-                                <td>Jane Smith</td>
-                                <td>R8,250</td>
-                                <td>Sep 07, 2026</td>
-                                <td>
-                                    <span class="status pending">Pending</span>
-                                </td>
-                                <td>
-                                    <button class="view-button">
-                                        View
-                                    </button>
-                                </td>
-                            </tr>
-
-
-                            <tr>
-                                <td><strong>INV-1003</strong></td>
-                                <td>Michael Johnson</td>
-                                <td>R12,500</td>
-                                <td>Sep 10, 2026</td>
-                                <td>
-                                    <span class="status overdue">Overdue</span>
-                                </td>
-                                <td>
-                                    <button class="view-button">
-                                        View
-                                    </button>
-                                </td>
-                            </tr>
-
-
-                            <tr>
-                                <td><strong>INV-1002</strong></td>
-                                <td>Sarah Williams</td>
-                                <td>R3,750</td>
-                                <td>Aug 28, 2026</td>
-                                <td>
-                                    <span class="status completed">Paid</span>
-                                </td>
-                                <td>
-                                    <button class="view-button">
-                                        View
-                                    </button>
-                                </td>
-                            </tr>
-
-
-                            <tr>
-                                <td><strong>INV-1001</strong></td>
-                                <td>David Brown</td>
-                                <td>R6,850</td>
-                                <td>Sep 12, 2026</td>
-                                <td>
-                                    <span class="status pending">Pending</span>
-                                </td>
-                                <td>
-                                    <button class="view-button">
-                                        View
-                                    </button>
-                                </td>
-                            </tr>
-
-                        </tbody>
+                        <tbody id="invoiceTableBody"><tr><td colspan="10" class="loading-cell" role="status">Loading records…</td></tr></tbody>
 
                     </table>
 

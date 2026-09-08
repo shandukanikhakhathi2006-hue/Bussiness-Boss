@@ -25,7 +25,22 @@
       ".gitignore",
       ".agents/**",
       "skills-lock.json",
-      "**/.*"
+      "**/.*",
+      "node_modules/**",
+      "tests/**",
+      "package.json",
+      "package-lock.json",
+      "**/*debug*.log"
     ]
+  },
+  "emulators": {
+    "firestore": {
+      "host": "127.0.0.1",
+      "port": 8080
+    },
+    "ui": {
+      "enabled": false
+    },
+    "singleProjectMode": true
   }
 }

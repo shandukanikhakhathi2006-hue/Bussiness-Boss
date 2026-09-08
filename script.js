@@ -1,18 +1,14 @@
+import { initPaymentsPage } from './js/features/payments.js';
+import { initInvoicesPage } from './js/features/invoices.js';
+import { initAppointmentsPage } from './js/features/appointments.js';
+import { getCustomerSnapshot, initCustomersPage } from './js/features/customers.js';
+import { getCurrentUser, getUserProfile, requireAuthenticatedUser, initAuthPages, initLogoutButtons, getFirebaseErrorMessage } from './js/firebase/auth.js';
+import { firestore } from './js/firebase/config.js';
+import { getFirstRecordDate, isSameDay, getDateRange, getPeriodGranularity } from './js/utils/dates.js';
+import { formatCurrency, money, formatAxisValue } from './js/utils/currency.js';
+import { isPaidInvoice, buildPeriodSeries, getPercentageChange, getPeriodTotals, getDayTotals, sumAmounts, calculateProfit } from './js/utils/calculations.js';
 import {
-	getApp,
-	getApps,
-	initializeApp
-} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js';
-import {
-	getAuth,
-	GoogleAuthProvider,
-	onAuthStateChanged,
-	signOut,
-	signInWithEmailAndPassword,
-	signInWithPopup,
-	createUserWithEmailAndPassword,
 	updateProfile,
-	sendPasswordResetEmail,
 	updateEmail,
 	updatePassword,
 	reauthenticateWithCredential,
@@ -25,45 +21,11 @@ import {
 	doc,
 	getDoc,
 	getDocs,
-	getFirestore,
 	query,
 	serverTimestamp,
 	setDoc,
 	where
 } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
-
-const firebaseConfig = {
-	apiKey: 'AIzaSyCCOdG3HgBJ6-BGxS6nA2iaVBwaaok3YSs',
-	authDomain: 'business-boss-1b871.firebaseapp.com',
-	projectId: 'business-boss-1b871',
-	storageBucket: 'business-boss-1b871.firebasestorage.app',
-	messagingSenderId: '583044689706',
-	appId: '1:583044689706:web:3496dc433aee05c161f853',
-	measurementId: 'G-K6T8RSWBLP'
-};
-
-const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
-const auth = getAuth(firebaseApp);
-const firestore = getFirestore(firebaseApp);
-const googleProvider = new GoogleAuthProvider();
-
-const getFirebaseErrorMessage = (error) => {
-	const messages = {
-		'auth/email-already-in-use': 'An account already exists for this email.',
-		'auth/invalid-credential': 'The email or password is incorrect.',
-		'auth/invalid-email': 'Enter a valid email address.',
-		'auth/missing-password': 'Enter your password.',
-		'auth/weak-password': 'Choose a stronger password.',
-		'auth/popup-closed-by-user': 'Google sign-in was cancelled.',
-		'auth/popup-blocked': 'Allow popups in your browser to use Google Sign-In.',
-		'auth/unauthorized-domain': 'This website domain is not authorized for Firebase Sign-In.',
-		'auth/wrong-password': 'Your current password is incorrect.',
-		'auth/missing-password': 'Enter your current password.',
-		'auth/requires-recent-login': 'Please log out and log back in, then try again.',
-		'auth/too-many-requests': 'Too many attempts. Please wait a moment and try again.'
-	};
-	return messages[error.code] || 'Something went wrong. Please try again.';
-};
 
 // Generates the next human-readable reference number (e.g. INV-00001, then INV-00002) for a
 // collection, scoped to the current user's own records so one account's numbering never
@@ -79,119 +41,6 @@ const generateNextReferenceId = async (collectionName, fieldName, prefix, user) 
 	return `${prefix}-${String(highestNumber + 1).padStart(5, '0')}`;
 };
 
-// Shared helper: converts a Firestore Timestamp, JS Date, number, or string into a JS Date.
-// "YYYY-MM-DD" strings are parsed as a LOCAL date (not UTC) so a booking entered for one day
-// never displays as the previous day for visitors in timezones behind UTC.
-const parseFlexibleDate = (value) => {
-	if (!value) return null;
-	if (typeof value.toDate === 'function') return value.toDate();
-	if (typeof value.seconds === 'number') return new Date(value.seconds * 1000);
-	if (typeof value === 'string') {
-		const dateOnlyMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-		if (dateOnlyMatch) {
-			const [, year, month, day] = dateOnlyMatch;
-			return new Date(Number(year), Number(month) - 1, Number(day));
-		}
-	}
-	const parsed = new Date(value);
-	return Number.isNaN(parsed.getTime()) ? null : parsed;
-};
-
-// Shared helper: finds the first usable date among several possible field names on a record.
-const getFirstRecordDate = (record, fields) => {
-	for (const field of fields) {
-		const date = parseFlexibleDate(record[field]);
-		if (date) return date;
-	}
-	return null;
-};
-
-// Shared helper used by both the dashboard page and the other pages (customers, reports, etc.)
-// so "paid" is defined once, consistently, in one place.
-const isPaidInvoice = (invoice) => String(invoice.status || '').trim().toLowerCase() === 'paid';
-
-// Compares two JS Dates by calendar day using their LOCAL year/month/date components (never
-// UTC), so "today" always means the visitor's actual today regardless of timezone offset.
-const isSameDay = (first, second) => Boolean(first) && Boolean(second)
-	&& first.getFullYear() === second.getFullYear()
-	&& first.getMonth() === second.getMonth()
-	&& first.getDate() === second.getDate();
-
-// Returns a {start, end} range (end EXCLUSIVE) for a named period, using native Date
-// arithmetic so month/year rollovers, leap years, and varying month lengths are handled
-// correctly by the JS engine itself — never a fixed day-count addition, never a hard-coded
-// month or year, so the same code keeps working correctly in any future year.
-const getDateRange = (period) => {
-	const now = new Date();
-	const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
-	const addDays = (date, days) => { const result = new Date(date); result.setDate(result.getDate() + days); return result; };
-	const startOfWeek = (date) => addDays(startOfDay(date), -date.getDay());
-
-	if (period === 'Today') { const start = startOfDay(now); return { start, end: addDays(start, 1) }; }
-	if (period === 'Tomorrow') { const start = addDays(startOfDay(now), 1); return { start, end: addDays(start, 1) }; }
-	if (period === 'This Week') { const start = startOfWeek(now); return { start, end: addDays(start, 7) }; }
-	if (period === 'Next Week') { const start = addDays(startOfWeek(now), 7); return { start, end: addDays(start, 7) }; }
-	if (period === 'Last Week') { const start = addDays(startOfWeek(now), -7); return { start, end: addDays(start, 7) }; }
-	if (period === 'Next Month') { const start = new Date(now.getFullYear(), now.getMonth() + 1, 1); return { start, end: new Date(now.getFullYear(), now.getMonth() + 2, 1) }; }
-	if (period === 'Last Month') { const start = new Date(now.getFullYear(), now.getMonth() - 1, 1); return { start, end: new Date(now.getFullYear(), now.getMonth(), 1) }; }
-	if (period === 'This Year') { const start = new Date(now.getFullYear(), 0, 1); return { start, end: new Date(now.getFullYear() + 1, 0, 1) }; }
-	// "This Month" and any unrecognized option fall back to the current calendar month.
-	const start = new Date(now.getFullYear(), now.getMonth(), 1);
-	return { start, end: new Date(now.getFullYear(), now.getMonth() + 1, 1) };
-};
-
-// Chooses how a period's chart is bucketed along the x-axis: hourly for a single day, by
-// weekday for a week, by day-of-month for a month, or by month for a year.
-const getPeriodGranularity = (period) => {
-	if (period === 'Today' || period === 'Tomorrow') return 'hour';
-	if (period === 'This Week' || period === 'Next Week' || period === 'Last Week') return 'weekday';
-	if (period === 'This Year') return 'month';
-	return 'day-of-month';
-};
-
-// Builds {labels, values} for a chart across [range.start, range.end) at the given
-// granularity. Every bucket in the range is included even when empty (value 0), so a period
-// with no data renders a flat zero line instead of silently reusing another period's shape.
-const buildPeriodSeries = (records, range, granularity, dateFields, getValue) => {
-	const buckets = [];
-	if (granularity === 'hour') {
-		for (let hour = 0; hour < 24; hour += 1) {
-			const start = new Date(range.start.getFullYear(), range.start.getMonth(), range.start.getDate(), hour);
-			const end = new Date(range.start.getFullYear(), range.start.getMonth(), range.start.getDate(), hour + 1);
-			buckets.push({ label: `${String(hour).padStart(2, '0')}:00`, start, end });
-		}
-	} else if (granularity === 'weekday' || granularity === 'day-of-month') {
-		let cursor = new Date(range.start);
-		while (cursor < range.end) {
-			const end = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + 1);
-			const label = granularity === 'weekday'
-				? new Intl.DateTimeFormat('en-ZA', { weekday: 'short' }).format(cursor)
-				: String(cursor.getDate());
-			buckets.push({ label, start: new Date(cursor), end });
-			cursor = end;
-		}
-	} else {
-		let cursor = new Date(range.start.getFullYear(), range.start.getMonth(), 1);
-		while (cursor < range.end) {
-			const end = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
-			buckets.push({ label: new Intl.DateTimeFormat('en-ZA', { month: 'short' }).format(cursor), start: new Date(cursor), end });
-			cursor = end;
-		}
-	}
-	const values = buckets.map((bucket) => records.reduce((sum, record) => {
-		const date = getFirstRecordDate(record, dateFields);
-		return date && date >= bucket.start && date < bucket.end ? sum + getValue(record) : sum;
-	}, 0));
-	// Thin the visible labels to roughly 8 evenly-spaced ticks so a 28-31 day month doesn't
-	// cram every single day's label into the same space the old fixed 8-point chart used.
-	const labelInterval = Math.max(1, Math.ceil(buckets.length / 8));
-	const labels = buckets.map((bucket, index) => (index % labelInterval === 0 || index === buckets.length - 1 ? bucket.label : ''));
-	return { labels, values };
-};
-
-// Reduces a full name (or an email address, as a fallback) to just its first word, so the
-// compact header profile chip stays a consistent width no matter how long someone's full
-// name is. The full name still shows in the profile dropdown and on the Settings page.
 const getFirstDisplayName = (nameOrEmail) => {
 	const value = String(nameOrEmail || '').trim();
 	if (!value) return 'User';
@@ -209,11 +58,6 @@ const getNiceAxisMaximum = (value) => {
 	const niceNormalized = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
 	return niceNormalized * magnitude;
 };
-
-// Axis label formatting using the same convention as every other money figure in the app
-// (Number.toLocaleString(), no K/M abbreviation) so a y-axis reads "0 / 500 / 1 000 / 1 500"
-// consistently with the rest of BusinessBoss.
-const formatAxisValue = (value) => Math.round(value).toLocaleString();
 
 // Shared in-app dialog that replaces window.prompt() for creating/editing records.
 // Renders a small centered form (title + labeled fields + Save/Cancel) instead of the
@@ -531,7 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	const handleUpgradeClick = async () => {
 		if (upgradeInProgress) return;
 
-		const user = auth.currentUser;
+		const user = getCurrentUser();
 		if (!user) {
 			showMessage('Please log in to upgrade your plan.', 'error');
 			return;
@@ -569,105 +413,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		learnMoreLink.href = 'features.html';
 	}
 
-	const signupForm = document.querySelector('.signup-form');
-	if (signupForm) {
-		const password = signupForm.querySelector('#password');
-		const confirmPassword = signupForm.querySelector('#confirm-password');
-
-		const validatePasswords = () => {
-			if (!password || !confirmPassword) return true;
-			const passwordsMatch = password.value === confirmPassword.value;
-			confirmPassword.setCustomValidity(passwordsMatch ? '' : 'Passwords do not match.');
-			return passwordsMatch;
-		};
-
-		password?.addEventListener('input', validatePasswords);
-		confirmPassword?.addEventListener('input', validatePasswords);
-
-		signupForm.addEventListener('submit', async (event) => {
-			event.preventDefault();
-
-			if (!validatePasswords()) {
-				confirmPassword.reportValidity();
-				showMessage('Passwords do not match.', 'error');
-				return;
-			}
-
-			const formData = new FormData(signupForm);
-
-			try {
-				const credentials = await createUserWithEmailAndPassword(
-					auth,
-					formData.get('email'),
-					formData.get('password')
-				);
-				await updateProfile(credentials.user, { displayName: formData.get('full-name') });
-				await setDoc(doc(firestore, 'users', credentials.user.uid), {
-					fullName: formData.get('full-name'),
-					email: formData.get('email'),
-					createdAt: serverTimestamp()
-				});
-				showMessage('Account created. Redirecting you to login...');
-				window.setTimeout(() => { window.location.href = 'login.html'; }, 800);
-			} catch (error) {
-				showMessage(getFirebaseErrorMessage(error), 'error');
-			}
-		});
-	}
-
-	const loginForm = document.querySelector('.login-container');
-	if (loginForm) {
-		loginForm.addEventListener('submit', async (event) => {
-			event.preventDefault();
-			const email = loginForm.querySelector('#email').value.trim();
-			const password = loginForm.querySelector('#password').value;
-
-			try {
-				await signInWithEmailAndPassword(auth, email, password);
-				window.location.href = 'dashboard.html';
-			} catch (error) {
-				showMessage(getFirebaseErrorMessage(error), 'error');
-			}
-		});
-	}
-
-	const forgotPasswordForm = document.querySelector('.forgot-password-form');
-	if (forgotPasswordForm) {
-		forgotPasswordForm.addEventListener('submit', async (event) => {
-			event.preventDefault();
-			const email = forgotPasswordForm.querySelector('#email').value.trim();
-			try {
-				await sendPasswordResetEmail(auth, email);
-				showMessage('Password reset instructions have been sent. Check your inbox and spam folder.');
-				forgotPasswordForm.reset();
-			} catch (error) {
-				showMessage(getFirebaseErrorMessage(error), 'error');
-			}
-		});
-	}
-
-	document.querySelectorAll('.google-btn').forEach((button) => {
-		button.type = 'button';
-		button.addEventListener('click', async () => {
-			try {
-				await signInWithPopup(auth, googleProvider);
-				const user = auth.currentUser;
-				if (user) {
-					const userDocRef = doc(firestore, 'users', user.uid);
-					const existingProfile = await getDoc(userDocRef);
-					await setDoc(userDocRef, {
-						fullName: user.displayName || '',
-						email: user.email || '',
-						...(existingProfile.exists() ? {} : { createdAt: serverTimestamp() }),
-						updatedAt: serverTimestamp()
-					}, { merge: true });
-				}
-				window.location.href = 'dashboard.html';
-			} catch (error) {
-				showMessage(getFirebaseErrorMessage(error), 'error');
-			}
-		});
-	});
+	initAuthPages(showMessage);
+	initLogoutButtons(showMessage);
 
 	const contactForm = document.querySelector('.contact-form form');
 	if (contactForm) {
@@ -694,7 +441,6 @@ document.addEventListener('DOMContentLoaded', () => {
 	if (dashboard) {
 		const menuButton = document.querySelector('#menuButton');
 		const sidebar = document.querySelector('#sidebar');
-		const logoutButton = document.querySelector('#logoutButton');
 		const viewAllInvoicesButton = document.querySelector('#viewAllInvoicesButton');
 		const invoiceTableBody = document.querySelector('#invoiceTableBody');
 		const viewCalendarButton = document.querySelector('#viewCalendarButton');
@@ -716,7 +462,6 @@ document.addEventListener('DOMContentLoaded', () => {
 		const profileDropdown = document.querySelector('#profileDropdown');
 		const profileDropdownName = document.querySelector('#profileDropdownName');
 		const profileDropdownEmail = document.querySelector('#profileDropdownEmail');
-		const profileDropdownLogout = document.querySelector('#profileDropdownLogout');
 		const revenueChartLine = document.querySelector('#revenueChartLine');
 		const revenueChartLabels = document.querySelector('#revenueChartLabels');
 		const revenueYAxis = dashboard.querySelector('.chart .y-axis');
@@ -828,11 +573,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		const getRecordDate = (record, fields = ['createdAt']) => getFirstRecordDate(record, fields);
 
-		const getPercentageChange = (current, previous) => {
-			if (previous === 0) return current === 0 ? 0 : 100;
-			return Math.round(((current - previous) / Math.abs(previous)) * 100);
-		};
-
 		const formatTrend = (change) => `${change > 0 ? '+' : ''}${change}%`;
 
 		const updateTrend = (key, change) => {
@@ -851,33 +591,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			trend.classList.toggle('red-text', change < 0);
 		};
 
-		const getPeriodTotals = (records, getValue, dateFields) => {
-			const now = new Date();
-			const currentMonth = now.getMonth();
-			const currentYear = now.getFullYear();
-			const previousDate = new Date(currentYear, currentMonth - 1, 1);
-			return records.reduce((totals, record) => {
-				const date = getRecordDate(record, dateFields);
-				if (!date) return totals;
-				const value = getValue(record);
-				if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) totals.current += value;
-				if (date.getMonth() === previousDate.getMonth() && date.getFullYear() === previousDate.getFullYear()) totals.previous += value;
-				return totals;
-			}, { current: 0, previous: 0 });
-		};
-
-		const getDayTotals = (records, getValue, dateFields) => {
-			const today = new Date();
-			const yesterday = new Date(today);
-			yesterday.setDate(today.getDate() - 1);
-			return records.reduce((totals, record) => {
-				const date = getRecordDate(record, dateFields);
-				if (isSameDay(date, today)) totals.current += getValue(record);
-				if (isSameDay(date, yesterday)) totals.previous += getValue(record);
-				return totals;
-			}, { current: 0, previous: 0 });
-		};
-
 		// Renders the revenue chart, Y-axis, and Business Performance figures for whichever
 		// period is currently selected in #periodSelect, using the cached invoice/expense data
 		// (no refetch needed when the dropdown changes).
@@ -890,14 +603,14 @@ document.addEventListener('DOMContentLoaded', () => {
 			const expenseSeries = buildPeriodSeries(latestExpenseData, range, granularity, ['createdAt', 'date'], (expense) => Number(expense.amount || 0));
 			const revenueTotal = revenueSeries.values.reduce((sum, value) => sum + value, 0);
 			const expenseTotal = expenseSeries.values.reduce((sum, value) => sum + value, 0);
-			const profit = revenueTotal - expenseTotal;
+			const profit = calculateProfit(revenueTotal, expenseTotal);
 
 			if (dashboard.querySelector('[data-performance-value="revenue"]')) {
-				dashboard.querySelector('[data-performance-value="revenue"]').textContent = `R${revenueTotal.toLocaleString()}`;
-				dashboard.querySelector('[data-performance-value="expenses"]').textContent = `R${expenseTotal.toLocaleString()}`;
-				dashboard.querySelector('[data-performance-value="profit"]').textContent = `R${profit.toLocaleString()}`;
+				dashboard.querySelector('[data-performance-value="revenue"]').textContent = formatCurrency(revenueTotal);
+				dashboard.querySelector('[data-performance-value="expenses"]').textContent = formatCurrency(expenseTotal);
+				dashboard.querySelector('[data-performance-value="profit"]').textContent = formatCurrency(profit);
 			}
-			if (serviceRevenueTotal) serviceRevenueTotal.textContent = `R${revenueTotal.toLocaleString()}`;
+			if (serviceRevenueTotal) serviceRevenueTotal.textContent = formatCurrency(revenueTotal);
 
 			const rawMaximum = Math.max(...revenueSeries.values, 0);
 			const axisMaximum = getNiceAxisMaximum(rawMaximum);
@@ -1001,7 +714,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					<tr>
 						<td><strong>${escapeHtml(invoiceNumber)}</strong></td>
 						<td>${escapeHtml(invoice.customerName || invoice.customer || 'Customer')}</td>
-						<td>R${Number(invoice.amount || 0).toLocaleString()}</td>
+						<td>${money(invoice.amount)}</td>
 						<td>${escapeHtml(invoice.dueDate || invoice.date || 'Not set')}</td>
 						<td><span class="status ${getInvoiceStatusClass(status)}">${escapeHtml(status)}</span></td>
 				<td><button class="view-button" type="button" data-dashboard-link="invoices.html">View invoices</button></td>
@@ -1089,7 +802,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		const updateDashboardData = async (user) => {
 			try {
 				const [customers, bookings, invoices, expenses] = await Promise.all([
-					getUserRecords('customers', user),
+					getCustomerSnapshot(user),
 					getUserRecords('bookings', user),
 					getUserRecords('invoices', user),
 					getUserRecords('expenses', user)
@@ -1117,15 +830,15 @@ document.addEventListener('DOMContentLoaded', () => {
 					...(activeTodayAppointments.length ? [{ title: `${activeTodayAppointments.length} appointment${activeTodayAppointments.length === 1 ? '' : 's'} today`, detail: 'Open the schedule to see your upcoming bookings.', link: 'appointments.html', icon: 'fa-calendar-check' }] : [])
 				]);
 				const profitTotals = {
-					current: revenueTotals.current - expenseTotals.current,
-					previous: revenueTotals.previous - expenseTotals.previous
+					current: calculateProfit(revenueTotals.current, expenseTotals.current),
+					previous: calculateProfit(revenueTotals.previous, expenseTotals.previous)
 				};
 
 				if (statCards[0]) statCards[0].querySelector('h2').textContent = customers.size.toLocaleString();
 				if (statCards[1]) statCards[1].querySelector('h2').textContent = bookingTotals.current.toLocaleString();
-				if (statCards[2]) statCards[2].querySelector('h2').textContent = `R${revenueTotals.current.toLocaleString()}`;
-				if (statCards[3]) statCards[3].querySelector('h2').textContent = `R${outstandingTotals.current.toLocaleString()}`;
-				if (statCards[4]) statCards[4].querySelector('h2').textContent = `R${expenseTotals.current.toLocaleString()}`;
+				if (statCards[2]) statCards[2].querySelector('h2').textContent = formatCurrency(revenueTotals.current);
+				if (statCards[3]) statCards[3].querySelector('h2').textContent = formatCurrency(outstandingTotals.current);
+				if (statCards[4]) statCards[4].querySelector('h2').textContent = formatCurrency(expenseTotals.current);
 
 				updateTrend('customers', getPercentageChange(customerTotals.current, customerTotals.previous));
 				updateTrend('bookings', getPercentageChange(bookingTotals.current, bookingTotals.previous));
@@ -1154,16 +867,12 @@ document.addEventListener('DOMContentLoaded', () => {
 			await updateDashboardData(user);
 		};
 
-		onAuthStateChanged(auth, async (user) => {
-			if (!user) {
-				window.location.href = 'login.html';
-				return;
-			}
+		requireAuthenticatedUser(async (user) => {
 			const profile = document.querySelector('.profile-info strong');
 			if (profile) profile.textContent = getFirstDisplayName(user.displayName || user.email);
 			if (profileDropdownName) profileDropdownName.textContent = user.displayName || 'Business Manager';
 			if (profileDropdownEmail) profileDropdownEmail.textContent = user.email || 'Signed-in account';
-			const profileDocument = await getDoc(doc(firestore, 'users', user.uid));
+			const profileDocument = await getUserProfile(user);
 			renderProfileAvatar(user, profileDocument.data()?.photoURL || user.photoURL);
 			renderUpgradeCard(profileDocument.data()?.plan === 'pro');
 			await updateDashboardData(user);
@@ -1183,17 +892,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			menuButton.setAttribute('aria-expanded', String(!isCollapsed));
 		});
 
-		const handleLogout = async () => {
-			try {
-				await signOut(auth);
-				window.location.href = 'login.html';
-			} catch (error) {
-				showMessage('You could not be logged out. Please try again.', 'error');
-			}
-		};
-
-		logoutButton?.addEventListener('click', handleLogout);
-		profileDropdownLogout?.addEventListener('click', handleLogout);
 		profileAvatarUpload?.addEventListener('click', (event) => event.stopPropagation());
 
 		profileMenuButton?.addEventListener('click', () => {
@@ -1229,7 +927,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		profileImageInput?.addEventListener('change', async (event) => {
 			const file = event.target.files?.[0];
-			const user = auth.currentUser;
+			const user = getCurrentUser();
 			if (!file || !user) return;
 			if (!file.type.startsWith('image/')) {
 				showMessage('Please choose a PNG, JPG, or WebP image.', 'error');
@@ -1338,7 +1036,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		document.querySelectorAll('.action-card').forEach((button) => {
 			button.addEventListener('click', async () => {
-				const user = auth.currentUser;
+				const user = getCurrentUser();
 				if (!user) return;
 				const action = button.textContent.trim();
 				const quickActions = {
@@ -1401,34 +1099,12 @@ document.addEventListener('DOMContentLoaded', () => {
 		const genericPaginationContainer = pageShell.querySelector('.pagination:not(#appointmentsPagination)');
 		let pageCurrentPage = 1;
 		const GENERIC_PAGE_SIZE = 10;
-		// Appointments page only (all selectors below resolve to null on other pages).
-		const appointmentPeriodSelect = pageShell.querySelector('#appointmentPeriodFilter');
-		const appointmentsCalendarViewButton = pageShell.querySelector('#appointmentsCalendarViewButton');
-		const appointmentsTableView = pageShell.querySelector('#appointmentsTableView');
-		const appointmentsCalendarView = pageShell.querySelector('#appointmentsCalendarView');
-		const appointmentsCalendarToolbar = pageShell.querySelector('#appointmentsCalendarToolbar');
-		const appointmentsCalendarGrid = pageShell.querySelector('#appointmentsCalendarGrid');
-		const appointmentsCalendarMonthLabel = pageShell.querySelector('#appointmentsCalendarMonthLabel');
-		const appointmentsCalendarDayView = pageShell.querySelector('#appointmentsCalendarDayView');
-		const appointmentsCalendarDayViewLabel = pageShell.querySelector('#appointmentsCalendarDayViewLabel');
-		const appointmentsCalendarDaySlots = pageShell.querySelector('#appointmentsCalendarDaySlots');
-		const appointmentsPrevMonthButton = pageShell.querySelector('#appointmentsPrevMonthButton');
-		const appointmentsNextMonthButton = pageShell.querySelector('#appointmentsNextMonthButton');
-		const appointmentsBackToMonthButton = pageShell.querySelector('#appointmentsBackToMonthButton');
-		const appointmentsPaginationContainer = pageShell.querySelector('#appointmentsPagination');
-		let appointmentsViewMode = 'table';
-		let appointmentsCalendarDate = new Date();
-		let appointmentsCurrentPage = 1;
-		let appointmentsActiveRecordsCache = [];
-		const APPOINTMENTS_PAGE_SIZE = 8;
 		const profileAvatar = pageShell.closest('.main-content')?.querySelector('#profileAvatar');
 		const profileImageInput = pageShell.closest('.main-content')?.querySelector('#profileImageInput');
 		const profileMenuButton = pageShell.closest('.main-content')?.querySelector('#profileMenuButton');
 		const profileDropdown = pageShell.closest('.main-content')?.querySelector('#profileDropdown');
 		const profileDropdownName = pageShell.closest('.main-content')?.querySelector('#profileDropdownName');
 		const profileDropdownEmail = pageShell.closest('.main-content')?.querySelector('#profileDropdownEmail');
-		const profileDropdownLogout = pageShell.closest('.main-content')?.querySelector('#profileDropdownLogout');
-		const logoutButton = pageShell.closest('.main-content')?.querySelector('#logoutButton');
 		const profileAvatarUpload = pageShell.closest('.main-content')?.querySelector('.profile-avatar-upload');
 
 		const profileInitials = (name) => String(name || 'Business Manager').split(' ').filter(Boolean).slice(0, 2).map((part) => part[0].toUpperCase()).join('');
@@ -1469,15 +1145,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			profileDropdown.hidden = !isOpen;
 			profileMenuButton.setAttribute('aria-expanded', String(isOpen));
 		};
-		const handlePageLogout = async () => {
-			try {
-				await signOut(auth);
-				window.location.href = 'login.html';
-			} catch (error) {
-				console.error('Failed to sign out', error);
-				showMessage('You could not be logged out. Please try again.', 'error');
-			}
-		};
 
 		profileMenuButton?.addEventListener('click', () => setProfileMenuOpen(profileDropdown?.hidden === true));
 		profileMenuButton?.addEventListener('keydown', (event) => {
@@ -1486,12 +1153,10 @@ document.addEventListener('DOMContentLoaded', () => {
 				setProfileMenuOpen(profileDropdown?.hidden === true);
 			}
 		});
-		profileDropdownLogout?.addEventListener('click', handlePageLogout);
-		logoutButton?.addEventListener('click', handlePageLogout);
 		profileAvatarUpload?.addEventListener('click', (event) => event.stopPropagation());
 		profileImageInput?.addEventListener('change', async (event) => {
 			const file = event.target.files?.[0];
-			const user = auth.currentUser;
+			const user = getCurrentUser();
 			if (!file || !user) return;
 			try {
 				const imageUrl = await resizePageProfileImage(file);
@@ -1517,27 +1182,14 @@ document.addEventListener('DOMContentLoaded', () => {
 			.replaceAll("'", '&#039;');
 
 		const pageDate = (record) => getFirstRecordDate(record, ['date', 'createdAt', 'issueDate']);
+		const periodTotals = (records, getValue) => getPeriodTotals(records, getValue, ['date', 'createdAt', 'issueDate']);
 
 		const pageDateText = (record) => {
 			const date = pageDate(record);
 			return date ? new Intl.DateTimeFormat('en-ZA', { dateStyle: 'medium' }).format(date) : 'Not set';
 		};
 
-		const money = (value) => `R${Number(value || 0).toLocaleString()}`;
 		const initials = (value) => String(value || 'Customer').split(' ').filter(Boolean).slice(0, 2).map((part) => part[0].toUpperCase()).join('');
-		const percentageChange = (current, previous) => previous === 0 ? (current === 0 ? 0 : 100) : Math.round(((current - previous) / Math.abs(previous)) * 100);
-		const periodTotals = (records, getValue) => {
-			const now = new Date();
-			const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-			return records.reduce((totals, record) => {
-				const date = pageDate(record);
-				if (!date) return totals;
-				const value = getValue(record);
-				if (date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()) totals.current += value;
-				if (date.getMonth() === previousMonth.getMonth() && date.getFullYear() === previousMonth.getFullYear()) totals.previous += value;
-				return totals;
-			}, { current: 0, previous: 0 });
-		};
 		const updatePageTrends = (values) => {
 			pageShell.querySelectorAll('.trend').forEach((trend, index) => {
 				const change = values[index] ?? 0;
@@ -1558,205 +1210,65 @@ document.addEventListener('DOMContentLoaded', () => {
 			return ['paid', 'received', 'completed', 'approved', 'active'].includes(value) ? 'paid' : ['overdue', 'cancelled', 'canceled', 'refunded', 'inactive'].includes(value) ? 'danger' : 'pending';
 		};
 
-		// ===================== APPOINTMENTS: single source of truth =====================
-		// The Today / This Week / This Month dropdown drives everything below: the table,
-		// the embedded calendar, the counts, and the empty state all read from the SAME
-		// getFilteredAppointments() result, so there is exactly one filtering codepath.
-		const APPOINTMENT_PERIOD_LABELS = { today: 'Today', week: 'This Week', month: 'This Month' };
-		const APPOINTMENT_EMPTY_TEXT = {
-			today: 'No appointments scheduled for today.',
-			week: 'No appointments scheduled for this week.',
-			month: 'No appointments scheduled for this month.'
-		};
-		const isCompletedAppointment = (record) => String(record.status || '').toLowerCase() === 'completed';
-		const getSelectedAppointmentPeriod = () => (appointmentPeriodSelect?.value in APPOINTMENT_PERIOD_LABELS ? appointmentPeriodSelect.value : 'today');
-		const getAppointmentPeriodRange = () => getDateRange(APPOINTMENT_PERIOD_LABELS[getSelectedAppointmentPeriod()]);
+		const customersFeature = pageName === 'customers'
+			? initCustomersPage({ pageName, tableBody, statCards, pageEscape, initials, statusClass, updatePageTrends })
+			: null;
 
-		// The one filtering function used by the table, the calendar, the counts, and the
-		// empty state. Excludes completed appointments (they stay in Firestore for future
-		// history/reporting, they just never appear in these active views) and restricts
-		// to whichever range the dropdown currently selects.
-		const getFilteredAppointments = () => {
-			const { start, end } = getAppointmentPeriodRange();
-			return pageRecords.filter((record) => {
-				if (isCompletedAppointment(record)) return false;
-				const date = pageDate(record);
-				return Boolean(date) && date >= start && date < end;
-			});
-		};
 
-		const renderAppointmentsPagination = (totalPages) => {
-			if (!appointmentsPaginationContainer) return;
-			if (totalPages <= 1) {
-				appointmentsPaginationContainer.hidden = true;
-				appointmentsPaginationContainer.innerHTML = '';
-				return;
-			}
-			appointmentsPaginationContainer.hidden = false;
-			appointmentsPaginationContainer.innerHTML = Array.from({ length: totalPages }, (_, index) => index + 1)
-				.map((page) => `<button type="button" class="${page === appointmentsCurrentPage ? 'active' : ''}" data-appointments-page="${page}">${page}</button>`)
-				.join('');
-		};
-
-		const renderAppointmentsTable = (activeRecords) => {
-			appointmentsActiveRecordsCache = activeRecords;
-			if (!tableBody) return;
-			if (!activeRecords.length) {
-				tableBody.innerHTML = `<tr><td colspan="6">${APPOINTMENT_EMPTY_TEXT[getSelectedAppointmentPeriod()]}</td></tr>`;
-				renderAppointmentsPagination(0);
-				return;
-			}
-			const timeToMinutes = (time) => {
-				const match = String(time || '').match(/^(\d{1,2}):(\d{2})/);
-				return match ? Number(match[1]) * 60 + Number(match[2]) : Number.MAX_SAFE_INTEGER;
-			};
-			const sortedRecords = [...activeRecords].sort((first, second) => (pageDate(first) - pageDate(second)) || (timeToMinutes(first.time) - timeToMinutes(second.time)));
-			const totalPages = Math.max(1, Math.ceil(sortedRecords.length / APPOINTMENTS_PAGE_SIZE));
-			appointmentsCurrentPage = Math.min(Math.max(appointmentsCurrentPage, 1), totalPages);
-			const startIndex = (appointmentsCurrentPage - 1) * APPOINTMENTS_PAGE_SIZE;
-			const recordsForPage = sortedRecords.slice(startIndex, startIndex + APPOINTMENTS_PAGE_SIZE);
-			tableBody.innerHTML = recordsForPage.map((record) => `<tr data-record-id="${record.id}"><td>${pageEscape(record.time || 'No time set')}</td><td><div class="customer"><div class="customer-avatar">${pageEscape(initials(record.customerName))}</div><span>${pageEscape(record.customerName || 'Customer')}</span></div></td><td>${pageEscape(record.service || 'Appointment')}</td><td>${pageEscape(record.staff || 'Not assigned')}</td><td><span class="status-badge ${statusClass(record.status)}">${pageEscape(record.status || 'Pending')}</span></td><td><label class="done-toggle" title="Mark as attended"><input type="checkbox" data-page-action="done"> Done</label><button class="view-button" type="button" data-page-action="edit">Edit</button> <button class="view-button" type="button" data-page-action="delete">Delete</button></td></tr>`).join('');
-			renderAppointmentsPagination(totalPages);
-		};
-
-		const updateAppointmentsStats = (activeRecords) => {
-			const { start, end } = getAppointmentPeriodRange();
-			const inSelectedPeriod = (record) => { const date = pageDate(record); return Boolean(date) && date >= start && date < end; };
-			const periodRecords = pageRecords.filter(inSelectedPeriod);
-			const completedInPeriod = periodRecords.filter(isCompletedAppointment);
-			const cancelledInPeriod = periodRecords.filter((record) => ['cancelled', 'canceled'].includes(String(record.status || '').toLowerCase()));
-			const pendingActive = activeRecords.filter((record) => !['cancelled', 'canceled'].includes(String(record.status || 'pending').toLowerCase()));
-			if (statCards[0]) statCards[0].textContent = activeRecords.length;
-			if (statCards[1]) statCards[1].textContent = completedInPeriod.length;
-			if (statCards[2]) statCards[2].textContent = pendingActive.length;
-			if (statCards[3]) statCards[3].textContent = cancelledInPeriod.length;
-			const periodLabelText = { today: "Today's Appointments", week: "This Week's Appointments", month: "This Month's Appointments" }[getSelectedAppointmentPeriod()];
-			const firstStatLabel = statCards[0]?.closest('.stat-card')?.querySelector('p');
-			if (firstStatLabel) firstStatLabel.textContent = periodLabelText;
-		};
-
-		// Embedded calendar (Appointments page). Reuses the same .calendar-toolbar /
-		// .calendar-grid / .calendar-day-view markup and CSS as the Dashboard's calendar
-		// modal so the two look and behave alike, just inline instead of in a dialog.
-		// Always draws the current month grid, but only ever marks/lists appointments
-		// that are also in the dropdown-filtered active dataset, so the calendar can never
-		// show something the table doesn't.
-		const APPOINTMENT_CALENDAR_HOURS = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
-		const appointmentDateKey = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-
-		const showAppointmentsCalendarMonthView = () => {
-			if (appointmentsCalendarGrid) appointmentsCalendarGrid.hidden = false;
-			if (appointmentsCalendarToolbar) appointmentsCalendarToolbar.hidden = false;
-			if (appointmentsCalendarDayView) appointmentsCalendarDayView.hidden = true;
-			if (appointmentsCalendarDaySlots) delete appointmentsCalendarDaySlots.dataset.currentDate;
-		};
-
-		const renderAppointmentsCalendarGrid = (activeRecords) => {
-			if (!appointmentsCalendarGrid || !appointmentsCalendarMonthLabel) return;
-			const year = appointmentsCalendarDate.getFullYear();
-			const month = appointmentsCalendarDate.getMonth();
-			const firstWeekday = new Date(year, month, 1).getDay();
-			const daysInMonth = new Date(year, month + 1, 0).getDate();
-			const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-			appointmentsCalendarMonthLabel.textContent = new Intl.DateTimeFormat('en-ZA', { month: 'long', year: 'numeric' }).format(appointmentsCalendarDate);
-			appointmentsCalendarGrid.innerHTML = dayNames.map((day) => `<span class="calendar-day-name">${day}</span>`).join('');
-			for (let i = 0; i < firstWeekday; i += 1) appointmentsCalendarGrid.insertAdjacentHTML('beforeend', '<span class="calendar-day empty" aria-hidden="true"></span>');
-			for (let day = 1; day <= daysInMonth; day += 1) {
-				const dateKey = appointmentDateKey(new Date(year, month, day));
-				const matching = activeRecords.filter((record) => { const date = pageDate(record); return date && appointmentDateKey(date) === dateKey; });
-				const bookingText = matching.length ? `${matching.length} appt${matching.length > 1 ? 's' : ''}` : '';
-				appointmentsCalendarGrid.insertAdjacentHTML('beforeend', `<button type="button" class="calendar-day${matching.length ? ' has-bookings' : ''}" data-date="${dateKey}"><strong>${day}</strong><span>${bookingText}</span></button>`);
-			}
-		};
-
-		const appointmentBookingHtml = (record, fallbackTimeLabel) => `<div class="calendar-slot-booking"><strong>${pageEscape(record.time || fallbackTimeLabel)}</strong> ${pageEscape(record.customerName || 'Customer')}${record.service ? ` &middot; ${pageEscape(record.service)}` : ''}</div>`;
-
-		const renderAppointmentsCalendarDay = (dateKey, activeRecords) => {
-			if (!appointmentsCalendarDaySlots || !appointmentsCalendarDayViewLabel) return;
-			const [year, month, day] = dateKey.split('-').map(Number);
-			appointmentsCalendarDayViewLabel.textContent = new Intl.DateTimeFormat('en-ZA', { dateStyle: 'full' }).format(new Date(year, month - 1, day));
-			const dayRecords = activeRecords.filter((record) => { const date = pageDate(record); return date && appointmentDateKey(date) === dateKey; });
-			const usedRecordIds = new Set();
-			const hourSlotsHtml = APPOINTMENT_CALENDAR_HOURS.map((hour) => {
-				const hourNumber = Number(hour.split(':')[0]);
-				const slotRecords = dayRecords.filter((record) => Number(String(record.time || '').split(':')[0]) === hourNumber);
-				slotRecords.forEach((record) => usedRecordIds.add(record.id));
-				const slotContent = slotRecords.length
-					? slotRecords.map((record) => appointmentBookingHtml(record, hour)).join('')
-					: '<div class="calendar-slot-empty">No appointments</div>';
-				return `<div class="calendar-slot"><span class="calendar-slot-time">${hour}</span><div class="calendar-slot-content">${slotContent}</div></div>`;
-			});
-			// Appointments booked outside the 08:00-17:00 business-hours grid (early
-			// morning, evening, or with no parseable time) would otherwise be silently
-			// dropped from the day view even though they still count on the month grid —
-			// this bucket makes sure every active appointment for the day is visible here.
-			const leftoverRecords = dayRecords.filter((record) => !usedRecordIds.has(record.id));
-			const leftoverSlotHtml = leftoverRecords.length
-				? [`<div class="calendar-slot"><span class="calendar-slot-time">Other</span><div class="calendar-slot-content">${leftoverRecords.map((record) => appointmentBookingHtml(record, 'No time set')).join('')}</div></div>`]
-				: [];
-			appointmentsCalendarDaySlots.innerHTML = [...hourSlotsHtml, ...leftoverSlotHtml].join('');
-			if (appointmentsCalendarGrid) appointmentsCalendarGrid.hidden = true;
-			if (appointmentsCalendarToolbar) appointmentsCalendarToolbar.hidden = true;
-			if (appointmentsCalendarDayView) appointmentsCalendarDayView.hidden = false;
-		};
-
-		// Called on load, on every dropdown change, and after any appointment is marked
-		// done — the table, the calendar, and the counts always re-derive from the exact
-		// same filtered dataset, so they can never disagree with one another.
-		const refreshAppointmentsView = () => {
-			const activeRecords = getFilteredAppointments();
-			renderAppointmentsTable(activeRecords);
-			updateAppointmentsStats(activeRecords);
-			renderAppointmentsCalendarGrid(activeRecords);
-			const openDateKey = appointmentsCalendarDaySlots?.dataset.currentDate;
-			if (openDateKey && appointmentsCalendarDayView && !appointmentsCalendarDayView.hidden) {
-				renderAppointmentsCalendarDay(openDateKey, activeRecords);
-			}
-		};
-		// ================== end appointments single source of truth ==================
+		const appointmentsFeature = pageName === 'appointments'
+			? initAppointmentsPage({
+				pageName, pageShell, tableBody, statCards, pageEscape, initials, statusClass,
+				getRecords: () => pageRecords, getCurrentUser,
+				reloadRecords: (user) => loadPageRecords(user), showMessage
+			})
+			: null;
+		const invoicesFeature = pageName === 'invoices'
+			? initInvoicesPage({
+				pageName, pageShell, tableBody, pageEscape, pageDateText, statusClass, generateNextReferenceId,
+				updateFinancialStats: (records) => updateFinancialPageStats(records)
+			})
+			: null;
+		const paymentsFeature = pageName === 'payments'
+			? initPaymentsPage({
+				pageName, pageShell, tableBody, pageEscape, pageDateText, statusClass, generateNextReferenceId,
+				updateFinancialStats: (records) => updateFinancialPageStats(records)
+			})
+			: null;
+		const recordFeature = customersFeature || appointmentsFeature || invoicesFeature || paymentsFeature;
 
 		const renderPageRows = (records = pageRecords) => {
+			if (recordFeature?.renderRows) return recordFeature.renderRows(records);
 			if (!tableBody || !collectionName) return;
 			if (!records.length) {
 				tableBody.innerHTML = `<tr><td colspan="8">No ${pageName} found yet.</td></tr>`;
 				return;
 			}
 
-			if (collectionName === 'customers') {
-				tableBody.innerHTML = records.map((record) => `<tr data-record-id="${record.id}"><td><div class="customer"><div class="customer-avatar">${pageEscape(initials(record.name))}</div><span>${pageEscape(record.name || 'Customer')}</span></div></td><td>${pageEscape(record.email || 'Not set')}</td><td>${pageEscape(record.phone || 'Not set')}</td><td>${money(record.totalSpent)}</td><td><span class="status-badge ${statusClass(record.status)}">${pageEscape(record.status || 'Active')}</span></td><td><button class="view-button" type="button" data-page-action="edit">Edit</button> <button class="view-button" type="button" data-page-action="delete">Delete</button></td></tr>`).join('');
-			} else if (collectionName === 'invoices') {
-				tableBody.innerHTML = records.map((record) => `<tr data-record-id="${record.id}"><td><strong>${pageEscape(record.invoiceNumber || record.id)}</strong></td><td>${pageEscape(record.customerName || 'Customer')}</td><td>${pageEscape(pageDateText({ date: record.issueDate || record.date }))}</td><td>${pageEscape(pageDateText({ date: record.dueDate }))}</td><td>${money(record.amount)}</td><td><span class="status-badge ${statusClass(record.status)}">${pageEscape(record.status || 'Pending')}</span></td><td><button class="view-button" type="button" data-page-action="edit">Edit</button> <button class="view-button" type="button" data-page-action="delete">Delete</button></td></tr>`).join('');
-			} else if (collectionName === 'expenses') {
+			if (collectionName === 'expenses') {
 				tableBody.innerHTML = records.map((record) => `<tr data-record-id="${record.id}"><td><strong>${pageEscape(record.expenseNumber || record.id)}</strong></td><td>${pageEscape(record.category || 'Other')}</td><td>${pageEscape(pageDateText(record))}</td><td>${pageEscape(record.vendor || record.description || 'Not set')}</td><td>${money(record.amount)}</td><td><span class="status-badge ${statusClass(record.status)}">${pageEscape(record.status || 'Approved')}</span></td><td><button class="view-button" type="button" data-page-action="edit">Edit</button> <button class="view-button" type="button" data-page-action="delete">Delete</button></td></tr>`).join('');
-			} else if (collectionName === 'payments') {
-				tableBody.innerHTML = records.map((record) => `<tr data-record-id="${record.id}"><td><strong>${pageEscape(record.paymentNumber || record.id)}</strong></td><td>${pageEscape(record.customerName || 'Customer')}</td><td>${pageEscape(record.invoiceNumber || record.invoiceId || 'Not linked')}</td><td>${pageEscape(pageDateText(record))}</td><td>${pageEscape(record.method || 'Not set')}</td><td>${money(record.amount)}</td><td><span class="status-badge ${statusClass(record.status)}">${pageEscape(record.status || 'Received')}</span></td><td><button class="view-button" type="button" data-page-action="edit">Edit</button> <button class="view-button" type="button" data-page-action="delete">Delete</button></td></tr>`).join('');
 			}
 		};
 
-		const updatePageStats = () => {
-			const total = pageRecords.reduce((sum, record) => sum + Number(record.amount || 0), 0);
-			const paid = pageRecords.filter((record) => ['paid', 'received', 'approved', 'completed'].includes(String(record.status || '').toLowerCase())).reduce((sum, record) => sum + Number(record.amount || 0), 0);
-			const pending = pageRecords.filter((record) => String(record.status || '').toLowerCase() === 'pending').reduce((sum, record) => sum + Number(record.amount || 0), 0);
-			if (pageName === 'customers') {
-				if (statCards[0]) statCards[0].textContent = pageRecords.length;
-				if (statCards[1]) statCards[1].textContent = pageRecords.filter((record) => String(record.status || 'active').toLowerCase() === 'active').length;
-				if (statCards[2]) statCards[2].textContent = pageRecords.filter((record) => { const date = pageDate(record); const now = new Date(); return date && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear(); }).length;
-				if (statCards[3]) statCards[3].textContent = pageRecords.filter((record) => String(record.group || record.type || '').toLowerCase() === 'vip').length;
-				if (statCards[4]) statCards[4].textContent = pageRecords.filter((record) => String(record.status || '').toLowerCase() === 'inactive').length;
-				const customerTotals = periodTotals(pageRecords, () => 1);
-				const newCustomers = pageRecords.filter((record) => { const date = pageDate(record); const now = new Date(); return date && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear(); });
-				updatePageTrends([percentageChange(customerTotals.current, customerTotals.previous), percentageChange(pageRecords.filter((record) => String(record.status || 'active').toLowerCase() === 'active').length, 0), percentageChange(newCustomers.length, 0), 0, 0]);
-			} else if (collectionName) {
+
+		const updateFinancialPageStats = (records) => {
+			const total = sumAmounts(records);
+			const paid = sumAmounts(records.filter((record) => ['paid', 'received', 'approved', 'completed'].includes(String(record.status || '').toLowerCase())));
+			const pending = sumAmounts(records.filter((record) => String(record.status || '').toLowerCase() === 'pending'));
+			if (collectionName) {
 				if (statCards[0]) statCards[0].textContent = money(total);
 				if (statCards[1]) statCards[1].textContent = money(paid);
 				if (statCards[2]) statCards[2].textContent = money(pending);
 				if (statCards[3]) statCards[3].textContent = money(total - paid - pending);
-				const totals = periodTotals(pageRecords, (record) => Number(record.amount || 0));
-				const paidTotals = periodTotals(pageRecords.filter((record) => ['paid', 'received', 'approved', 'completed'].includes(String(record.status || '').toLowerCase())), (record) => Number(record.amount || 0));
-				const pendingTotals = periodTotals(pageRecords.filter((record) => String(record.status || '').toLowerCase() === 'pending'), (record) => Number(record.amount || 0));
-				updatePageTrends([percentageChange(totals.current, totals.previous), percentageChange(paidTotals.current, paidTotals.previous), percentageChange(pendingTotals.current, pendingTotals.previous), 0]);
+				const totals = periodTotals(records, (record) => Number(record.amount || 0));
+				const paidTotals = periodTotals(records.filter((record) => ['paid', 'received', 'approved', 'completed'].includes(String(record.status || '').toLowerCase())), (record) => Number(record.amount || 0));
+				const pendingTotals = periodTotals(records.filter((record) => String(record.status || '').toLowerCase() === 'pending'), (record) => Number(record.amount || 0));
+				updatePageTrends([getPercentageChange(totals.current, totals.previous), getPercentageChange(paidTotals.current, paidTotals.previous), getPercentageChange(pendingTotals.current, pendingTotals.previous), 0]);
 			}
 		};
+
+		const updatePageStats = () => recordFeature?.updateStats
+			? recordFeature.updateStats(pageRecords)
+			: updateFinancialPageStats(pageRecords);
 
 		const loadReports = async (user) => {
 			const [invoiceSnapshot, expenseSnapshot] = await Promise.all([
@@ -1773,9 +1285,9 @@ document.addEventListener('DOMContentLoaded', () => {
 			const allExpenses = expenseSnapshot.docs.map((record) => record.data());
 			const invoices = allPaidInvoices.filter(isInSelectedPeriod);
 			const expenses = allExpenses.filter(isInSelectedPeriod);
-			const revenue = invoices.reduce((sum, record) => sum + Number(record.amount || 0), 0);
-			const expenseTotal = expenses.reduce((sum, record) => sum + Number(record.amount || 0), 0);
-			const profit = revenue - expenseTotal;
+			const revenue = sumAmounts(invoices);
+			const expenseTotal = sumAmounts(expenses);
+			const profit = calculateProfit(revenue, expenseTotal);
 			const reportValues = [money(revenue), money(expenseTotal), money(profit), revenue ? `${((profit / revenue) * 100).toFixed(1)}%` : '0%'];
 			reportValues.forEach((value, index) => { if (statCards[index]) statCards[index].textContent = value; });
 			const now = new Date();
@@ -1791,19 +1303,24 @@ document.addEventListener('DOMContentLoaded', () => {
 			const previousRevenue = sumForRange(allPaidInvoices, comparisonRange);
 			const previousExpenses = sumForRange(allExpenses, comparisonRange);
 			const currentProfit = profit;
-			const previousProfit = previousRevenue - previousExpenses;
+			const previousProfit = calculateProfit(previousRevenue, previousExpenses);
 			const currentMargin = revenue ? currentProfit / revenue : 0;
 			const previousMargin = previousRevenue ? previousProfit / previousRevenue : 0;
 			updatePageTrends([
-				percentageChange(revenue, previousRevenue),
-				percentageChange(expenseTotal, previousExpenses),
-				percentageChange(currentProfit, previousProfit),
-				percentageChange(currentMargin, previousMargin)
+				getPercentageChange(revenue, previousRevenue),
+				getPercentageChange(expenseTotal, previousExpenses),
+				getPercentageChange(currentProfit, previousProfit),
+				getPercentageChange(currentMargin, previousMargin)
 			]);
 			const reportLine = pageShell.querySelector('.reports-analytics .line-chart polyline');
 			const reportYAxis = pageShell.querySelector('.reports-analytics .y-axis');
 			if (reportLine) {
 				const now = new Date();
+				const reportLabels = pageShell.querySelector('.reports-analytics .chart-labels');
+				if (reportLabels) reportLabels.innerHTML = Array.from({ length: 8 }, (_, index) => {
+					const month = new Date(now.getFullYear(), now.getMonth() - 7 + index, 1);
+					return `<span>${new Intl.DateTimeFormat('en-ZA', { month: 'short' }).format(month)}</span>`;
+				}).join('');
 				const monthlyRevenue = Array.from({ length: 8 }, (_, index) => {
 					const month = new Date(now.getFullYear(), now.getMonth() - 7 + index, 1);
 					return allPaidInvoices.reduce((sum, invoice) => {
@@ -1832,7 +1349,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		};
 
 		reportPeriodSelect?.addEventListener('change', () => {
-			if (auth.currentUser) loadReports(auth.currentUser);
+			if (getCurrentUser()) loadReports(getCurrentUser());
 		});
 
 		const loadSettings = async (user) => {
@@ -1876,7 +1393,7 @@ document.addEventListener('DOMContentLoaded', () => {
 						await setDoc(doc(firestore, 'users', user.uid), {
 							fullName: name,
 							phone: phone?.value.trim() || '',
-							email: auth.currentUser?.email || newEmail || user.email,
+							email: getCurrentUser()?.email || newEmail || user.email,
 							updatedAt: serverTimestamp()
 						}, { merge: true });
 
@@ -2003,29 +1520,6 @@ document.addEventListener('DOMContentLoaded', () => {
 		};
 
 		const recordFieldSets = {
-			customers: [
-				{ name: 'name', label: 'Customer name', required: true },
-				{ name: 'email', label: 'Customer email' },
-				{ name: 'phone', label: 'Customer phone' },
-				{ name: 'status', label: 'Status', type: 'select', options: ['active', 'inactive'] }
-			],
-			bookings: (customerHint) => [
-				{ name: 'customerName', label: 'Customer name', required: true, placeholder: customerHint },
-				{ name: 'date', label: 'Booking date', type: 'date', required: true },
-				{ name: 'time', label: 'Booking time', type: 'time', required: true },
-				{ name: 'service', label: 'Service' },
-				{ name: 'staff', label: 'Staff member' },
-				{ name: 'status', label: 'Status', type: 'select', options: ['pending', 'completed', 'cancelled'] }
-			],
-			invoices: (customerHint, existing, generatedId) => [
-				{ name: 'invoiceNumber', label: 'Invoice ID', disabled: true, defaultValue: existing.invoiceNumber || generatedId },
-				{ name: 'customerName', label: 'Customer name', required: true, placeholder: customerHint },
-				{ name: 'issueDate', label: 'Issue date', type: 'date' },
-				{ name: 'dueDate', label: 'Due date', type: 'date' },
-				{ name: 'amount', label: 'Invoice amount', type: 'number', required: true },
-				{ name: 'status', label: 'Status', type: 'select', options: ['pending', 'paid', 'overdue'] },
-				{ name: 'service', label: 'Service/category' }
-			],
 			expenses: (customerHint, existing, generatedId) => [
 				{ name: 'expenseNumber', label: 'Expense number', disabled: true, defaultValue: existing.expenseNumber || generatedId },
 				{ name: 'description', label: 'Description', required: true },
@@ -2035,30 +1529,20 @@ document.addEventListener('DOMContentLoaded', () => {
 				{ name: 'amount', label: 'Amount', type: 'number', required: true },
 				{ name: 'status', label: 'Status', type: 'select', options: ['approved', 'pending'] }
 			],
-			payments: (customerHint, existing, generatedId) => [
-				{ name: 'paymentNumber', label: 'Payment ID', disabled: true, defaultValue: existing.paymentNumber || generatedId },
-				{ name: 'customerName', label: 'Customer name', required: true, placeholder: customerHint },
-				{ name: 'invoiceNumber', label: 'Invoice number' },
-				{ name: 'date', label: 'Payment date', type: 'date' },
-				{ name: 'method', label: 'Payment method', type: 'select', options: ['Cash', 'Bank'], required: true },
-				{ name: 'amount', label: 'Amount', type: 'number', required: true },
-				{ name: 'status', label: 'Status', type: 'select', options: ['received', 'pending', 'refunded'] }
-			]
 		};
 
-		const pageSingularTitles = { customers: 'Customer', bookings: 'Appointment', invoices: 'Invoice', expenses: 'Expense', payments: 'Payment' };
+		const pageSingularTitles = { expenses: 'Expense' };
 
 		const promptRecord = async (user, existing = {}, isEditing = false) => {
-			const customerSnapshot = await getDocs(query(collection(firestore, 'customers'), where('ownerId', '==', user.uid)));
+			const customerSnapshot = await getCustomerSnapshot(user);
 			const customers = customerSnapshot.docs.map((record) => ({ id: record.id, ...record.data() }));
 			const customerHint = customers.length ? `e.g. ${customers.map((customer) => customer.name).join(', ')}` : '';
 			let generatedId = null;
-			if (!isEditing && collectionName === 'invoices') generatedId = await generateNextReferenceId('invoices', 'invoiceNumber', 'INV', user);
-			if (!isEditing && collectionName === 'payments') generatedId = await generateNextReferenceId('payments', 'paymentNumber', 'PAY', user);
+			if (!isEditing && recordFeature?.generateNumber) generatedId = await recordFeature.generateNumber(user);
 			if (!isEditing && collectionName === 'expenses') generatedId = await generateNextReferenceId('expenses', 'expenseNumber', 'EXP', user);
-			const fieldSet = recordFieldSets[collectionName];
+			const fieldSet = recordFeature?.fields || recordFieldSets[collectionName];
 			const fields = typeof fieldSet === 'function' ? fieldSet(customerHint, existing, generatedId) : fieldSet;
-			const title = `${isEditing ? 'Edit' : 'Add'} ${pageSingularTitles[collectionName] || 'Record'}`;
+			const title = `${isEditing ? 'Edit' : 'Add'} ${recordFeature?.singularTitle || pageSingularTitles[collectionName] || 'Record'}`;
 			const values = await showFormModal({ title, fields, values: existing, submitLabel: isEditing ? 'Save changes' : 'Add' });
 			if (!values) return null;
 			if (values.amount !== undefined) values.amount = Number(values.amount);
@@ -2073,9 +1557,13 @@ document.addEventListener('DOMContentLoaded', () => {
 			const values = await promptRecord(user, existing, Boolean(recordId));
 			if (!values) return;
 			try {
-				const record = { ...values, ownerId: user.uid, updatedAt: serverTimestamp() };
-				if (!recordId) record.createdAt = serverTimestamp();
-				await setDoc(recordId ? doc(firestore, collectionName, recordId) : doc(collection(firestore, collectionName)), record, { merge: true });
+				if (recordFeature) {
+					await recordFeature.saveRecord(user, values, recordId);
+				} else {
+					const record = { ...values, ownerId: user.uid, updatedAt: serverTimestamp() };
+					if (!recordId) record.createdAt = serverTimestamp();
+					await setDoc(recordId ? doc(firestore, collectionName, recordId) : doc(collection(firestore, collectionName)), record, { merge: true });
+				}
 				showMessage(`${pageName.slice(0, -1)} saved.`);
 				await loadPageRecords(user);
 			} catch (error) {
@@ -2087,10 +1575,12 @@ document.addEventListener('DOMContentLoaded', () => {
 		const loadPageRecords = async (user) => {
 			if (!collectionName) return;
 			try {
-				const records = await getDocs(query(collection(firestore, collectionName), where('ownerId', '==', user.uid)));
+				const records = recordFeature
+					? await recordFeature.getSnapshot(user)
+					: await getDocs(query(collection(firestore, collectionName), where('ownerId', '==', user.uid)));
 				pageRecords = records.docs.map((record) => ({ id: record.id, ...record.data() }));
-				if (pageName === 'appointments') {
-					refreshAppointmentsView();
+				if (appointmentsFeature) {
+					appointmentsFeature.refresh();
 				} else {
 					renderFilteredPageRecords();
 					updatePageStats();
@@ -2104,16 +1594,12 @@ document.addEventListener('DOMContentLoaded', () => {
 		};
 
 		clearDemoContent();
-		onAuthStateChanged(auth, async (user) => {
-			if (!user) {
-				window.location.href = 'login.html';
-				return;
-			}
+		requireAuthenticatedUser(async (user) => {
 			const userProfile = document.querySelector('.profile-info strong');
 			if (userProfile) userProfile.textContent = getFirstDisplayName(user.displayName || user.email);
 			if (profileDropdownName) profileDropdownName.textContent = user.displayName || 'Business Manager';
 			if (profileDropdownEmail) profileDropdownEmail.textContent = user.email || 'Signed-in account';
-			const profileDocument = await getDoc(doc(firestore, 'users', user.uid));
+			const profileDocument = await getUserProfile(user);
 			renderPageProfile(user, profileDocument.data()?.photoURL || user.photoURL);
 			renderUpgradeCard(profileDocument.data()?.plan === 'pro');
 			if (collectionName) await loadPageRecords(user);
@@ -2126,31 +1612,14 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (pageName === 'messages') await loadMessages(user);
 		});
 
-		// The appointments dropdown (#appointmentPeriodFilter) is excluded here and wired
-		// separately below — it is the single source of truth for the appointments page
-		// and drives refreshAppointmentsView() directly, rather than the generic
-		// show/hide-row filtering used by the other pages' toolbar selects.
+		// The Appointments feature owns its period dropdown and view refresh.
 		const pageFilterSelects = Array.from(pageShell.querySelectorAll('.toolbar-select')).filter((select) => select.id !== 'appointmentPeriodFilter');
 
-		const recordMatchesFilters = (record) => pageFilterSelects.every((select) => {
+		const recordMatchesFilters = (record) => recordFeature?.matchesFilters ? recordFeature.matchesFilters(record, pageFilterSelects) : pageFilterSelects.every((select) => {
 			const value = select.value;
 			if (!value || value === 'all') return true;
-			if (select.id === 'customerStatusFilter' || select.id === 'invoiceStatusFilter') {
-				return String(record.status || '').toLowerCase() === value;
-			}
 			if (select.id === 'expenseCategoryFilter') {
 				return String(record.category || '').toLowerCase() === value;
-			}
-			if (select.id === 'paymentMethodFilter') {
-				return String(record.method || '').toLowerCase() === value;
-			}
-			if (select.id === 'invoiceTimeFilter') {
-				const date = pageDate(record);
-				if (!date) return false;
-				const now = new Date();
-				if (value === 'month') return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-				if (value === '90days') { const daysAgo = (now - date) / 86400000; return daysAgo >= 0 && daysAgo <= 90; }
-				return true;
 			}
 			return true;
 		});
@@ -2200,11 +1669,8 @@ document.addEventListener('DOMContentLoaded', () => {
 				recordMatchesFilters(record)
 				&& (!searchValue || Object.values(record).join(' ').toLowerCase().includes(searchValue))
 			));
-			const columns = {
-				customers: [['Name', 'name'], ['Email', 'email'], ['Phone', 'phone'], ['Status', 'status'], ['Created', 'createdAt']],
-				invoices: [['Invoice number', 'invoiceNumber'], ['Customer', 'customerName'], ['Issue date', 'issueDate'], ['Due date', 'dueDate'], ['Amount', 'amount'], ['Status', 'status']],
+			const columns = recordFeature?.exportColumns || {
 				expenses: [['Expense number', 'expenseNumber'], ['Description', 'description'], ['Category', 'category'], ['Vendor', 'vendor'], ['Date', 'date'], ['Amount', 'amount'], ['Status', 'status']],
-				payments: [['Payment number', 'paymentNumber'], ['Customer', 'customerName'], ['Invoice', 'invoiceNumber'], ['Date', 'date'], ['Method', 'method'], ['Amount', 'amount'], ['Status', 'status']]
 			}[collectionName];
 			if (!columns) return;
 			const csv = [columns.map(([label]) => csvCell(label)).join(','), ...records.map((record) => columns.map(([, field]) => csvCell(record[field])).join(','))].join('\n');
@@ -2237,56 +1703,10 @@ document.addEventListener('DOMContentLoaded', () => {
 			renderFilteredPageRecords();
 		});
 
-		// The dropdown is the single source of truth: any change re-derives the table,
-		// the calendar, and the counts together from the same filtered dataset.
-		appointmentPeriodSelect?.addEventListener('change', () => {
-			appointmentsCurrentPage = 1;
-			refreshAppointmentsView();
-		});
-
-		appointmentsPaginationContainer?.addEventListener('click', (event) => {
-			const pageButton = event.target.closest('[data-appointments-page]');
-			if (!pageButton) return;
-			appointmentsCurrentPage = Number(pageButton.dataset.appointmentsPage) || 1;
-			renderAppointmentsTable(appointmentsActiveRecordsCache);
-		});
-
-		// Root cause of "Calendar View" navigating away: this used to be a plain
-		// window.location.href = 'dashboard.html'. It now toggles the calendar embedded
-		// directly on this page (built from the same filtered dataset as the table),
-		// matching the Dashboard's own calendar in look and behaviour.
-		appointmentsCalendarViewButton?.addEventListener('click', () => {
-			appointmentsViewMode = appointmentsViewMode === 'calendar' ? 'table' : 'calendar';
-			const showingCalendar = appointmentsViewMode === 'calendar';
-			if (appointmentsTableView) appointmentsTableView.hidden = showingCalendar;
-			if (appointmentsCalendarView) appointmentsCalendarView.hidden = !showingCalendar;
-			appointmentsCalendarViewButton.textContent = showingCalendar ? 'Table View' : 'Calendar View';
-			if (showingCalendar) {
-				appointmentsCalendarDate = new Date();
-				showAppointmentsCalendarMonthView();
-				renderAppointmentsCalendarGrid(getFilteredAppointments());
-			}
-		});
-
-		appointmentsPrevMonthButton?.addEventListener('click', () => {
-			appointmentsCalendarDate.setMonth(appointmentsCalendarDate.getMonth() - 1);
-			renderAppointmentsCalendarGrid(getFilteredAppointments());
-		});
-		appointmentsNextMonthButton?.addEventListener('click', () => {
-			appointmentsCalendarDate.setMonth(appointmentsCalendarDate.getMonth() + 1);
-			renderAppointmentsCalendarGrid(getFilteredAppointments());
-		});
-		appointmentsCalendarGrid?.addEventListener('click', (event) => {
-			const dayButton = event.target.closest('.calendar-day:not(.empty)');
-			if (!dayButton?.dataset.date) return;
-			if (appointmentsCalendarDaySlots) appointmentsCalendarDaySlots.dataset.currentDate = dayButton.dataset.date;
-			renderAppointmentsCalendarDay(dayButton.dataset.date, getFilteredAppointments());
-		});
-		appointmentsBackToMonthButton?.addEventListener('click', showAppointmentsCalendarMonthView);
 
 		pageShell.querySelectorAll('.primary-button').forEach((button) => {
-			if (button.textContent.toLowerCase().includes('add customer') || button.textContent.toLowerCase().includes('new appointment') || button.textContent.toLowerCase().includes('create invoice') || button.textContent.toLowerCase().includes('add expense') || button.textContent.toLowerCase().includes('record payment')) {
-				button.addEventListener('click', () => { if (auth.currentUser && collectionName) savePageRecord(auth.currentUser); });
+			if (recordFeature?.isCreateButton(button) || button.textContent.toLowerCase().includes('add expense')) {
+				button.addEventListener('click', () => { if (getCurrentUser() && collectionName) savePageRecord(getCurrentUser()); });
 			}
 		});
 
@@ -2296,28 +1716,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		tableBody?.addEventListener('click', async (event) => {
 			const button = event.target.closest('[data-page-action]');
-			if (!button || !auth.currentUser) return;
+			if (!button || !getCurrentUser()) return;
 			const recordId = button.closest('tr')?.dataset.recordId;
-			if (button.dataset.pageAction === 'done' && recordId) {
-				if (!button.checked) return;
-				try {
-					// Reuses the existing "status" field (never a new/duplicate field) and never
-					// deletes the document — completed appointments stay in Firestore for future
-					// history/reporting, they just drop out of the active table/calendar/counts.
-					await setDoc(doc(firestore, collectionName, recordId), { status: 'completed', completedAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true });
-					showMessage('Appointment marked as done.');
-					await loadPageRecords(auth.currentUser);
-				} catch (error) {
-					console.error(`Failed to complete ${collectionName}`, error);
-					showMessage('The appointment could not be updated.', 'error');
-					button.checked = false;
-				}
-				return;
-			}
-			if (button.dataset.pageAction === 'edit') await savePageRecord(auth.currentUser, recordId);
+			if (button.dataset.pageAction === 'edit') await savePageRecord(getCurrentUser(), recordId);
 		if (button.dataset.pageAction === 'delete' && recordId) {
 			const confirmation = await showFormModal({
-				title: `Delete ${pageSingularTitles[collectionName] || 'record'}?`,
+				title: `Delete ${recordFeature?.singularTitle || pageSingularTitles[collectionName] || 'record'}?`,
 				description: 'This action permanently removes the record and cannot be undone.',
 				fields: [],
 				submitLabel: 'Delete record',
@@ -2325,8 +1729,9 @@ document.addEventListener('DOMContentLoaded', () => {
 			});
 			if (confirmation === null) return;
 			try {
-					await deleteDoc(doc(firestore, collectionName, recordId));
-					await loadPageRecords(auth.currentUser);
+					if (recordFeature) await recordFeature.deleteRecord(recordId);
+					else await deleteDoc(doc(firestore, collectionName, recordId));
+					await loadPageRecords(getCurrentUser());
 				} catch (error) {
 					console.error(`Failed to delete ${collectionName}`, error);
 					showMessage('The record could not be deleted.', 'error');
