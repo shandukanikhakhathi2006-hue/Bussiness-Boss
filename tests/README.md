@@ -24,8 +24,9 @@ If Java reports `Unable to establish loopback connection` / `Invalid argument: c
 - `npm run test:backend`: pure draft authorization contract (127 tests).
 - `npm run test:rules`: local Firestore authorization (127 tests).
 - `npm run test:persistence`: Stage 9C draft persistence against the emulator (55 tests).
-- `npm run test:emulator`: rules and persistence files, sequentially in one emulator session.
-- `npm test`: finance, backend, then both emulator suites (584 existing tests plus 55 Stage 9C tests; 639 total).
+- `npm run test:v2-security`: isolated Stage 9D Invoice v2 client rules fixture (64 tests).
+- `npm run test:emulator`: legacy rules, persistence and v2 security files, sequentially in one emulator session.
+- `npm test`: finance, backend, then all emulator suites (639 existing tests plus 64 Stage 9D tests; 703 total).
 
 Exit codes determine success; counts are descriptive, not a success heuristic. Dependencies and package-lock remain pinned. The first rules run downloads the emulator if needed; subsequent runs reuse `.firebase/emulators`. An explicit FIREBASE_EMULATORS_PATH cache override is supported.
 
@@ -81,3 +82,17 @@ The adapter checks required plain-data fields, storage types and path segments, 
 Stored defaults are schemaVersion 2, lifecycleStatus draft, paymentStatus not_due, amountPaidMinor 0 and balanceDueMinor equal to the prepared total. Customer fields are grouped into a snapshot map using the Stage 9C shape. Stage 9C's explicit lifecycleStatus name and absent invoiceNumber override the broader Stage 7 proposal. Firestore server timestamp transforms populate createdAt and updatedAt. No issuance, revision, numbering, payment/provider fields, financial events or legacy collection changes are introduced.
 
 The persistence suite reads resolved timestamps and full documents back from the emulator, checks rejected client injection, malformed contracts, path isolation, sequential/concurrent duplicate creation, immutability, and unchanged legacy records. It also verifies the existing rules deny v2 reads and writes even to the owner; this models administrative persistence, not client access. Both emulator test files clear the demo database and must run with `--test-concurrency=1`, as configured by `--all`. Standalone rules and persistence commands keep the same lock, lifecycle and failure handling.
+
+## Stage 9D: isolated future Invoice v2 client boundary
+
+`firestore.invoiceV2.rules` is a test-only fixture loaded by `invoiceV2SecurityRules.test.mjs`. Production `firestore.rules` and `firebase.json` remain unchanged. The fixture is deliberately not a replacement for the full legacy rule set and must not be deployed.
+
+The fixture uses `businesses/{businessId}/members/{uid}` with `{ uid, role, active }`. Invoice reads require a signed-in user, an existing membership at that user's path, matching membership uid and the boolean `active: true`. Role is informational: owner, staff, accountant and viewer have identical read access, and backend-seeded role case changes do not affect it. Role is not a permission grant. The membership document is the authority; this fixture does not separately require the parent business document to exist. Invoice body ownerId does not grant access to another business path.
+
+Active members may get known invoice documents and query `businesses/{businessId}/invoices`. Cross-business reads require a separate active membership. Collection-group reads across businesses are not granted. All direct invoice create/update/delete operations are denied, including owner writes. Membership and parent business reads/writes are denied in this minimal fixture, so clients cannot enroll themselves, elevate roles or reactivate disabled access. An explicit recursive catch-all denies unspecified paths, including invoice subcollections.
+
+Fixtures are seeded using `withSecurityRulesDisabled`, which models trusted administrative writes. Client rules do not authorize or constrain Admin/server writes; a future backend must perform its own verified identity and tenant authorization. The Stage 9C adapter is unchanged, remains emulator-only, and has not acquired membership-based authorization from this fixture.
+
+The suite uses server reads for revocation checks, ensuring an earlier successful read does not mask lost access through local cache. It tests direct reads, scoped queries, all-role write denial, membership removal/disablement and malformed membership data, self-enrollment/escalation, an atomic enrollment-plus-invoice attack, and unspecified paths. Each emulator suite explicitly loads its own rules. The new suite also restores production rules in its cleanup hook, verifies those rules deny v2 reads even with an active member, clears its synthetic data and closes its environment. Restoration failures fail the run.
+
+All three emulator files must remain sequential under `--test-concurrency=1`: they share the same fixed demo database and change its loaded rules. No second emulator instance, project override, remote fallback or machine-wide configuration is introduced. No production memberships, business documents, backend endpoint or frontend integration exists.

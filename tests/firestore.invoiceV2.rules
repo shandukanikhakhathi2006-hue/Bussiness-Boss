@@ -1,0 +1,40 @@
+rules_version = '2';
+
+// Stage 9D test fixture only. Never selected by firebase.json or deployed.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function membershipPath(businessId) {
+      return /databases/$(database)/documents/businesses/$(businessId)/members/$(request.auth.uid);
+    }
+
+    function isActiveBusinessMember(businessId) {
+      return signedIn()
+        && exists(membershipPath(businessId))
+        && get(membershipPath(businessId)).data.uid == request.auth.uid
+        && get(membershipPath(businessId)).data.active == true;
+    }
+
+    match /businesses/{businessId} {
+      allow read, write: if false;
+
+      // Memberships are backend-managed. No client self-enrollment or escalation.
+      match /members/{uid} {
+        allow read, write: if false;
+      }
+
+      match /invoices/{invoiceId} {
+        // Role is informational in this fixture; active membership grants reads.
+        allow get, list: if isActiveBusinessMember(businessId);
+        allow create, update, delete: if false;
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
