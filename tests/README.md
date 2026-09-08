@@ -23,7 +23,9 @@ If Java reports `Unable to establish loopback connection` / `Invalid argument: c
 - `npm run test:finance`: calculations, draft validator and issue validator (330 tests).
 - `npm run test:backend`: pure draft authorization contract (127 tests).
 - `npm run test:rules`: local Firestore authorization (127 tests).
-- `npm test`: all three groups in order (584 current tests).
+- `npm run test:persistence`: Stage 9C draft persistence against the emulator (55 tests).
+- `npm run test:emulator`: rules and persistence files, sequentially in one emulator session.
+- `npm test`: finance, backend, then both emulator suites (584 existing tests plus 55 Stage 9C tests; 639 total).
 
 Exit codes determine success; counts are descriptive, not a success heuristic. Dependencies and package-lock remain pinned. The first rules run downloads the emulator if needed; subsequent runs reuse `.firebase/emulators`. An explicit FIREBASE_EMULATORS_PATH cache override is supported.
 
@@ -64,4 +66,18 @@ Tests use synthetic user-a, user-b and unauthenticated contexts. The demo state 
 
 Legacy financial amount/status/method and arbitrary unprotected fields remain owner-editable. Owners can delete their financial documents even when provider metadata exists. These tests document current policy; they do not establish verified online payment or an immutable ledger. Neither the rules nor production application code is changed by this harness.
 
-All tooling is development-only and excluded from Hosting. No Invoice v2 persistence, Functions, Peach or Resend integration exists.
+The test harness and its test files are development-only and excluded from Hosting. No Functions, Peach or Resend integration exists. The isolated Stage 9C module is not imported by the production application; no deployment is performed.
+
+## Stage 9C: create-only draft persistence
+
+`js/backend/invoiceDraftPersistence.js` exports the async factory `createEmulatorInvoiceDraftPersistence()`. It returns `{ saveInvoiceDraft, close }`. Call `saveInvoiceDraft({ preparedCommand, invoiceId })` with the unmodified result of `authorizeAndPrepareInvoiceDraftCommand()` and an explicit internal document ID. Always await outstanding saves and call `close()` afterward. The result is `{ invoiceId, path }`.
+
+The factory deliberately depends on the existing test environment and its safety guard for this emulator-only stage. It creates its own fixed demo/localhost client and uses `withSecurityRulesDisabled` to model a future privileged backend. It takes no injected database, credentials, project or endpoint. The environment guard runs at initialization and before each save. This development adapter is not a production server SDK integration or authenticated endpoint. A future production implementation must replace this emulator context and obtain verified identity/business contexts server-side.
+
+Writes target only `businesses/{businessId}/invoices/{invoiceId}`. No parent business document is created. A transaction reads the document, rejects an existing ID with `INVOICE_ALREADY_EXISTS`, and creates the draft atomically. Concurrent creators cannot silently overwrite one another. IDs are internal identifiers, not invoice numbers. A lost success response may leave the caller uncertain whether creation committed; retrying the same ID rejects if it exists. There is no idempotent result-replay or update protocol yet.
+
+The adapter checks required plain-data fields, storage types and path segments, then explicitly copies the normalized customer, dates, line items and domain-calculated totals. It does not authenticate, revalidate currency/dates/quantities, recalculate or check mathematical consistency. A well-shaped forged or modified prepared object is therefore not authenticated by this layer; only trusted code may call it. Raw client fields must pass through Stage 9B/8B first. A fresh snapshot protects an in-flight save from later caller mutation.
+
+Stored defaults are schemaVersion 2, lifecycleStatus draft, paymentStatus not_due, amountPaidMinor 0 and balanceDueMinor equal to the prepared total. Customer fields are grouped into a snapshot map using the Stage 9C shape. Stage 9C's explicit lifecycleStatus name and absent invoiceNumber override the broader Stage 7 proposal. Firestore server timestamp transforms populate createdAt and updatedAt. No issuance, revision, numbering, payment/provider fields, financial events or legacy collection changes are introduced.
+
+The persistence suite reads resolved timestamps and full documents back from the emulator, checks rejected client injection, malformed contracts, path isolation, sequential/concurrent duplicate creation, immutability, and unchanged legacy records. It also verifies the existing rules deny v2 reads and writes even to the owner; this models administrative persistence, not client access. Both emulator test files clear the demo database and must run with `--test-concurrency=1`, as configured by `--all`. Standalone rules and persistence commands keep the same lock, lifecycle and failure handling.

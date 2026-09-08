@@ -78,7 +78,8 @@ function interrupt() {
 let result = 1;
 try {
     assertEmulatorEnvironment(process.env, { requireHost: false });
-    if (process.argv.slice(2).some(arg => arg !== '--verify-failure-cleanup')) throw new Error('Unexpected harness argument.');
+    const mode = process.argv[2];
+    if (process.argv.length > 3 || (mode && !['--verify-failure-cleanup', '--persistence', '--all'].includes(mode))) throw new Error('Unexpected harness argument.');
     const config = JSON.parse(fs.readFileSync(path.join(root, 'firebase.json'), 'utf8'));
     if (config.emulators?.firestore?.host !== '127.0.0.1' || config.emulators?.firestore?.port !== 8080) {
         throw new Error('Expected configured Firestore emulator at 127.0.0.1:8080.');
@@ -109,8 +110,11 @@ try {
         if (javaTemp.length > 80) throw new Error('Java socket temporary directory is too long; set BUSINESSBOSS_JAVA_TMPDIR to a shorter writable directory.');
         env.JAVA_TOOL_OPTIONS = `${env.JAVA_TOOL_OPTIONS || ''} "-Djdk.net.unixdomain.tmpdir=${javaTemp}"`.trim();
     }
-    const script = process.argv.includes('--verify-failure-cleanup')
-        ? 'node -e "process.exit(23)"' : 'node --test tests/firestoreRules.test.mjs';
+    // Both suites clear the same demo database. Run files sequentially.
+    const script = mode === '--verify-failure-cleanup' ? 'node -e "process.exit(23)"'
+        : mode === '--persistence' ? 'node --test tests/invoiceDraftPersistence.test.mjs'
+        : mode === '--all' ? 'node --test --test-concurrency=1 tests/firestoreRules.test.mjs tests/invoiceDraftPersistence.test.mjs'
+        : 'node --test tests/firestoreRules.test.mjs';
     console.log(`Starting isolated rules run (${demoProjectId}, ${emulatorHost}). Logs: ${run}`);
     child = spawn(process.execPath, ['--require', path.join(root, 'tests/emulatorStartup.cjs'),
         path.join(root, 'node_modules/firebase-tools/lib/bin/firebase.js'), 'emulators:exec',
