@@ -12,7 +12,7 @@
     "test:emulator": "node tests/runRules.mjs --all",
     "test:persistence": "node tests/runRules.mjs --persistence",
     "test:v2-security": "node tests/runRules.mjs --v2-security",
-    "test:backend": "node --test tests/invoiceDraftCommand.test.mjs",
+    "test:backend": "node --test tests/invoiceDraftCommand.test.mjs tests/invoiceDraftUpdateCommand.test.mjs",
     "test:server": "node tests/runRules.mjs --server",
     "build:functions-shared": "node tests/packageFunctionsShared.mjs",
     "test:callable": "node tests/runRules.mjs --callable"
