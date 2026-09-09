@@ -96,3 +96,57 @@ Fixtures are seeded using `withSecurityRulesDisabled`, which models trusted admi
 The suite uses server reads for revocation checks, ensuring an earlier successful read does not mask lost access through local cache. It tests direct reads, scoped queries, all-role write denial, membership removal/disablement and malformed membership data, self-enrollment/escalation, an atomic enrollment-plus-invoice attack, and unspecified paths. Each emulator suite explicitly loads its own rules. The new suite also restores production rules in its cleanup hook, verifies those rules deny v2 reads even with an active member, clears its synthetic data and closes its environment. Restoration failures fail the run.
 
 All three emulator files must remain sequential under `--test-concurrency=1`: they share the same fixed demo database and change its loaded rules. No second emulator instance, project override, remote fallback or machine-wide configuration is introduced. No production memberships, business documents, backend endpoint or frontend integration exists.
+
+## Stage 9F: local trusted server handler
+
+Run `npm run test:server` for the focused suite. `npm test` includes it after the
+three existing emulator suites, sequentially. `--server`, `--all` and
+`--verify-failure-cleanup` start Firestore at 127.0.0.1:8080 and Auth at
+127.0.0.1:9099 for demo-businessboss-rules. Both ports must be free before and
+after the run. Auth lives inside the owned Firebase CLI process. Java cleanup
+also checks an owned process that has not yet bound its port, verifying its
+parent and command before termination. No unrelated processes are stopped.
+
+The in-process API is:
+
+```javascript
+import { createEmulatorSaveInvoiceDraftHandler } from './server/emulatorSaveInvoiceDraftHandler.mjs';
+const handler = await createEmulatorSaveInvoiceDraftHandler();
+try {
+    await handler.saveInvoiceDraft({ idToken, data: {
+        businessId: 'business-a', invoiceId: 'draft-1',
+        draft: { currency: 'ZAR', lineItems: [] }
+    } });
+} finally {
+    await handler.close();
+}
+```
+
+Use an Auth Emulator-issued ID token. Admin `verifyIdToken(token, true)` derives
+uid and checks user state. Emulator tokens are unsigned; these tests do not
+prove production cryptography. The revoked-token test moves the unsigned
+emulator token's auth_time back 60 seconds to avoid same-second ambiguity;
+success tests use untouched emulator-issued tokens.
+
+Only active owners can save. Business and membership reads, Stage 9B preparation,
+Stage 8B calculation, target read and create share a server Firestore transaction.
+The internal transaction callback is exported solely for deterministic SDK retry
+tests; it is not an authenticated entry point. Never expose that internal API.
+Retry tests force ABORTED before commit, change authority, and prove the next
+attempt re-reads it. Auth verification is outside the Firestore transaction.
+
+Customer/catalog reference IDs must be omitted or null; non-null normalized IDs
+are unsupported and blank strings retain Stage 8B validation errors. Exact
+create-only IDs conflict on retries and cannot overwrite. Success returns only
+invoiceId and lifecycleStatus. Errors have fixed messages, no stack/cause, and
+safe domain codes/known field paths only. Requests are copied before awaits;
+getters, proxies, cycles, non-JSON data and payloads over 512 KiB are rejected.
+
+firebase-admin 14.3.0 is an exact development dependency. The local Auth app uses
+a synthetic owner credential; the Admin-exported Firestore constructor uses
+fixed localhost/demo settings and a nonfunctional placeholder credential. It
+never discovers ADC or loads browser config. Credential environment variables,
+remote hosts and conflicting projects are rejected before initialization.
+No production functions package exists. All new modules are under tests/server,
+already excluded by Hosting's tests/** rule. Stage 9B, 9C, finance and both rules
+files remain unchanged. No deployment, billing, provisioning or UI integration.

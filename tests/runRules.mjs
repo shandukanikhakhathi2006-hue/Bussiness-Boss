@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
-import { assertEmulatorEnvironment, demoProjectId, emulatorHost } from './emulatorEnvironment.mjs';
+import { assertEmulatorEnvironment, assertServerEmulatorEnvironment, demoProjectId, emulatorHost } from './emulatorEnvironment.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const work = path.join(root, '.firebase', 'rules-tests');
@@ -19,18 +19,19 @@ let javaTemp;
 let interrupted = false;
 let watchdog;
 let output;
+let ports = [8080];
 
-async function portFree() {
+async function portFree(port = 8080) {
     return new Promise((resolve, reject) => {
         const server = net.createServer();
         server.once('error', error => error.code === 'EADDRINUSE' ? resolve(false) : reject(error));
-        server.listen({ host: '127.0.0.1', port: 8080, exclusive: true }, () => server.close(() => resolve(true)));
+        server.listen({ host: '127.0.0.1', port, exclusive: true }, () => server.close(() => resolve(true)));
     });
 }
-async function waitForFreePort(milliseconds) {
+async function waitForFreePort(milliseconds, port = 8080) {
     const deadline = Date.now() + milliseconds;
     do {
-        if (await portFree()) return true;
+        if (await portFree(port)) return true;
         await delay(250);
     } while (Date.now() < deadline);
     return false;
@@ -56,6 +57,8 @@ function stopOwnedEmulator() {
     if (state.token !== token || state.cliPid !== child?.pid || !Number.isInteger(state.pid) || state.pid <= 0) {
         throw new Error('Invalid emulator ownership record; no process was terminated.');
     }
+    try { process.kill(state.pid, 0); }
+    catch (error) { if (error.code === 'ESRCH') return; throw error; }
     if (process.platform === 'win32') {
         // Confirm this run's recorded Java PID still owns the fixed port.
         const listing = spawnSync('netstat.exe', ['-ano', '-p', 'tcp'], { encoding: 'utf8', windowsHide: true, timeout: 5000 });
@@ -63,7 +66,20 @@ function stopOwnedEmulator() {
             const fields = line.trim().split(/\s+/);
             return fields[0] === 'TCP' && fields[1] === emulatorHost && fields[2] === '0.0.0.0:0' && Number(fields.at(-1)) === state.pid;
         });
-        if (!ownsPort) throw new Error('Port ownership changed or could not be verified; no process was terminated.');
+        if (!ownsPort) {
+            // Java may still be starting and have no listening socket. Verify
+            // its parent and command before stopping the recorded process.
+            const query = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
+                `$ErrorActionPreference='Stop'; Get-CimInstance Win32_Process -Filter 'ProcessId=${state.pid}' | Select-Object ParentProcessId,CommandLine | ConvertTo-Json -Compress`],
+                { encoding: 'utf8', windowsHide: true, timeout: 10000 });
+            let processInfo;
+            try { processInfo = JSON.parse(query.stdout); } catch { /* fail closed below */ }
+            if (query.status !== 0 || processInfo?.ParentProcessId !== state.cliPid
+                || !processInfo.CommandLine?.includes('cloud-firestore-emulator-')
+                || !processInfo.CommandLine.includes(demoProjectId)) {
+                throw new Error('Java process ownership could not be verified; no process was terminated.');
+            }
+        }
         const stopped = spawnSync('taskkill.exe', ['/PID', String(state.pid), '/T', '/F'], { encoding: 'utf8', windowsHide: true, timeout: 10000 });
         if (stopped.status !== 0) throw new Error(`Windows denied cleanup of this run's emulator. Run Stop-Process -Id ${state.pid} -Force in your PowerShell session. ${stopped.stderr.trim()}`);
     } else {
@@ -79,15 +95,19 @@ let result = 1;
 try {
     assertEmulatorEnvironment(process.env, { requireHost: false });
     const mode = process.argv[2];
-    if (process.argv.length > 3 || (mode && !['--verify-failure-cleanup', '--persistence', '--v2-security', '--all'].includes(mode))) throw new Error('Unexpected harness argument.');
+    if (process.argv.length > 3 || (mode && !['--verify-failure-cleanup', '--persistence', '--v2-security', '--server', '--all'].includes(mode))) throw new Error('Unexpected harness argument.');
+    const needsAuth = ['--all', '--server', '--verify-failure-cleanup'].includes(mode);
+    if (needsAuth) { ports = [8080, 9099]; assertServerEmulatorEnvironment(process.env, { requireHost: false }); }
     const config = JSON.parse(fs.readFileSync(path.join(root, 'firebase.json'), 'utf8'));
     if (config.emulators?.firestore?.host !== '127.0.0.1' || config.emulators?.firestore?.port !== 8080) {
         throw new Error('Expected configured Firestore emulator at 127.0.0.1:8080.');
     }
+    if (needsAuth && (config.emulators?.auth?.host !== '127.0.0.1' || config.emulators?.auth?.port !== 9099))
+        throw new Error('Expected configured Auth emulator at 127.0.0.1:9099.');
     const version = JSON.parse(fs.readFileSync(path.join(root, 'node_modules/firebase-tools/package.json'), 'utf8')).version;
     if (version !== '15.29.0') throw new Error(`Review the startup compatibility hook for firebase-tools ${version}; expected 15.29.0.`);
     takeLock();
-    if (!await portFree()) throw new Error('Port 127.0.0.1:8080 is occupied. Stop the known emulator or investigate its owner; this harness will not reuse it, change ports or kill a pre-existing process.');
+    for (const port of ports) if (!await portFree(port)) throw new Error(`Port 127.0.0.1:${port} is occupied; this harness will not reuse it, change ports or kill a pre-existing process.`);
     const run = path.join(work, token);
     fs.mkdirSync(run);
     statePath = path.join(run, 'emulator.json');
@@ -114,12 +134,13 @@ try {
     const script = mode === '--verify-failure-cleanup' ? 'node -e "process.exit(23)"'
         : mode === '--persistence' ? 'node --test tests/invoiceDraftPersistence.test.mjs'
         : mode === '--v2-security' ? 'node --test tests/invoiceV2SecurityRules.test.mjs'
-        : mode === '--all' ? 'node --test --test-concurrency=1 tests/firestoreRules.test.mjs tests/invoiceDraftPersistence.test.mjs tests/invoiceV2SecurityRules.test.mjs'
+        : mode === '--server' ? 'node --test tests/saveInvoiceDraftServerHandler.test.mjs'
+        : mode === '--all' ? 'node --test --test-concurrency=1 tests/firestoreRules.test.mjs tests/invoiceDraftPersistence.test.mjs tests/invoiceV2SecurityRules.test.mjs tests/saveInvoiceDraftServerHandler.test.mjs'
         : 'node --test tests/firestoreRules.test.mjs';
     console.log(`Starting isolated rules run (${demoProjectId}, ${emulatorHost}). Logs: ${run}`);
     child = spawn(process.execPath, ['--require', path.join(root, 'tests/emulatorStartup.cjs'),
         path.join(root, 'node_modules/firebase-tools/lib/bin/firebase.js'), 'emulators:exec',
-        '--only', 'firestore', '--project', demoProjectId, '--non-interactive', '--debug', script],
+        '--only', needsAuth ? 'firestore,auth' : 'firestore', '--project', demoProjectId, '--non-interactive', '--debug', script],
         { cwd: root, env, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
     child.stdout.on('data', data => { output.write(data); process.stdout.write(data); });
     child.stderr.on('data', data => { output.write(data); process.stderr.write(data); });
@@ -145,8 +166,16 @@ try {
                 console.error('CLI left its emulator running; cleaning up only this run\'s recorded process.');
                 stopOwnedEmulator();
             }
+            // A free port does not prove that a still-starting Java child exited.
+            stopOwnedEmulator();
             if (!await waitForFreePort(10_000)) throw new Error('Port 8080 is still occupied after cleanup.');
             console.log('Verified: port 127.0.0.1:8080 is free after rules run.');
+            // Auth is an HTTP server inside the owned CLI process (not a child).
+            // After CLI exit it cannot survive. Never kill a new occupant's PID.
+            if (ports.includes(9099)) {
+                if (!await waitForFreePort(10_000, 9099)) throw new Error('Port 9099 is still occupied after owned CLI exit.');
+                console.log('Verified: port 127.0.0.1:9099 is free after rules run.');
+            }
         } catch (error) { console.error(error.stack || error); result = 1; }
         child.stdout?.destroy(); child.stderr?.destroy();
     }

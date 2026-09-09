@@ -12,11 +12,13 @@
     "test:emulator": "node tests/runRules.mjs --all",
     "test:persistence": "node tests/runRules.mjs --persistence",
     "test:v2-security": "node tests/runRules.mjs --v2-security",
-    "test:backend": "node --test tests/invoiceDraftCommand.test.mjs"
+    "test:backend": "node --test tests/invoiceDraftCommand.test.mjs",
+    "test:server": "node tests/runRules.mjs --server"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "5.0.2",
     "firebase": "12.18.0",
+    "firebase-admin": "14.3.0",
     "firebase-tools": "15.29.0"
   }
 }
