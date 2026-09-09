@@ -30,7 +30,9 @@
       "tests/**",
       "package.json",
       "package-lock.json",
-      "**/*debug*.log"
+      "**/*debug*.log",
+      "functions/**",
+      "server/**"
     ]
   },
   "emulators": {
@@ -45,6 +47,23 @@
     "auth": {
       "host": "127.0.0.1",
       "port": 9099
+    },
+    "functions": {
+      "host": "127.0.0.1",
+      "port": 5001
     }
+  },
+  "functions": {
+    "source": "functions",
+    "codebase": "businessboss",
+    "runtime": "nodejs24",
+    "ignore": [
+      "node_modules",
+      ".git",
+      "*debug*.log"
+    ],
+    "predeploy": [
+      "npm run build:functions-shared"
+    ]
   }
 }

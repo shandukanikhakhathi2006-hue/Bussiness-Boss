@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
+import { assertFunctionsEmulatorEnvironment } from './emulatorEnvironment.mjs';
 import { assertEmulatorEnvironment, assertServerEmulatorEnvironment, demoProjectId, emulatorHost } from './emulatorEnvironment.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -15,6 +16,7 @@ const token = randomUUID();
 let locked = false;
 let child;
 let statePath;
+let workersPath;
 let javaTemp;
 let interrupted = false;
 let watchdog;
@@ -91,19 +93,46 @@ function interrupt() {
     child?.kill('SIGTERM');
 }
 
+function stopOwnedFunctionsWorkers() {
+    if (!workersPath || !fs.existsSync(workersPath)) return;
+    const state = JSON.parse(fs.readFileSync(workersPath, 'utf8'));
+    if (state.token !== token || state.cliPid !== child?.pid) throw new Error('Invalid Functions worker ownership record.');
+    for (const worker of state.workers) {
+        if (!Number.isInteger(worker.pid) || worker.pid <= 0 || !['functionsEmulatorRuntime', 'firebase-functions.js'].includes(worker.marker))
+            throw new Error('Invalid Functions worker identity.');
+        try { process.kill(worker.pid, 0); } catch (error) { if (error.code === 'ESRCH') continue; throw error; }
+        if (process.platform !== 'win32') {
+            // Without a portable parent/command check, fail rather than target an unverifiable PID.
+            throw new Error('Functions worker survived CLI shutdown; ownership verification required.');
+        }
+        const query = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
+            `$ErrorActionPreference='Stop'; Get-CimInstance Win32_Process -Filter 'ProcessId=${worker.pid}' | Select-Object ParentProcessId,CommandLine | ConvertTo-Json -Compress`],
+            { encoding: 'utf8', windowsHide: true, timeout: 10000 });
+        let info;
+        try { info = JSON.parse(query.stdout); } catch { /* fail closed */ }
+        if (query.status !== 0 || info?.ParentProcessId !== state.cliPid || !info.CommandLine?.includes(worker.marker))
+            throw new Error('Cannot prove ownership of surviving Functions worker.');
+        const stopped = spawnSync('taskkill.exe', ['/PID', String(worker.pid), '/T', '/F'], { encoding: 'utf8', windowsHide: true, timeout: 10000 });
+        if (stopped.status !== 0) throw new Error('Owned Functions worker cleanup failed.');
+    }
+}
+
 let result = 1;
 try {
     assertEmulatorEnvironment(process.env, { requireHost: false });
     const mode = process.argv[2];
-    if (process.argv.length > 3 || (mode && !['--verify-failure-cleanup', '--persistence', '--v2-security', '--server', '--all'].includes(mode))) throw new Error('Unexpected harness argument.');
-    const needsAuth = ['--all', '--server', '--verify-failure-cleanup'].includes(mode);
+    if (process.argv.length > 3 || (mode && !['--verify-failure-cleanup', '--persistence', '--v2-security', '--server', '--callable', '--all'].includes(mode))) throw new Error('Unexpected harness argument.');
+    const needsFunctions = ['--all', '--callable', '--verify-failure-cleanup'].includes(mode);
+    const needsAuth = needsFunctions || mode === '--server';
     if (needsAuth) { ports = [8080, 9099]; assertServerEmulatorEnvironment(process.env, { requireHost: false }); }
+    if (needsFunctions) { ports.push(5001); assertFunctionsEmulatorEnvironment(process.env, { requireHost: false }); }
     const config = JSON.parse(fs.readFileSync(path.join(root, 'firebase.json'), 'utf8'));
     if (config.emulators?.firestore?.host !== '127.0.0.1' || config.emulators?.firestore?.port !== 8080) {
         throw new Error('Expected configured Firestore emulator at 127.0.0.1:8080.');
     }
     if (needsAuth && (config.emulators?.auth?.host !== '127.0.0.1' || config.emulators?.auth?.port !== 9099))
         throw new Error('Expected configured Auth emulator at 127.0.0.1:9099.');
+    if (needsFunctions && (config.emulators?.functions?.host !== '127.0.0.1' || config.emulators?.functions?.port !== 5001)) throw new Error('Expected local Functions emulator on 5001.');
     const version = JSON.parse(fs.readFileSync(path.join(root, 'node_modules/firebase-tools/package.json'), 'utf8')).version;
     if (version !== '15.29.0') throw new Error(`Review the startup compatibility hook for firebase-tools ${version}; expected 15.29.0.`);
     takeLock();
@@ -111,10 +140,12 @@ try {
     const run = path.join(work, token);
     fs.mkdirSync(run);
     statePath = path.join(run, 'emulator.json');
+    workersPath = path.join(run, 'functions-workers.json');
     output = fs.createWriteStream(path.join(run, 'cli-output.log'));
     const env = { ...process.env, CI: 'true', GCLOUD_PROJECT: demoProjectId,
         FIREBASE_DEBUG_PATH: path.join(run, 'firebase-debug.log'), XDG_CONFIG_HOME: path.join(run, 'config'),
-        BUSINESSBOSS_EMULATOR_STATE: statePath, BUSINESSBOSS_EMULATOR_TOKEN: token };
+        BUSINESSBOSS_EMULATOR_STATE: statePath, BUSINESSBOSS_EMULATOR_TOKEN: token, BUSINESSBOSS_FUNCTIONS_WORKERS: workersPath };
+    if (needsFunctions) Object.assign(env, { BUSINESSBOSS_LOCAL_FUNCTIONS: 'true', FUNCTIONS_DISCOVERY_TIMEOUT: '120', FUNCTIONS_EMULATOR_HOST: '127.0.0.1:5001', FIRESTORE_EMULATOR_HOST: '127.0.0.1:8080', FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099' });
     env.FIREBASE_EMULATORS_PATH ||= path.join(root, '.firebase', 'emulators');
     const javaHome = env.BUSINESSBOSS_JAVA_HOME || env.JAVA_HOME;
     if (javaHome) {
@@ -134,13 +165,14 @@ try {
     const script = mode === '--verify-failure-cleanup' ? 'node -e "process.exit(23)"'
         : mode === '--persistence' ? 'node --test tests/invoiceDraftPersistence.test.mjs'
         : mode === '--v2-security' ? 'node --test tests/invoiceV2SecurityRules.test.mjs'
+        : mode === '--callable' ? 'node --test tests/saveInvoiceDraftCallable.test.mjs'
         : mode === '--server' ? 'node --test tests/saveInvoiceDraftServerHandler.test.mjs'
-        : mode === '--all' ? 'node --test --test-concurrency=1 tests/firestoreRules.test.mjs tests/invoiceDraftPersistence.test.mjs tests/invoiceV2SecurityRules.test.mjs tests/saveInvoiceDraftServerHandler.test.mjs'
+        : mode === '--all' ? 'node --test --test-concurrency=1 tests/firestoreRules.test.mjs tests/invoiceDraftPersistence.test.mjs tests/invoiceV2SecurityRules.test.mjs tests/saveInvoiceDraftServerHandler.test.mjs tests/saveInvoiceDraftCallable.test.mjs'
         : 'node --test tests/firestoreRules.test.mjs';
     console.log(`Starting isolated rules run (${demoProjectId}, ${emulatorHost}). Logs: ${run}`);
     child = spawn(process.execPath, ['--require', path.join(root, 'tests/emulatorStartup.cjs'),
         path.join(root, 'node_modules/firebase-tools/lib/bin/firebase.js'), 'emulators:exec',
-        '--only', needsAuth ? 'firestore,auth' : 'firestore', '--project', demoProjectId, '--non-interactive', '--debug', script],
+        '--only', needsFunctions ? 'firestore,auth,functions' : needsAuth ? 'firestore,auth' : 'firestore', '--project', demoProjectId, '--non-interactive', '--debug', script],
         { cwd: root, env, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
     child.stdout.on('data', data => { output.write(data); process.stdout.write(data); });
     child.stderr.on('data', data => { output.write(data); process.stderr.write(data); });
@@ -161,6 +193,8 @@ try {
     process.removeListener('SIGINT', interrupt);
     process.removeListener('SIGTERM', interrupt);
     if (child) {
+        try { stopOwnedFunctionsWorkers(); }
+        catch (error) { console.error(error.message); result = 1; }
         try {
             if (!await waitForFreePort(10_000)) {
                 console.error('CLI left its emulator running; cleaning up only this run\'s recorded process.');
@@ -175,6 +209,10 @@ try {
             if (ports.includes(9099)) {
                 if (!await waitForFreePort(10_000, 9099)) throw new Error('Port 9099 is still occupied after owned CLI exit.');
                 console.log('Verified: port 127.0.0.1:9099 is free after rules run.');
+            }
+            if (ports.includes(5001)) {
+                if (!await waitForFreePort(10_000, 5001)) throw new Error('Port 5001 still occupied after owned CLI exit.');
+                console.log('Verified: port 127.0.0.1:5001 is free after rules run.');
             }
         } catch (error) { console.error(error.stack || error); result = 1; }
         child.stdout?.destroy(); child.stderr?.destroy();

@@ -13,12 +13,24 @@
     "test:persistence": "node tests/runRules.mjs --persistence",
     "test:v2-security": "node tests/runRules.mjs --v2-security",
     "test:backend": "node --test tests/invoiceDraftCommand.test.mjs",
-    "test:server": "node tests/runRules.mjs --server"
+    "test:server": "node tests/runRules.mjs --server",
+    "build:functions-shared": "node tests/packageFunctionsShared.mjs",
+    "test:callable": "node tests/runRules.mjs --callable"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "5.0.2",
     "firebase": "12.18.0",
     "firebase-admin": "14.3.0",
     "firebase-tools": "15.29.0"
+  },
+  "version": "0.0.0",
+  "files": [
+    "js/backend/invoiceDraftCommand.js",
+    "js/finance/invoiceCalculations.js",
+    "js/finance/invoiceDraftValidator.js",
+    "server/"
+  ],
+  "peerDependencies": {
+    "firebase-admin": "14.3.0"
   }
 }

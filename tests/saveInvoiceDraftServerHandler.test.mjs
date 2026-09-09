@@ -239,7 +239,7 @@ for (const key of ['FIRESTORE_EMULATOR_HOST', 'FIREBASE_AUTH_EMULATOR_HOST']) te
 });
 test('local boundary is Hosting-excluded and never imports browser config or ADC', async () => {
     const config = JSON.parse(await readFile(new URL('../firebase.json', import.meta.url), 'utf8'));
-    assert.ok(config.hosting.ignore.includes('tests/**')); assert.equal(config.functions, undefined);
+    assert.ok(config.hosting.ignore.includes('tests/**')); assert.ok(config.hosting.ignore.includes('functions/**')); assert.ok(config.hosting.ignore.includes('server/**'));
     for (const name of ['emulatorAdmin.mjs', 'emulatorSaveInvoiceDraftHandler.mjs', 'invoiceDraftRepository.mjs', 'invoiceDraftBoundary.mjs']) {
         const source = await readFile(new URL(`./server/${name}`, import.meta.url), 'utf8');
         assert.doesNotMatch(source, /firebase\/config|applicationDefault\(|withSecurityRulesDisabled|invoiceIssueValidator/);

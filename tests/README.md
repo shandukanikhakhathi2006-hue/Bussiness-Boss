@@ -150,3 +150,62 @@ remote hosts and conflicting projects are rejected before initialization.
 No production functions package exists. All new modules are under tests/server,
 already excluded by Hosting's tests/** rule. Stage 9B, 9C, finance and both rules
 files remain unchanged. No deployment, billing, provisioning or UI integration.
+
+## Stage 9G: Functions package and callable transport
+
+The Node.js 24 / ESM package under functions/ pins firebase-functions 7.3.2 and
+firebase-admin 14.3.0. The exported saveInvoiceDraft uses the v2 onCall API in
+africa-south1. Nothing is deployed and no billing or secrets are configured.
+
+Bootstrap after root npm ci:
+
+```powershell
+npm run build:functions-shared
+npm run test:callable
+npm test
+```
+
+The build command uses ordinary npm pack to distribute the canonical allowlisted
+js domain and server modules into an ignored functions/vendor archive, then
+installs that archive into functions/ and refreshes its lockfile. It does not
+maintain copied source files. Re-run it after changing canonical server/domain
+sources. The integration suite compares every installed source byte with its
+canonical file to reject stale packaging. functions/ has its own lockfile and
+contains everything required to install its runtime dependencies; vendor/ is a
+generated packaging artifact, not a second source tree. No tests/** dependency
+is packaged. Both functions/** and server/** are excluded from Hosting.
+
+Stage 9F's boundary/repository paths remain compatibility wrappers for canonical
+server modules. Its original driver still verifies tokens directly and its 141
+tests remain. The one previous no-Functions-package assertion now verifies the
+new package and shared server directory are Hosting-excluded.
+
+For callable tests the supervisor starts Auth 127.0.0.1:9099, Firestore
+127.0.0.1:8080 and Functions 127.0.0.1:5001 with demo-businessboss-rules.
+It sets explicit local-only configuration for discovery and invocation, checks
+all three ports before/after, and records owned Functions runtime/discovery
+workers through the existing version-checked CLI preload hook. After CLI exit,
+surviving workers require verified parent/command identity before Windows cleanup.
+A worker cleanup failure still permits independent Firestore cleanup and fails
+the run. Unix survivor cleanup fails closed if ownership cannot be verified.
+
+The client sends only { businessId, invoiceId, draft } to httpsCallable. Firebase
+Auth attaches the transport token automatically. The pinned SDK publicly exposes
+request.auth.rawToken; the handler re-verifies it with Admin verifyIdToken(token,
+true), compares its uid with request.auth.uid, and never parses raw headers.
+This preserves disabled/deleted/revoked-user checks. Emulator unsigned tokens do
+not prove production signature verification. Auth verification and Firestore
+commit remain separate services with the same Stage 9F revocation race limitation.
+
+Production-shaped callable options default enforceAppCheck to true. Local tests
+explicitly select BUSINESSBOSS_LOCAL_FUNCTIONS=true, which requires the demo
+project and fixed emulator endpoints before enforcement can be disabled. Actual
+invocations additionally require FUNCTIONS_EMULATOR=true. This stage intentionally
+refuses non-emulator persistence; production Admin initialization/deployment needs
+a separate review. App Check is not production-enabled by this stage.
+
+Run node tests/runRules.mjs --verify-failure-cleanup to verify all three services
+are cleaned up while the deliberate child exit code 23 is preserved. There is
+no deployment, tenant provisioning, draft update, issuing, numbering, payment,
+email, PDF, or frontend integration in Stage 9G.
+`FUNCTIONS_DISCOVERY_TIMEOUT=120` is set only in the local supervisor child environment to accommodate cold module loading; the overall 20-minute run deadline remains.
