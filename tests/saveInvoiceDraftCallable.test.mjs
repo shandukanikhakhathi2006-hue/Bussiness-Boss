@@ -57,7 +57,7 @@ test('actual client Auth → httpsCallable → Functions Emulator saves minimal 
     assert.ok(stored.createdAt instanceof Timestamp); assert.ok(stored.updatedAt instanceof Timestamp);
     assert.ok(stored.createdAt.isEqual(stored.updatedAt));
     const { createdAt, updatedAt, ...fields } = stored;
-    assert.deepEqual(fields, { schemaVersion: 2, businessId: 'callable-business', ownerId: 'callable-owner', lifecycleStatus: 'draft', paymentStatus: 'not_due',
+    assert.deepEqual(fields, { schemaVersion: 2, businessId: 'callable-business', ownerId: 'callable-owner', lifecycleStatus: 'draft', paymentStatus: 'not_due', revision: 1,
         customer: { id: null, name: '', email: null, address: null }, currency: 'ZAR', issueDate: null, dueDate: null, lineItems: [],
         subtotalMinor: 0, discountMinor: 0, taxMinor: 0, totalMinor: 0, amountPaidMinor: 0, balanceDueMinor: 0,
         createdBy: 'callable-owner', updatedBy: 'callable-owner' });
@@ -68,7 +68,8 @@ test('full callable draft has normalized snapshots and server-calculated amounts
     assert.equal(stored.subtotalMinor, 1500); assert.equal(stored.discountMinor, 100); assert.equal(stored.taxMinor, 140);
     assert.equal(stored.totalMinor, 1540); assert.equal(stored.balanceDueMinor, 1540);
     assert.equal(stored.lineItems[0].totalMinor, 1540);
-    for (const field of ['invoiceNumber', 'revision', 'provider', 'paymentReference', 'issuedAt', 'paidAt']) assert.equal(Object.hasOwn(stored, field), false);
+    assert.equal(stored.revision, 1); assert.ok(Number.isSafeInteger(stored.revision) && stored.revision > 0);
+    for (const field of ['invoiceNumber', 'provider', 'paymentReference', 'issuedAt', 'paidAt']) assert.equal(Object.hasOwn(stored, field), false);
 });
 test('missing Auth is a safe unauthenticated callable error', () => expect(call(data(), anonymous), 'UNAUTHENTICATED', 'unauthenticated'));
 test('another authenticated user cannot impersonate owner', () => expect(call(data(), outsider), 'BUSINESS_ACCESS_DENIED', 'permission-denied'));
@@ -108,6 +109,24 @@ for (const changed of [false, true]) test(`duplicate ${changed ? 'changed' : 'sa
 test('concurrent callable creates produce one winner and one conflict', async () => {
     const results = await Promise.allSettled([call(), call()]); assert.equal(results.filter(item => item.status === 'fulfilled').length, 1);
     assert.equal(results.find(item => item.status === 'rejected').reason.code, 'functions/already-exists');
+    assert.equal((await target().get()).data().revision, 1);
+});
+
+for (const field of ['revision', 'expectedRevision']) for (const location of ['envelope', 'draft']) {
+    test(`callable rejects numeric ${field} in ${location} without influencing revision`, async () => {
+        const payload = data(); (location === 'envelope' ? payload : payload.draft)[field] = 999;
+        await expect(call(payload), location === 'envelope' ? 'INVALID_REQUEST' : 'INVALID_INVOICE_DRAFT', 'invalid-argument');
+        assert.equal((await target().get()).exists, false);
+        assert.deepEqual((await call()).data, { invoiceId: 'draft-1', lifecycleStatus: 'draft' });
+        assert.equal((await target().get()).data().revision, 1);
+    });
+}
+for (const revision of [undefined, 7]) test(`callable duplicate preserves pre-existing revision ${revision} without repair`, async () => {
+    await call(); const existing = (await target().get()).data();
+    if (revision === undefined) delete existing.revision; else existing.revision = revision;
+    await target().set(existing); // Emulator fixture only; never migration behavior.
+    await expect(call(), 'INVOICE_ALREADY_EXISTS', 'already-exists');
+    assert.deepEqual((await target().get()).data(), existing);
 });
 test('callable cannot disclose conflict before authorization', async () => { await call(); await expect(call(data(), outsider), 'BUSINESS_ACCESS_DENIED', 'permission-denied'); });
 test('no legacy financial writes, tenant changes or extra financial documents', async () => {

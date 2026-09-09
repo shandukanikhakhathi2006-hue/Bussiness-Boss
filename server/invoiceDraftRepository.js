@@ -32,7 +32,7 @@ export async function createDraftInTransaction(transaction, db, uid, data, asser
     assertEnvironment();
     transaction.create(target, {
         schemaVersion: 2, businessId: command.businessId, ownerId: command.ownerId,
-        lifecycleStatus: 'draft', paymentStatus: 'not_due',
+        lifecycleStatus: 'draft', paymentStatus: 'not_due', revision: 1,
         customer: { id: null, name: draft.customerName, email: draft.customerEmail, address: draft.customerAddress },
         currency: draft.currency, issueDate: draft.issueDate, dueDate: draft.dueDate,
         lineItems: draft.lineItems.map(line => ({

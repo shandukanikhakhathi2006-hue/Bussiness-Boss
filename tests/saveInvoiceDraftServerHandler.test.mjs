@@ -8,6 +8,7 @@ import { createDraftInTransaction } from './server/invoiceDraftRepository.mjs';
 import { safeError } from './server/invoiceDraftBoundary.mjs';
 import { assertServerEmulatorEnvironment, demoProjectId, waitForFirestore } from './emulatorEnvironment.mjs';
 import { validateInvoiceDraft } from '../js/finance/invoiceDraftValidator.js';
+import { authorizeAndPrepareInvoiceDraftUpdate } from '../js/backend/invoiceDraftUpdateCommand.js';
 
 let admin, handler, token, otherToken;
 const minimal = () => ({ currency: 'ZAR', lineItems: [] });
@@ -56,7 +57,7 @@ test('real emulator-issued token creates an exact minimal zero-total draft and s
     assert.ok(stored.createdAt instanceof Timestamp); assert.ok(stored.updatedAt instanceof Timestamp);
     assert.ok(stored.createdAt.isEqual(stored.updatedAt));
     const { createdAt, updatedAt, ...data } = stored;
-    assert.deepEqual(data, { schemaVersion: 2, businessId: 'business-a', ownerId: 'user-a', lifecycleStatus: 'draft', paymentStatus: 'not_due',
+    assert.deepEqual(data, { schemaVersion: 2, businessId: 'business-a', ownerId: 'user-a', lifecycleStatus: 'draft', paymentStatus: 'not_due', revision: 1,
         customer: { id: null, name: '', email: null, address: null }, currency: 'ZAR', issueDate: null, dueDate: null, lineItems: [],
         subtotalMinor: 0, discountMinor: 0, taxMinor: 0, totalMinor: 0, amountPaidMinor: 0, balanceDueMinor: 0,
         createdBy: 'user-a', updatedBy: 'user-a' });
@@ -65,6 +66,7 @@ test('full snapshot matches Stage 8B normalization and Stage 8A calculated amoun
     const raw = full(), original = structuredClone(raw), normalized = validateInvoiceDraft(raw);
     await save(envelope(raw)); assert.deepEqual(raw, original);
     const data = (await invoice().get()).data();
+    assert.equal(data.revision, 1); assert.ok(Number.isSafeInteger(data.revision) && data.revision > 0);
     assert.deepEqual(data.lineItems, normalized.lineItems); assert.equal(data.totalMinor, 1540);
     for (const [key, value] of Object.entries(normalized.totals)) assert.equal(data[key], value);
     assert.deepEqual(data.customer, { id: null, name: 'Customer 王', email: 'customer@example.test', address: 'Street\nCity' });
@@ -176,6 +178,37 @@ test('concurrent create has exactly one winner and one safe conflict', async () 
     const results = await Promise.allSettled([save(), save()]); assert.equal(results.filter(result => result.status === 'fulfilled').length, 1);
     assert.equal(results.find(result => result.status === 'rejected').reason.code, 'INVOICE_ALREADY_EXISTS');
     assert.equal((await business().collection('invoices').get()).size, 1);
+    assert.equal((await invoice().get()).data().revision, 1);
+});
+
+for (const field of ['revision', 'expectedRevision']) for (const location of ['envelope', 'draft']) {
+    test(`create rejects numeric ${field} in ${location} without influencing revision`, async () => {
+        const data = envelope(); (location === 'envelope' ? data : data.draft)[field] = 999;
+        await expect(save(data), location === 'envelope' ? 'INVALID_REQUEST' : 'INVALID_INVOICE_DRAFT');
+        assert.equal((await invoice().get()).exists, false);
+        await save(); assert.equal((await invoice().get()).data().revision, 1);
+    });
+}
+for (const revision of [undefined, 7]) test(`duplicate preserves pre-existing revision ${revision} without repair`, async () => {
+    await save(); const existing = (await invoice().get()).data();
+    if (revision === undefined) delete existing.revision; else existing.revision = revision;
+    await invoice().set(existing); // Emulator fixture for an old or later-version document.
+    await expect(save(), 'INVOICE_ALREADY_EXISTS');
+    assert.deepEqual((await invoice().get()).data(), existing);
+});
+for (const [label, draft] of [['minimal', minimal], ['full', full]]) test(`created ${label} snapshot satisfies unchanged Stage 9I without persisting update`, async () => {
+    const input = draft(); await save(envelope(input));
+    const persisted = (await invoice().get()).data();
+    const plain = { ...persisted };
+    for (const field of ['createdAt', 'updatedAt']) plain[field] = { seconds: persisted[field].seconds, nanoseconds: persisted[field].nanoseconds };
+    const args = { authContext: { uid: 'user-a' }, businessContext: { businessId: 'business-a', ownerId: 'user-a', role: 'owner' },
+        businessId: 'business-a', invoiceId: 'draft-1', storedInvoice: plain, expectedRevision: 1, input };
+    const prepared = authorizeAndPrepareInvoiceDraftUpdate(args);
+    assert.equal(prepared.previousRevision, 1); assert.equal(prepared.nextRevision, 2);
+    assert.deepEqual(prepared.preserved, { createdBy: persisted.createdBy, createdAt: plain.createdAt });
+    assert.deepEqual((await invoice().get()).data(), persisted);
+    delete plain.revision;
+    assert.throws(() => authorizeAndPrepareInvoiceDraftUpdate(args), error => error.code === 'INTERNAL');
 });
 test('only one invoice written; legacy, business/member, accounting collections untouched', async () => {
     const businessBefore = (await business().get()).data(), memberBefore = (await member().get()).data();
