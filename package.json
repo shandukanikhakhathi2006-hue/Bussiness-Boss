@@ -26,6 +26,7 @@
   "version": "0.0.0",
   "files": [
     "js/backend/invoiceDraftCommand.js",
+    "js/backend/invoiceDraftUpdateCommand.js",
     "js/finance/invoiceCalculations.js",
     "js/finance/invoiceDraftValidator.js",
     "server/"

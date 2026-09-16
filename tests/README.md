@@ -209,3 +209,62 @@ are cleaned up while the deliberate child exit code 23 is preserved. There is
 no deployment, tenant provisioning, draft update, issuing, numbering, payment,
 email, PDF, or frontend integration in Stage 9G.
 `FUNCTIONS_DISCOVERY_TIMEOUT=120` is set only in the local supervisor child environment to accommodate cold module loading; the overall 20-minute run deadline remains.
+
+## Stage 9K — local draft update repository
+
+`tests/server/emulatorInvoiceDraftUpdateRepository.mjs` is an emulator-only server
+repository, not a callable. `createEmulatorInvoiceDraftUpdateRepository()` owns a
+fixed demo-project Admin client and returns `updateInvoiceDraftTransaction({
+businessId, invoiceId, verifiedUid, expectedRevision, input })` plus `close()`.
+The caller must already have verified the uid. No application-supplied identity,
+external database, credentials or production fallback is accepted. The internal
+transaction callback is exported only for controlled SDK retry tests.
+
+Each attempt reads business/member snapshots, preserves the existing disclosure
+policy, reuses Stage 9B before target disclosure, and invokes unchanged Stage 9I
+against the current invoice. Timestamp instances become immutable plain evidence;
+malformed timestamps are not accepted as evidence. Only the approved editable,
+calculated, revision and updated-audit fields are written. Creation metadata and
+protected lifecycle/payment/identity fields are preserved. Missing targets never
+upsert; missing revisions and corrupted records never migrate or repair.
+
+`npm run test:server` now runs both create and update server suites sequentially;
+`npm test` includes the update suite too. Tests use real Firestore transactions,
+concurrent writers and controlled SDK-aborted retries with changed authority or
+invoice state. The callable package, pure domains and create repository are
+unchanged, so no shared-package rebuild is needed in Stage 9K. This local module
+must be deliberately packaged into a proper server boundary before a future
+callable can use it; current Functions never depend on this new test module.
+
+## Stage 9L — local draft update callable
+
+`updateInvoiceDraft` is a second-generation callable with the exact wire envelope
+`{ businessId, invoiceId, expectedRevision, input }`. Identity is derived only
+from `request.auth.uid`; the platform token is rechecked for disabled, deleted
+and revoked users, as in the unchanged create callable. Extra keys are rejected.
+The detached request snapshot retains the 512 KiB and depth bounds. Transport
+checks shape/types/routes; Stage 9I retains revision and invoice semantics.
+
+The canonical transaction now lives in `server/invoiceDraftUpdateRepository.js`.
+The Stage 9K factory is a compatibility wrapper that owns its guarded local Admin
+client. Functions composes the same implementation with existing `localServices()`
+and an additional Functions runtime guard. Internal service injection is trusted
+module composition only; neither public wire data nor the no-argument emulator
+factory accepts a database, credentials or project. Mandatory emulator guards,
+synchronous immutable snapshots, write masks and per-attempt authorization remain.
+No Functions source imports tests. Rebuild the allowlisted shared npm package with
+`npm run build:functions-shared` after changing canonical packaged source.
+
+Success returns only `{ invoiceId, revision }` after commit. Errors retain the
+application code in `details.code`. Revision conflicts map to callable `aborted`;
+they never trigger revision substitution or automatic command replay. Other
+mapping conventions match create. The client must resolve a conflict explicitly.
+
+Run `node tests/runRules.mjs --update-callable` for Stage 9L alone, or
+`npm run test:callable` for both callable suites sequentially. Full regression
+includes all Stage 9K retry/concurrency tests and new actual Auth/Functions
+transport tests. The one obsolete Stage 9K assertion that no update export exists
+now checks that its export uses a separate server boundary; behavior tests remain.
+
+This is still emulator-only: no UI integration, deployment, production Admin,
+rules activation, App Check enforcement change, billing change or Stage 9M.
