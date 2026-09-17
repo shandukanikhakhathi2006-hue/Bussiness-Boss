@@ -196,5 +196,5 @@ test('installed shared package contains exactly the reviewed modules', async () 
     await walk();
     assert.deepEqual(files.sort(), ['package.json', 'js/backend/invoiceDraftCommand.js', 'js/backend/invoiceDraftUpdateCommand.js',
         'js/finance/invoiceCalculations.js', 'js/finance/invoiceDraftValidator.js', 'server/invoiceDraftBoundary.js',
-        'server/invoiceDraftRepository.js', 'server/invoiceDraftUpdateRepository.js', 'server/emulatorSafety.js'].sort());
+        'server/invoiceDraftRepository.js', 'server/invoiceDraftUpdateRepository.js', 'server/invoiceDraftReadRepository.js', 'server/emulatorSafety.js'].sort());
 });

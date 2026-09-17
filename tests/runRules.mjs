@@ -121,8 +121,8 @@ let result = 1;
 try {
     assertEmulatorEnvironment(process.env, { requireHost: false });
     const mode = process.argv[2];
-    if (process.argv.length > 3 || (mode && !['--verify-failure-cleanup', '--persistence', '--v2-security', '--server', '--callable', '--update-callable', '--all'].includes(mode))) throw new Error('Unexpected harness argument.');
-    const needsFunctions = ['--all', '--callable', '--update-callable', '--verify-failure-cleanup'].includes(mode);
+    if (process.argv.length > 3 || (mode && !['--verify-failure-cleanup', '--persistence', '--v2-security', '--server', '--callable', '--read-callable', '--update-callable', '--all'].includes(mode))) throw new Error('Unexpected harness argument.');
+    const needsFunctions = ['--all', '--callable', '--read-callable', '--update-callable', '--verify-failure-cleanup'].includes(mode);
     const needsAuth = needsFunctions || mode === '--server';
     if (needsAuth) { ports = [8080, 9099]; assertServerEmulatorEnvironment(process.env, { requireHost: false }); }
     if (needsFunctions) { ports.push(5001); assertFunctionsEmulatorEnvironment(process.env, { requireHost: false }); }
@@ -165,10 +165,11 @@ try {
     const script = mode === '--verify-failure-cleanup' ? 'node -e "process.exit(23)"'
         : mode === '--persistence' ? 'node --test tests/invoiceDraftPersistence.test.mjs'
         : mode === '--v2-security' ? 'node --test tests/invoiceV2SecurityRules.test.mjs'
+        : mode === '--read-callable' ? 'node --test tests/getInvoiceDraftCallable.test.mjs'
         : mode === '--update-callable' ? 'node --test tests/updateInvoiceDraftCallable.test.mjs'
-        : mode === '--callable' ? 'node --test --test-concurrency=1 tests/saveInvoiceDraftCallable.test.mjs tests/updateInvoiceDraftCallable.test.mjs'
+        : mode === '--callable' ? 'node --test --test-concurrency=1 tests/saveInvoiceDraftCallable.test.mjs tests/updateInvoiceDraftCallable.test.mjs tests/getInvoiceDraftCallable.test.mjs'
         : mode === '--server' ? 'node --test --test-concurrency=1 tests/saveInvoiceDraftServerHandler.test.mjs tests/updateInvoiceDraftPersistence.test.mjs'
-        : mode === '--all' ? 'node --test --test-concurrency=1 tests/firestoreRules.test.mjs tests/invoiceDraftPersistence.test.mjs tests/invoiceV2SecurityRules.test.mjs tests/saveInvoiceDraftServerHandler.test.mjs tests/saveInvoiceDraftCallable.test.mjs tests/updateInvoiceDraftPersistence.test.mjs tests/updateInvoiceDraftCallable.test.mjs'
+        : mode === '--all' ? 'node --test --test-concurrency=1 tests/firestoreRules.test.mjs tests/invoiceDraftPersistence.test.mjs tests/invoiceV2SecurityRules.test.mjs tests/saveInvoiceDraftServerHandler.test.mjs tests/saveInvoiceDraftCallable.test.mjs tests/updateInvoiceDraftPersistence.test.mjs tests/updateInvoiceDraftCallable.test.mjs tests/getInvoiceDraftCallable.test.mjs'
         : 'node --test tests/firestoreRules.test.mjs';
     console.log(`Starting isolated rules run (${demoProjectId}, ${emulatorHost}). Logs: ${run}`);
     child = spawn(process.execPath, ['--require', path.join(root, 'tests/emulatorStartup.cjs'),

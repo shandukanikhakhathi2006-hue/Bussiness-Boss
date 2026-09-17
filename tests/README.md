@@ -268,3 +268,30 @@ now checks that its export uses a separate server boundary; behavior tests remai
 
 This is still emulator-only: no UI integration, deployment, production Admin,
 rules activation, App Check enforcement change, billing change or Stage 9M.
+
+## Stage 9M — local editable-draft read callable
+
+`getInvoiceDraft` accepts exactly `{ businessId, invoiceId }`, derives uid from
+callable Auth and preserves the existing raw-token/revocation verification policy.
+Only the active owner can read an editable draft. No direct client rules are opened.
+
+`server/invoiceDraftReadRepository.js` uses one transaction for current business,
+membership and invoice reads. The installed Firestore SDK documents read-only
+mode as potentially up to 60 seconds old; this reader instead uses its default
+read-write mode for current pessimistic locks, while performing zero writes.
+The SDK completes the empty-write transaction to release locks before returning.
+Every retry reads fresh authority and target state. Authorization is point-in-time;
+revocation after transaction completion cannot retract an already authorized read.
+
+Stage 9I's existing storedDraft helper is exported as validateStoredInvoiceDraft;
+its body and update command are unchanged. No financial/revision/invariant logic
+is copied. Read responses explicitly project editable inputs, revision and validated
+totals, excluding identity/audit/provider metadata and calculated line fields.
+Returning totals does not make them valid update inputs. Missing/unversioned/corrupt
+records never trigger repair, migration or creation. Non-drafts remain noneditable.
+
+Run `node tests/runRules.mjs --read-callable` for focused tests. `test:callable` and
+`npm test` now include read coverage. Tests cover actual Auth/Functions calls,
+corruption/no-write evidence, SDK retries and create/read/update round trips.
+The shared npm package must be rebuilt through the existing allowlisted workflow.
+No frontend integration or Stage 9N is included.

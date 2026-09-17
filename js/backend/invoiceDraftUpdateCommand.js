@@ -142,3 +142,6 @@ export function authorizeAndPrepareInvoiceDraftUpdate(options) {
         preserved: { createdBy: stored.createdBy, createdAt: stored.createdAt }
     };
 }
+
+// Shared trusted-state validation; export only, with no change to update semantics.
+export { storedDraft as validateStoredInvoiceDraft };

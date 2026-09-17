@@ -11,7 +11,7 @@ const npm = process.env.npm_execpath;
 if (!npm?.endsWith('npm-cli.js')) throw new Error('Run npm run build:functions-shared.');
 const result = JSON.parse(execFileSync(process.execPath, [npm, 'pack', '--ignore-scripts', '--json', '--pack-destination', vendor], { cwd: root, encoding: 'utf8' }));
 const allowed = new Set(['package.json', ...JSON.parse(readFileSync(new URL('../package.json', import.meta.url))).files.filter(p => !p.endsWith('/')),
-    'server/invoiceDraftBoundary.js', 'server/invoiceDraftRepository.js', 'server/invoiceDraftUpdateRepository.js', 'server/emulatorSafety.js']);
+    'server/invoiceDraftBoundary.js', 'server/invoiceDraftRepository.js', 'server/invoiceDraftUpdateRepository.js', 'server/invoiceDraftReadRepository.js', 'server/emulatorSafety.js']);
 if (result[0].files.some(file => !allowed.has(file.path))) throw new Error('Unexpected shared package contents; do not use this archive.');
 console.log('Packaged canonical domain/server modules; no maintained source copies.');
 execFileSync(process.execPath, [npm, 'install', 'businessboss@file:vendor/businessboss-0.0.0.tgz',
