@@ -3,7 +3,7 @@ import { initInvoicesPage } from './js/features/invoices.js';
 import { initAppointmentsPage } from './js/features/appointments.js';
 import { getCustomerSnapshot, initCustomersPage } from './js/features/customers.js';
 import { getCurrentUser, getUserProfile, requireAuthenticatedUser, initAuthPages, initLogoutButtons, getFirebaseErrorMessage } from './js/firebase/auth.js';
-import { firestore } from './js/firebase/config.js';
+import { firestore, clientEnvironment } from './js/firebase/config.js';
 import { getFirstRecordDate, isSameDay, getDateRange, getPeriodGranularity } from './js/utils/dates.js';
 import { formatCurrency, money, formatAxisValue } from './js/utils/currency.js';
 import { isPaidInvoice, buildPeriodSeries, getPercentageChange, getPeriodTotals, getDayTotals, sumAmounts, calculateProfit } from './js/utils/calculations.js';
@@ -215,6 +215,13 @@ const showFormModal = ({ title, description = '', fields, values = {}, submitLab
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+	if (clientEnvironment.local && window.location.pathname.endsWith('/invoices.html')) {
+		const link = document.createElement('a');
+		link.href = 'invoices-v2.html';
+		link.className = 'secondary-button';
+		link.textContent = 'Invoice v2 · Local';
+		document.querySelector('.page-actions')?.append(link);
+	}
 	const showMessage = (message, type = 'success') => {
 		let messageElement = document.querySelector('[data-script-message]');
 
