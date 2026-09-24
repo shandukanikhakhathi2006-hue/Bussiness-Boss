@@ -20,9 +20,14 @@ const requireRevision = revision => {
 // In-memory state survives DOM rerenders, not reloads. No localStorage draft
 // cache, network workflow, automatic merge or revision inference.
 export function createInvoiceDraftState({ businessId, invoiceId = null }) {
-    let state = { businessId, invoiceId, lifecycleStatus: null, revision: null, draft: null, totals: null, status: 'idle' };
+    let state = { businessId, invoiceId, lifecycleStatus: null, revision: null, draft: null, totals: null, status: 'idle', form: null, dirty: false };
     return Object.freeze({
         snapshot: () => structuredClone(state),
+        setForm(form, dirty = true) {
+            // Raw decimal text lives in controlled state, including temporarily
+            // invalid edits. Conversion happens at the preview/request boundary.
+            state = { ...state, form: structuredClone(form), dirty };
+        },
         setStatus(status) {
             if (!statuses.includes(status)) throw new Error('Invalid editor status.');
             state = { ...state, status };
@@ -33,7 +38,7 @@ export function createInvoiceDraftState({ businessId, invoiceId = null }) {
                 || response.lifecycleStatus !== 'draft' || !response.totals) throw new Error('Invalid server draft.');
             state = { ...state, invoiceId: response.invoiceId, lifecycleStatus: response.lifecycleStatus,
                 revision: response.revision, draft: editableDraft(response.draft),
-                totals: structuredClone(pick(response.totals, totalFields)), status: 'ready' };
+                totals: structuredClone(pick(response.totals, totalFields)), status: 'ready', form: null, dirty: false };
         },
         adoptUpdated(response) {
             requireRevision(response.revision);

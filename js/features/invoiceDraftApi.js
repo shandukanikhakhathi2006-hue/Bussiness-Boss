@@ -6,7 +6,7 @@ import { DEMO_PROJECT_ID } from '../firebase/clientEnvironment.js';
 export function createInvoiceDraftApi({ functions, httpsCallable, environment, getCurrentUser }) {
     const invoke = async (name, data) => {
         if (!environment.local || environment.projectId !== DEMO_PROJECT_ID) throw new Error('Invoice v2 is local-only.');
-        if (!getCurrentUser()?.uid) throw new Error('Sign in to the local demo first.');
+        if (!getCurrentUser()?.uid) throw Object.assign(new Error('Sign in to the local demo first.'), { code: 'functions/unauthenticated' });
         const result = await httpsCallable(functions, name)(data);
         return result.data;
     };

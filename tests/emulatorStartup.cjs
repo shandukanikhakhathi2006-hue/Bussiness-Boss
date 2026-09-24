@@ -10,7 +10,7 @@ function recordWorkers() {
 }
 childProcess.spawn = function (...args) {
     const child = originalSpawn.apply(this, args);
-    const marker = ['functionsEmulatorRuntime', 'firebase-functions.js'].find(value => args[1]?.some?.(arg => String(arg).includes(value)));
+    const marker = ['functionsEmulatorRuntime', 'firebase-functions.js', 'invoiceBrowserSession.mjs'].find(value => args[1]?.some?.(arg => String(arg).includes(value)));
     if (marker && child.pid && process.env.BUSINESSBOSS_FUNCTIONS_WORKERS) {
         activeWorkers.set(child.pid, { pid: child.pid, marker }); recordWorkers();
         child.once('exit', () => { activeWorkers.delete(child.pid); recordWorkers(); });

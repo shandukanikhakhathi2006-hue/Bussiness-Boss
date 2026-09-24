@@ -98,7 +98,7 @@ function stopOwnedFunctionsWorkers() {
     const state = JSON.parse(fs.readFileSync(workersPath, 'utf8'));
     if (state.token !== token || state.cliPid !== child?.pid) throw new Error('Invalid Functions worker ownership record.');
     for (const worker of state.workers) {
-        if (!Number.isInteger(worker.pid) || worker.pid <= 0 || !['functionsEmulatorRuntime', 'firebase-functions.js'].includes(worker.marker))
+        if (!Number.isInteger(worker.pid) || worker.pid <= 0 || !['functionsEmulatorRuntime', 'firebase-functions.js', 'invoiceBrowserSession.mjs'].includes(worker.marker))
             throw new Error('Invalid Functions worker identity.');
         try { process.kill(worker.pid, 0); } catch (error) { if (error.code === 'ESRCH') continue; throw error; }
         if (process.platform !== 'win32') {
@@ -121,8 +121,8 @@ let result = 1;
 try {
     assertEmulatorEnvironment(process.env, { requireHost: false });
     const mode = process.argv[2];
-    if (process.argv.length > 3 || (mode && !['--verify-failure-cleanup', '--persistence', '--v2-security', '--server', '--callable', '--read-callable', '--update-callable', '--frontend-smoke', '--all'].includes(mode))) throw new Error('Unexpected harness argument.');
-    const needsFunctions = ['--all', '--callable', '--read-callable', '--update-callable', '--frontend-smoke', '--verify-failure-cleanup'].includes(mode);
+    if (process.argv.length > 3 || (mode && !['--verify-failure-cleanup', '--persistence', '--v2-security', '--server', '--callable', '--read-callable', '--update-callable', '--frontend-smoke', '--frontend-browser', '--all'].includes(mode))) throw new Error('Unexpected harness argument.');
+    const needsFunctions = ['--all', '--callable', '--read-callable', '--update-callable', '--frontend-smoke', '--frontend-browser', '--verify-failure-cleanup'].includes(mode);
     const needsAuth = needsFunctions || mode === '--server';
     if (needsAuth) { ports = [8080, 9099]; assertServerEmulatorEnvironment(process.env, { requireHost: false }); }
     if (needsFunctions) { ports.push(5001); assertFunctionsEmulatorEnvironment(process.env, { requireHost: false }); }
@@ -145,7 +145,7 @@ try {
     const env = { ...process.env, CI: 'true', GCLOUD_PROJECT: demoProjectId,
         FIREBASE_DEBUG_PATH: path.join(run, 'firebase-debug.log'), XDG_CONFIG_HOME: path.join(run, 'config'),
         BUSINESSBOSS_EMULATOR_STATE: statePath, BUSINESSBOSS_EMULATOR_TOKEN: token, BUSINESSBOSS_FUNCTIONS_WORKERS: workersPath };
-    if (needsFunctions) Object.assign(env, { BUSINESSBOSS_LOCAL_FUNCTIONS: 'true', FUNCTIONS_DISCOVERY_TIMEOUT: '120', FUNCTIONS_EMULATOR_HOST: '127.0.0.1:5001', FIRESTORE_EMULATOR_HOST: '127.0.0.1:8080', FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099' });
+    if (needsFunctions) Object.assign(env, { BUSINESSBOSS_LOCAL_FUNCTIONS: 'true', FUNCTIONS_DISCOVERY_TIMEOUT: mode === '--frontend-browser' ? '300' : '120', FUNCTIONS_EMULATOR_HOST: '127.0.0.1:5001', FIRESTORE_EMULATOR_HOST: '127.0.0.1:8080', FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099' });
     env.FIREBASE_EMULATORS_PATH ||= path.join(root, '.firebase', 'emulators');
     const javaHome = env.BUSINESSBOSS_JAVA_HOME || env.JAVA_HOME;
     if (javaHome) {
@@ -163,25 +163,41 @@ try {
     }
     // Suites clear the same demo database and load their own rules. Run sequentially.
     const script = mode === '--verify-failure-cleanup' ? 'node -e "process.exit(23)"'
-        : mode === '--frontend-smoke' ? 'node --test tests/invoiceFrontendSmoke.test.mjs'
+        : mode === '--frontend-browser' ? 'node tests/invoiceBrowserSession.mjs'
+        : mode === '--frontend-smoke' ? 'node --test --test-concurrency=1 tests/invoiceFrontendSmoke.test.mjs tests/invoiceDraftWorkflowEmulator.test.mjs'
         : mode === '--persistence' ? 'node --test tests/invoiceDraftPersistence.test.mjs'
         : mode === '--v2-security' ? 'node --test tests/invoiceV2SecurityRules.test.mjs'
         : mode === '--read-callable' ? 'node --test tests/getInvoiceDraftCallable.test.mjs'
         : mode === '--update-callable' ? 'node --test tests/updateInvoiceDraftCallable.test.mjs'
         : mode === '--callable' ? 'node --test --test-concurrency=1 tests/saveInvoiceDraftCallable.test.mjs tests/updateInvoiceDraftCallable.test.mjs tests/getInvoiceDraftCallable.test.mjs'
         : mode === '--server' ? 'node --test --test-concurrency=1 tests/saveInvoiceDraftServerHandler.test.mjs tests/updateInvoiceDraftPersistence.test.mjs'
-        : mode === '--all' ? 'node --test --test-concurrency=1 tests/firestoreRules.test.mjs tests/invoiceDraftPersistence.test.mjs tests/invoiceV2SecurityRules.test.mjs tests/saveInvoiceDraftServerHandler.test.mjs tests/saveInvoiceDraftCallable.test.mjs tests/updateInvoiceDraftPersistence.test.mjs tests/updateInvoiceDraftCallable.test.mjs tests/getInvoiceDraftCallable.test.mjs tests/invoiceFrontendSmoke.test.mjs'
+        : mode === '--all' ? 'node --test --test-concurrency=1 tests/firestoreRules.test.mjs tests/invoiceDraftPersistence.test.mjs tests/invoiceV2SecurityRules.test.mjs tests/saveInvoiceDraftServerHandler.test.mjs tests/saveInvoiceDraftCallable.test.mjs tests/updateInvoiceDraftPersistence.test.mjs tests/updateInvoiceDraftCallable.test.mjs tests/getInvoiceDraftCallable.test.mjs tests/invoiceFrontendSmoke.test.mjs tests/invoiceDraftWorkflowEmulator.test.mjs'
         : 'node --test tests/firestoreRules.test.mjs';
     console.log(`Starting isolated rules run (${demoProjectId}, ${emulatorHost}). Logs: ${run}`);
     child = spawn(process.execPath, ['--require', path.join(root, 'tests/emulatorStartup.cjs'),
         path.join(root, 'node_modules/firebase-tools/lib/bin/firebase.js'), 'emulators:exec',
         '--only', needsFunctions ? 'firestore,auth,functions' : needsAuth ? 'firestore,auth' : 'firestore', '--project', demoProjectId, '--non-interactive', '--debug', script],
         { cwd: root, env, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
-    child.stdout.on('data', data => { output.write(data); process.stdout.write(data); });
+    // Browser time starts only after synthetic sign-in, callable readiness and
+    // static-server startup. A token-scoped marker cannot reuse a stale status file.
+    let browserReady = false, readinessBuffer = '';
+    child.stdout.on('data', data => {
+        output.write(data); process.stdout.write(data);
+        if (mode === '--frontend-browser' && !browserReady) {
+            readinessBuffer = (readinessBuffer + data.toString()).slice(-4096);
+            if (readinessBuffer.includes(`BUSINESSBOSS_BROWSER_READY:${token}`)) {
+                browserReady = true;
+                clearTimeout(watchdog);
+                watchdog = setTimeout(() => { console.error('Browser acceptance exceeded its 16-minute ready-session budget.'); interrupt(); }, 16 * 60_000);
+                console.log('Browser acceptance budget started after verified readiness.');
+            }
+        }
+    });
     child.stderr.on('data', data => { output.write(data); process.stderr.write(data); });
     process.once('SIGINT', interrupt);
     process.once('SIGTERM', interrupt);
-    watchdog = setTimeout(() => { console.error('Rules harness exceeded its 20-minute run budget.'); interrupt(); }, 20 * 60_000);
+    const startupMinutes = mode === '--frontend-browser' ? 25 : 20;
+    watchdog = setTimeout(() => { console.error(`Rules harness exceeded its ${startupMinutes}-minute ${mode === '--frontend-browser' ? 'startup' : 'run'} budget.`); interrupt(); }, startupMinutes * 60_000);
     // exit, not close: a crashed CLI can leave a Java descendant holding a pipe.
     result = await new Promise((resolve, reject) => {
         child.once('error', reject);
