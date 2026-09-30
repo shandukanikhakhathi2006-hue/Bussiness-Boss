@@ -1,5 +1,6 @@
 import { firestore } from '../firebase/config.js';
 import { getDateRange, getFirstRecordDate } from '../utils/dates.js';
+import { AppointmentMutationError, buildAppointmentCancellation, buildAppointmentCompletion, buildAppointmentCreate, buildAppointmentUpdate, createAppointmentInFlightGuard } from './appointmentCrud.js';
 import { collection, deleteDoc, doc, getDocs, query, serverTimestamp, setDoc, where } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
 
 // One feature instance owns the calendar and period listeners for each page shell.
@@ -28,6 +29,7 @@ export const initAppointmentsPage = ({ pageName, pageShell, tableBody, statCards
 	let appointmentsCalendarDate = new Date();
 	let appointmentsCurrentPage = 1;
 	let appointmentsActiveRecordsCache = [];
+	const mutationGuard = createAppointmentInFlightGuard();
 	const APPOINTMENTS_PAGE_SIZE = 8;
 
 	// ===================== APPOINTMENTS: single source of truth =====================
@@ -87,7 +89,7 @@ export const initAppointmentsPage = ({ pageName, pageShell, tableBody, statCards
 		appointmentsCurrentPage = Math.min(Math.max(appointmentsCurrentPage, 1), totalPages);
 		const startIndex = (appointmentsCurrentPage - 1) * APPOINTMENTS_PAGE_SIZE;
 		const recordsForPage = sortedRecords.slice(startIndex, startIndex + APPOINTMENTS_PAGE_SIZE);
-		tableBody.innerHTML = recordsForPage.map((record) => `<tr data-record-id="${record.id}"><td>${pageEscape(record.time || 'No time set')}</td><td><div class="customer"><div class="customer-avatar">${pageEscape(initials(record.customerName))}</div><span>${pageEscape(record.customerName || 'Customer')}</span></div></td><td>${pageEscape(record.service || 'Appointment')}</td><td>${pageEscape(record.staff || 'Not assigned')}</td><td><span class="status-badge ${statusClass(record.status)}">${pageEscape(record.status || 'Pending')}</span></td><td><label class="done-toggle" title="Mark as attended"><input type="checkbox" data-page-action="done"> Done</label><button class="view-button" type="button" data-page-action="edit">Edit</button> <button class="view-button" type="button" data-page-action="delete">Delete</button></td></tr>`).join('');
+		tableBody.innerHTML = recordsForPage.map((record) => `<tr data-record-id="${record.id}"><td>${pageEscape(record.time || 'No time set')}</td><td><div class="customer"><div class="customer-avatar">${pageEscape(initials(record.customerName))}</div><span>${pageEscape(record.customerName || 'Customer')}</span></div></td><td>${pageEscape(record.service || 'Appointment')}</td><td>${pageEscape(record.staff || 'Not assigned')}</td><td><span class="status-badge ${statusClass(record.status)}">${pageEscape(record.status || 'Pending')}</span></td><td>${String(record.status || 'pending').toLowerCase() === 'pending' ? '<button class="view-button" type="button" data-page-action="complete">Done</button> <button class="view-button" type="button" data-page-action="cancel">Cancel</button> ' : ''}<button class="view-button" type="button" data-page-action="edit">Edit</button> <button class="view-button" type="button" data-page-action="delete">Delete</button></td></tr>`).join('');
 		renderAppointmentsPagination(totalPages);
 	};
 
@@ -235,41 +237,45 @@ export const initAppointmentsPage = ({ pageName, pageShell, tableBody, statCards
 	appointmentsBackToMonthButton?.addEventListener('click', showAppointmentsCalendarMonthView);
 
 
-	tableBody?.addEventListener('click', async (event) => {
-		const button = event.target.closest('[data-page-action="done"]');
-		if (!button || !getCurrentUser()) return;
-		const recordId = button.closest('tr')?.dataset.recordId;
-		if (button.dataset.pageAction === 'done' && recordId) {
-			if (!button.checked) return;
-			try {
-				// Reuses the existing "status" field (never a new/duplicate field) and never
-				// deletes the document — completed appointments stay in Firestore for future
-				// history/reporting, they just drop out of the active table/calendar/counts.
-				await setDoc(doc(firestore, 'bookings', recordId), { status: 'completed', completedAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true });
-				showMessage('Appointment marked as done.');
-				await reloadRecords(getCurrentUser());
-			} catch (error) {
-				console.error('Failed to complete bookings', error);
-				showMessage('The appointment could not be updated.', 'error');
-				button.checked = false;
-			}
-			return;
-		}
-	});
-
-	const saveRecord = async (user, values, recordId = null) => {
-		const record = {
-			customerName: values.customerName, customerId: values.customerId,
-			date: values.date, time: values.time, service: values.service,
-			staff: values.staff, status: values.status, updatedAt: serverTimestamp()
-		};
-		if (!recordId) {
-			record.ownerId = user.uid;
-			record.createdAt = serverTimestamp();
-		}
-		await setDoc(recordId ? doc(firestore, 'bookings', recordId) : doc(collection(firestore, 'bookings')), record, { merge: true });
+	const ownedRecord = (user, recordId) => getRecords().find((record) => record.id === recordId && record.ownerId === user?.uid) || null;
+	const requirePendingOwnedRecord = (user, recordId) => {
+		const record = ownedRecord(user, recordId);
+		if (!record || String(record.status || 'pending').toLowerCase() !== 'pending') throw new AppointmentMutationError('APPOINTMENT_NOT_ACTIONABLE');
+		return record;
 	};
-
+	const runMutation = (key, operation) => mutationGuard.run(key, operation);
+	const saveRecord = async (user, values, recordId = null) => {
+		if (recordId && !ownedRecord(user, recordId)) throw new AppointmentMutationError('APPOINTMENT_NOT_FOUND');
+		const key = recordId ? `edit:${recordId}` : `create:${user?.uid || ''}`;
+		const persisted = await runMutation(key, async () => {
+			const record = recordId ? buildAppointmentUpdate({ input: values, timestamp: serverTimestamp }) : buildAppointmentCreate({ uid: user?.uid, input: values, timestamp: serverTimestamp });
+			await setDoc(recordId ? doc(firestore, 'bookings', recordId) : doc(collection(firestore, 'bookings')), record, { merge: true });
+		});
+		if (!persisted) throw new AppointmentMutationError('APPOINTMENT_BUSY');
+	};
+	const completeRecord = async (user, recordId) => {
+		requirePendingOwnedRecord(user, recordId);
+		const persisted = await runMutation(`complete:${recordId}`, () => setDoc(doc(firestore, 'bookings', recordId), buildAppointmentCompletion({ timestamp: serverTimestamp }), { merge: true }));
+		if (!persisted) throw new AppointmentMutationError('APPOINTMENT_BUSY');
+	};
+	const cancelRecord = async (user, recordId) => {
+		requirePendingOwnedRecord(user, recordId);
+		const persisted = await runMutation(`cancel:${recordId}`, () => setDoc(doc(firestore, 'bookings', recordId), buildAppointmentCancellation({ timestamp: serverTimestamp }), { merge: true }));
+		if (!persisted) throw new AppointmentMutationError('APPOINTMENT_BUSY');
+	};
+	const deleteRecord = async (user, recordId) => {
+		if (!ownedRecord(user, recordId)) throw new AppointmentMutationError('APPOINTMENT_NOT_FOUND');
+		const deleted = await runMutation(`delete:${recordId}`, () => deleteDoc(doc(firestore, 'bookings', recordId)));
+		if (!deleted) throw new AppointmentMutationError('APPOINTMENT_BUSY');
+	};
+	tableBody?.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-page-action="complete"]'); if (!button || !getCurrentUser()) return;
+		const recordId = button.closest('tr')?.dataset.recordId; if (!recordId) return;
+		button.disabled = true;
+		try { await completeRecord(getCurrentUser(), recordId); await reloadRecords(getCurrentUser()); showMessage('Appointment marked as done.'); }
+		catch (error) { console.error('Failed to complete booking', error); showMessage('The appointment could not be marked as done.', 'error'); }
+		finally { button.disabled = false; }
+	});
 	const feature = {
 		singularTitle: 'Appointment',
 		fields: (customerHint) => [
@@ -282,7 +288,9 @@ export const initAppointmentsPage = ({ pageName, pageShell, tableBody, statCards
 		],
 		getSnapshot: (user) => getDocs(query(collection(firestore, 'bookings'), where('ownerId', '==', user.uid))),
 		saveRecord,
-		deleteRecord: (recordId) => deleteDoc(doc(firestore, 'bookings', recordId)),
+		completeRecord,
+		cancelRecord,
+		deleteRecord,
 		refresh: refreshAppointmentsView,
 		isCreateButton: (button) => button.textContent.toLowerCase().includes('new appointment')
 	};

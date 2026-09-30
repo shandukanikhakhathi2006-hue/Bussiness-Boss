@@ -5,6 +5,7 @@ import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebas
 import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, query, setDoc, updateDoc, where, Timestamp, serverTimestamp, setLogLevel } from 'firebase/firestore';
 
 import { assertEmulatorEnvironment, demoProjectId, waitForFirestore } from './emulatorEnvironment.mjs';
+import { buildAppointmentCancellation, buildAppointmentCompletion, buildAppointmentCreate, buildAppointmentUpdate } from '../js/features/appointmentCrud.js';
 
 // Never discover a host/project from production configuration or SDK defaults.
 const projectId = demoProjectId;
@@ -128,6 +129,30 @@ for (const name of collections) {
 test('bookings: existing completion fields remain owner-editable', async () => {
     await seed('bookings', 'a', record());
     await assertSucceeds(setDoc(ref(a, 'bookings'), { status: 'completed', completedAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true }));
+});
+test('bookings: owner can create, edit, complete, cancel and delete a canonical appointment', async () => {
+    const target = ref(a, 'bookings', 'canonical');
+    const input = { customerName: 'Alex', customerId: '', date: '2026-10-01', time: '09:30', service: '', staff: '', status: 'pending' };
+    await assertSucceeds(setDoc(target, buildAppointmentCreate({ uid: 'user-a', input, timestamp: serverTimestamp })));
+    let saved = (await assertSucceeds(getDoc(target))).data();
+    assert.deepEqual(Object.keys(saved).sort(), ['createdAt', 'customerId', 'customerName', 'date', 'ownerId', 'service', 'staff', 'status', 'time', 'updatedAt']);
+    await assertSucceeds(setDoc(target, buildAppointmentUpdate({ input: { ...input, service: 'Consulting' }, timestamp: serverTimestamp }), { merge: true }));
+    await assertSucceeds(setDoc(target, buildAppointmentCompletion({ timestamp: serverTimestamp }), { merge: true }));
+    saved = (await assertSucceeds(getDoc(target))).data();
+    assert.equal(saved.status, 'completed'); assert.ok(saved.completedAt); assert.equal(saved.service, 'Consulting');
+    await assertSucceeds(setDoc(target, buildAppointmentCancellation({ timestamp: serverTimestamp }), { merge: true }));
+    assert.equal((await assertSucceeds(getDoc(target))).data().status, 'cancelled');
+    await assertSucceeds(deleteDoc(target));
+});
+test('bookings: foreign user cannot mutate an owner canonical appointment', async () => {
+    const target = ref(a, 'bookings', 'canonical');
+    const input = { customerName: 'Alex', customerId: '', date: '2026-10-01', time: '09:30', service: '', staff: '', status: 'pending' };
+    await assertSucceeds(setDoc(target, buildAppointmentCreate({ uid: 'user-a', input, timestamp: serverTimestamp })));
+    const foreign = ref(b, 'bookings', 'canonical');
+    await assertFails(setDoc(foreign, buildAppointmentUpdate({ input: { ...input, service: 'Forged' }, timestamp: serverTimestamp }), { merge: true }));
+    await assertFails(setDoc(foreign, buildAppointmentCompletion({ timestamp: serverTimestamp }), { merge: true }));
+    await assertFails(setDoc(foreign, buildAppointmentCancellation({ timestamp: serverTimestamp }), { merge: true }));
+    await assertFails(deleteDoc(foreign));
 });
 test('payments: legacy manual amount/status/method remain owner-editable', async () => {
     await assertSucceeds(setDoc(ref(a, 'payments'), { ...record(), method: 'Cash' }));

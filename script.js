@@ -1,6 +1,7 @@
 import { initPaymentsPage } from './js/features/payments.js';
 import { initInvoicesPage } from './js/features/invoices.js';
 import { initAppointmentsPage } from './js/features/appointments.js';
+import { AppointmentValidationError, normalizeAppointmentInput } from './js/features/appointmentContract.js';
 import { getCustomerSnapshot, initCustomersPage } from './js/features/customers.js';
 import { getCurrentUser, getUserProfile, requireAuthenticatedUser, initAuthPages, initLogoutButtons, getFirebaseErrorMessage } from './js/firebase/auth.js';
 import { firestore, clientEnvironment } from './js/firebase/config.js';
@@ -14,6 +15,12 @@ import {
 	reauthenticateWithCredential,
 	EmailAuthProvider
 } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
+
+const appointmentValidationMessage = (error) => {
+	if (!(error instanceof AppointmentValidationError)) return 'The appointment could not be saved. Please try again.';
+	const label = { customerName: 'customer name', customerId: 'customer', date: 'date', time: 'time', service: 'service', staff: 'staff member', status: 'status' }[error.path];
+	return label ? `Check the ${label} and try again.` : 'Check the appointment details and try again.';
+};
 import {
 	addDoc,
 	collection,
@@ -65,7 +72,7 @@ const getNiceAxisMaximum = (value) => {
 // Resolves with an object of trimmed string values keyed by field name on Save, or null
 // if the person cancels (Escape, backdrop click, the X, or the Cancel button).
 // Required and numeric fields are validated inline before the dialog will close on Save.
-const showFormModal = ({ title, description = '', fields, values = {}, submitLabel = 'Save', destructive = false }) => new Promise((resolve) => {
+const showFormModal = ({ title, description = '', fields, values = {}, submitLabel = 'Save', destructive = false, onSubmit, getErrorMessage }) => new Promise((resolve) => {
 	const overlay = document.createElement('div');
 	overlay.className = 'app-modal-overlay';
 
@@ -154,8 +161,18 @@ const showFormModal = ({ title, description = '', fields, values = {}, submitLab
 	(inputs[fields[0]?.name] || cancelButton).focus();
 
 	let settled = false;
+	let saving = false;
+	const setSaving = (active) => {
+		saving = active;
+		submitButton.disabled = active;
+		cancelButton.disabled = active;
+		closeButton.disabled = active;
+		Object.values(inputs).forEach((input) => { input.disabled = active || input.dataset.initiallyDisabled === 'true'; });
+		submitButton.textContent = active ? 'Saving…' : submitLabel;
+	};
+	Object.values(inputs).forEach((input) => { if (input.disabled) input.dataset.initiallyDisabled = 'true'; });
 	const close = (result) => {
-		if (settled) return;
+		if (settled || saving) return;
 		settled = true;
 		document.removeEventListener('keydown', onKeydown);
 		overlay.remove();
@@ -164,7 +181,7 @@ const showFormModal = ({ title, description = '', fields, values = {}, submitLab
 	};
 
 	const onKeydown = (event) => {
-		if (event.key === 'Escape') {
+		if (event.key === 'Escape' && !saving) {
 			close(null);
 			return;
 		}
@@ -184,13 +201,14 @@ const showFormModal = ({ title, description = '', fields, values = {}, submitLab
 	document.addEventListener('keydown', onKeydown);
 
 	overlay.addEventListener('mousedown', (event) => {
-		if (event.target === overlay) close(null);
+		if (event.target === overlay && !saving) close(null);
 	});
-	closeButton.addEventListener('click', () => close(null));
-	cancelButton.addEventListener('click', () => close(null));
+	closeButton.addEventListener('click', () => { if (!saving) close(null); });
+	cancelButton.addEventListener('click', () => { if (!saving) close(null); });
 
-	form.addEventListener('submit', (event) => {
+	form.addEventListener('submit', async (event) => {
 		event.preventDefault();
+		if (saving) return;
 		errorMessage.classList.remove('visible');
 		const result = {};
 		for (const field of fields) {
@@ -210,7 +228,20 @@ const showFormModal = ({ title, description = '', fields, values = {}, submitLab
 			}
 			result[field.name] = rawValue;
 		}
-		close(result);
+		if (!onSubmit) {
+			close(result);
+			return;
+		}
+		setSaving(true);
+		try {
+			await onSubmit(result);
+			saving = false;
+			close(result);
+		} catch (error) {
+			errorMessage.textContent = getErrorMessage?.(error) || 'The record could not be saved. Please try again.';
+			errorMessage.classList.add('visible');
+			setSaving(false);
+		}
 	});
 });
 
@@ -861,17 +892,23 @@ document.addEventListener('DOMContentLoaded', () => {
 		};
 
 		const addRecordFromPrompt = async (collectionName, title, fields, user) => {
-			const values = await showFormModal({ title, fields });
+			const values = await showFormModal({
+				title, fields,
+				onSubmit: async (rawValues) => {
+					const record = collectionName === 'bookings'
+						? { ownerId: user.uid, ...normalizeAppointmentInput({ ...rawValues, customerId: '', service: '', staff: '', status: 'pending' }), createdAt: serverTimestamp(), updatedAt: serverTimestamp() }
+						: Object.fromEntries(fields.map((field) => [field.name, field.type === 'number' ? Number(rawValues[field.name]) : rawValues[field.name]]));
+					if (collectionName !== 'bookings') {
+						record.ownerId = user.uid;
+						record.createdAt = serverTimestamp();
+					}
+					await addDoc(collection(firestore, collectionName), record);
+					await updateDashboardData(user);
+				},
+				getErrorMessage: collectionName === 'bookings' ? appointmentValidationMessage : () => 'The record could not be saved to Firestore.'
+			});
 			if (!values) return;
-			const record = {};
-			for (const field of fields) {
-				record[field.name] = field.type === 'number' ? Number(values[field.name]) : values[field.name];
-			}
-			record.ownerId = user.uid;
-			record.createdAt = serverTimestamp();
-			await addDoc(collection(firestore, collectionName), record);
 			showMessage(`${collectionName.slice(0, -1)} saved to Firestore.`);
-			await updateDashboardData(user);
 		};
 
 		requireAuthenticatedUser(async (user) => {
@@ -1540,7 +1577,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		const pageSingularTitles = { expenses: 'Expense' };
 
-		const promptRecord = async (user, existing = {}, isEditing = false) => {
+		const promptRecord = async (user, existing = {}, isEditing = false, persistWhileOpen = null) => {
 			const customerSnapshot = await getCustomerSnapshot(user);
 			const customers = customerSnapshot.docs.map((record) => ({ id: record.id, ...record.data() }));
 			const customerHint = customers.length ? `e.g. ${customers.map((customer) => customer.name).join(', ')}` : '';
@@ -1550,20 +1587,33 @@ document.addEventListener('DOMContentLoaded', () => {
 			const fieldSet = recordFeature?.fields || recordFieldSets[collectionName];
 			const fields = typeof fieldSet === 'function' ? fieldSet(customerHint, existing, generatedId) : fieldSet;
 			const title = `${isEditing ? 'Edit' : 'Add'} ${recordFeature?.singularTitle || pageSingularTitles[collectionName] || 'Record'}`;
-			const values = await showFormModal({ title, fields, values: existing, submitLabel: isEditing ? 'Save changes' : 'Add' });
+			const prepareValues = (values) => {
+				if (values.amount !== undefined) values.amount = Number(values.amount);
+				if ('customerName' in values) values.customerId = customers.find((customer) => String(customer.name || '').toLowerCase() === values.customerName.toLowerCase())?.id || '';
+				return values;
+			};
+			const values = await showFormModal({
+				title, fields, values: existing, submitLabel: isEditing ? 'Save changes' : 'Add',
+				onSubmit: persistWhileOpen ? (rawValues) => persistWhileOpen(prepareValues(rawValues)) : undefined,
+				getErrorMessage: appointmentValidationMessage
+			});
 			if (!values) return null;
-			if (values.amount !== undefined) values.amount = Number(values.amount);
-			if ('customerName' in values) {
-				values.customerId = customers.find((customer) => String(customer.name || '').toLowerCase() === values.customerName.toLowerCase())?.id || '';
-			}
-			return values;
+			return prepareValues(values);
 		};
 
 		const savePageRecord = async (user, recordId = null) => {
 			const existing = recordId ? pageRecords.find((record) => record.id === recordId) || {} : {};
-			const values = await promptRecord(user, existing, Boolean(recordId));
+			const isAppointment = recordFeature === appointmentsFeature;
+			const values = await promptRecord(user, existing, Boolean(recordId), isAppointment ? async (preparedValues) => {
+				await recordFeature.saveRecord(user, preparedValues, recordId);
+				await loadPageRecords(user);
+			} : null);
 			if (!values) return;
 			try {
+				if (isAppointment) {
+					showMessage('Appointment saved.');
+					return;
+				}
 				if (recordFeature) {
 					await recordFeature.saveRecord(user, values, recordId);
 				} else {
@@ -1726,6 +1776,22 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (!button || !getCurrentUser()) return;
 			const recordId = button.closest('tr')?.dataset.recordId;
 			if (button.dataset.pageAction === 'edit') await savePageRecord(getCurrentUser(), recordId);
+			if (button.dataset.pageAction === 'cancel' && recordId && appointmentsFeature) {
+				const confirmation = await showFormModal({
+					title: 'Cancel appointment?', description: 'The appointment will remain in your records as cancelled.',
+					fields: [], submitLabel: 'Cancel appointment', destructive: true
+				});
+				if (confirmation === null) return;
+				button.disabled = true;
+				try {
+					await appointmentsFeature.cancelRecord(getCurrentUser(), recordId);
+					await loadPageRecords(getCurrentUser());
+					showMessage('Appointment cancelled.');
+				} catch (error) {
+					console.error('Failed to cancel booking', error);
+					showMessage('The appointment could not be cancelled.', 'error');
+				} finally { button.disabled = false; }
+			}
 		if (button.dataset.pageAction === 'delete' && recordId) {
 			const confirmation = await showFormModal({
 				title: `Delete ${recordFeature?.singularTitle || pageSingularTitles[collectionName] || 'record'}?`,
@@ -1735,14 +1801,18 @@ document.addEventListener('DOMContentLoaded', () => {
 				destructive: true
 			});
 			if (confirmation === null) return;
+			button.disabled = true;
 			try {
-					if (recordFeature) await recordFeature.deleteRecord(recordId);
+					if (recordFeature) await (recordFeature === appointmentsFeature
+						? recordFeature.deleteRecord(getCurrentUser(), recordId)
+						: recordFeature.deleteRecord(recordId));
 					else await deleteDoc(doc(firestore, collectionName, recordId));
 					await loadPageRecords(getCurrentUser());
+					showMessage(`${pageName.slice(0, -1)} deleted.`);
 				} catch (error) {
 					console.error(`Failed to delete ${collectionName}`, error);
 					showMessage('The record could not be deleted.', 'error');
-				}
+				} finally { button.disabled = false; }
 			}
 		});
 	}
