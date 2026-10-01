@@ -3518,3 +3518,17 @@ select {
   .workspace-refined .stats-grid > .stat-card:last-child:nth-child(odd) { grid-column: 1 / -1; }
   .workspace-refined .performance-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 }
+
+/* Interactive entries belong only to the Appointments calendar. */
+#appointmentsCalendarDaySlots button.calendar-slot-booking {
+    width: 100%;
+    border: 1px solid transparent;
+    text-align: left;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+#appointmentsCalendarDaySlots button.calendar-slot-booking:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}

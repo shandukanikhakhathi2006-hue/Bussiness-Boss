@@ -1263,7 +1263,8 @@ document.addEventListener('DOMContentLoaded', () => {
 			? initAppointmentsPage({
 				pageName, pageShell, tableBody, statCards, pageEscape, initials, statusClass,
 				getRecords: () => pageRecords, getCurrentUser,
-				reloadRecords: (user) => loadPageRecords(user), showMessage
+				reloadRecords: (user) => loadPageRecords(user), showMessage,
+				editRecord: (user, recordId) => savePageRecord(user, recordId)
 			})
 			: null;
 		const invoicesFeature = pageName === 'invoices'
