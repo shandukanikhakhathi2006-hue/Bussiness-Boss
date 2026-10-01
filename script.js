@@ -68,6 +68,12 @@ const getNiceAxisMaximum = (value) => {
 	return niceNormalized * magnitude;
 };
 
+let appModalSequence = 0;
+const nextAppModalId = (part) => `app-modal-${part}-${++appModalSequence}`;
+const restoreModalFocus = (element) => {
+	if (element instanceof HTMLElement && element.isConnected && !element.disabled) element.focus();
+};
+
 // Shared in-app dialog that replaces window.prompt() for creating/editing records.
 // Renders a small centered form (title + labeled fields + Save/Cancel) instead of the
 // browser's built-in prompt boxes, which look out of place next to the rest of the UI.
@@ -75,6 +81,7 @@ const getNiceAxisMaximum = (value) => {
 // if the person cancels (Escape, backdrop click, the X, or the Cancel button).
 // Required and numeric fields are validated inline before the dialog will close on Save.
 const showFormModal = ({ title, description = '', fields, values = {}, submitLabel = 'Save', destructive = false, onSubmit, getErrorMessage }) => new Promise((resolve) => {
+	const previouslyFocused = document.activeElement;
 	const overlay = document.createElement('div');
 	overlay.className = 'app-modal-overlay';
 
@@ -89,7 +96,9 @@ const showFormModal = ({ title, description = '', fields, values = {}, submitLab
 	const header = document.createElement('div');
 	header.className = 'app-modal-header';
 	const heading = document.createElement('h2');
+	heading.id = nextAppModalId('title');
 	heading.textContent = title;
+	modal.setAttribute('aria-labelledby', heading.id);
 	const closeButton = document.createElement('button');
 	closeButton.type = 'button';
 	closeButton.className = 'app-modal-close';
@@ -100,6 +109,10 @@ const showFormModal = ({ title, description = '', fields, values = {}, submitLab
 	descriptionElement.className = 'app-modal-description';
 	descriptionElement.textContent = description;
 	descriptionElement.hidden = !description;
+	if (description) {
+		descriptionElement.id = nextAppModalId('description');
+		modal.setAttribute('aria-describedby', descriptionElement.id);
+	}
 
 	const fieldsWrapper = document.createElement('div');
 	fieldsWrapper.className = 'app-modal-fields';
@@ -141,6 +154,8 @@ const showFormModal = ({ title, description = '', fields, values = {}, submitLab
 
 	const errorMessage = document.createElement('p');
 	errorMessage.className = 'app-modal-error';
+	errorMessage.setAttribute('role', 'alert');
+	errorMessage.setAttribute('aria-atomic', 'true');
 
 	const actions = document.createElement('div');
 	actions.className = 'app-modal-actions';
@@ -159,7 +174,6 @@ const showFormModal = ({ title, description = '', fields, values = {}, submitLab
 	overlay.append(modal);
 	document.body.append(overlay);
 
-	const previouslyFocused = document.activeElement;
 	(inputs[fields[0]?.name] || cancelButton).focus();
 
 	let settled = false;
@@ -178,7 +192,7 @@ const showFormModal = ({ title, description = '', fields, values = {}, submitLab
 		settled = true;
 		document.removeEventListener('keydown', onKeydown);
 		overlay.remove();
-		if (previouslyFocused instanceof HTMLElement) previouslyFocused.focus();
+		restoreModalFocus(previouslyFocused);
 		resolve(result);
 	};
 
@@ -306,6 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	};
 
 	const showUpgradeConfirmModal = () => new Promise((resolve) => {
+		const previouslyFocused = document.activeElement;
 		const overlay = document.createElement('div');
 		overlay.className = 'app-modal-overlay';
 
@@ -317,7 +332,9 @@ document.addEventListener('DOMContentLoaded', () => {
 		const header = document.createElement('div');
 		header.className = 'app-modal-header';
 		const heading = document.createElement('h2');
+		heading.id = nextAppModalId('title');
 		heading.textContent = 'Upgrade to BusinessBoss Pro?';
+		modal.setAttribute('aria-labelledby', heading.id);
 		const closeButton = document.createElement('button');
 		closeButton.type = 'button';
 		closeButton.className = 'app-modal-close';
@@ -327,6 +344,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		const body = document.createElement('div');
 		body.className = 'app-modal-fields';
+		body.id = nextAppModalId('description');
+		modal.setAttribute('aria-describedby', body.id);
 
 		const priceLine = document.createElement('p');
 		priceLine.className = 'upgrade-plan-summary';
@@ -369,10 +388,20 @@ document.addEventListener('DOMContentLoaded', () => {
 			settled = true;
 			document.removeEventListener('keydown', onKeydown);
 			overlay.remove();
+			restoreModalFocus(previouslyFocused);
 			resolve(result);
 		};
 
-		const onKeydown = (event) => { if (event.key === 'Escape') close(false); };
+		const onKeydown = (event) => {
+			if (event.key === 'Escape') { close(false); return; }
+			if (event.key !== 'Tab') return;
+			const focusable = [...modal.querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')];
+			const first = focusable[0];
+			const last = focusable[focusable.length - 1];
+			if (!first || !last) return;
+			if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+			else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+		};
 		document.addEventListener('keydown', onKeydown);
 
 		overlay.addEventListener('mousedown', (event) => { if (event.target === overlay) close(false); });

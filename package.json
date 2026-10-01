@@ -9,7 +9,7 @@
     "test:finance": "node --test tests/invoiceCalculations.test.mjs tests/invoiceDraftValidator.test.mjs tests/invoiceIssueValidator.test.mjs",
     "test:rules": "node tests/runRules.mjs",
     "test": "npm run test:finance && npm run test:backend && npm run test:frontend && npm run test:emulator",
-    "test:frontend": "node --test tests/invoiceFrontendFoundation.test.mjs tests/invoiceDraftWorkflow.test.mjs tests/appointmentContract.test.mjs tests/appointmentCrud.test.mjs tests/appointmentCalendar.test.mjs tests/appointmentCustomerDashboard.test.mjs",
+    "test:frontend": "node --test tests/invoiceFrontendFoundation.test.mjs tests/invoiceDraftWorkflow.test.mjs tests/appointmentContract.test.mjs tests/appointmentCrud.test.mjs tests/appointmentCalendar.test.mjs tests/appointmentCustomerDashboard.test.mjs tests/modalAccessibility.test.mjs",
     "test:frontend-smoke": "node tests/runRules.mjs --frontend-smoke",
     "test:emulator": "node tests/runRules.mjs --all",
     "test:persistence": "node tests/runRules.mjs --persistence",
