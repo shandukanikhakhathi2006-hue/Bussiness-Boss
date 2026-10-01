@@ -188,7 +188,10 @@ try {
             if (readinessBuffer.includes(`BUSINESSBOSS_BROWSER_READY:${token}`)) {
                 browserReady = true;
                 clearTimeout(watchdog);
-                watchdog = setTimeout(() => { console.error('Browser acceptance exceeded its 16-minute ready-session budget.'); interrupt(); }, 16 * 60_000);
+                // The fixture itself exits after 60 minutes. Leave one minute
+                // for its finally block and Firebase CLI shutdown before this
+                // harness forces termination and performs owned-process cleanup.
+                watchdog = setTimeout(() => { console.error('Browser acceptance exceeded its 61-minute ready-session budget.'); interrupt(); }, 61 * 60_000);
                 console.log('Browser acceptance budget started after verified readiness.');
             }
         }

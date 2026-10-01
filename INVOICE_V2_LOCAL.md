@@ -95,7 +95,7 @@ using the existing calculation engine, never submitted as financial authority.
 With the existing Java/emulator prerequisites configured, run
 `node tests/runRules.mjs --frontend-browser`. This guarded demo-only fixture seeds
 one synthetic owner/business/membership and serves the checkout on
-`127.0.0.1:4173` for at most 15 minutes. Open
+`127.0.0.1:4173` for at most 60 minutes. Open
 `http://127.0.0.1:4173/invoices-v2.html?emulator=1`, sign in through the existing
 login page with `stage9nb-browser@example.test` / `local-browser-test`, then return
 to the v2 page in the same tab. These are disposable emulator credentials.

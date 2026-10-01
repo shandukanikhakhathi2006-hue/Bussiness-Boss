@@ -53,7 +53,9 @@ try {
     await status({ ready: true, url: 'http://127.0.0.1:4173/invoices-v2.html?emulator=1', email });
     console.log('Browser fixture ready on 127.0.0.1:4173 (synthetic local owner only).');
     console.log(`BUSINESSBOSS_BROWSER_READY:${process.env.BUSINESSBOSS_EMULATOR_TOKEN}`);
-    const deadline = Date.now() + 15 * 60_000;
+    // Manual browser acceptance needs one bounded but practical session. The
+    // enclosing harness keeps a one-minute grace period for orderly cleanup.
+    const deadline = Date.now() + 60 * 60_000;
     let previous = '';
     while (Date.now() < deadline) {
         const raw = await fs.readFile(commandFile, 'utf8').catch(() => '');
