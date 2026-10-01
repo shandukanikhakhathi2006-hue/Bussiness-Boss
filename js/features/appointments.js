@@ -2,6 +2,7 @@ import { firestore } from '../firebase/config.js';
 import { getDateRange } from '../utils/dates.js';
 import { appointmentRecordDate, isCompletedAppointment, isCancelledAppointment, createAppointmentCalendarState, moveAppointmentMonth, appointmentMonth, appointmentDaySlots } from './appointmentCalendar.js';
 import { AppointmentMutationError, buildAppointmentCancellation, buildAppointmentCompletion, buildAppointmentCreate, buildAppointmentUpdate, createAppointmentInFlightGuard } from './appointmentCrud.js';
+import { appointmentCustomerOptions } from './appointmentCustomers.js';
 import { collection, deleteDoc, doc, getDocs, query, serverTimestamp, setDoc, where } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
 
 // One feature instance owns the calendar and period listeners for each page shell.
@@ -252,8 +253,8 @@ export const initAppointmentsPage = ({ pageName, pageShell, tableBody, statCards
 	});
 	const feature = {
 		singularTitle: 'Appointment',
-		fields: (customerHint) => [
-			{ name: 'customerName', label: 'Customer name', required: true, placeholder: customerHint },
+		fields: (customers = [], existing = {}) => [
+			{ name: 'customerId', label: 'Customer', type: 'select', required: true, options: appointmentCustomerOptions(customers, existing.customerId, existing.customerName) },
 			{ name: 'date', label: 'Booking date', type: 'date', required: true },
 			{ name: 'time', label: 'Booking time', type: 'time', required: true },
 			{ name: 'service', label: 'Service' },

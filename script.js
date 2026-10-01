@@ -2,6 +2,8 @@ import { initPaymentsPage } from './js/features/payments.js';
 import { initInvoicesPage } from './js/features/invoices.js';
 import { initAppointmentsPage } from './js/features/appointments.js';
 import { AppointmentValidationError, normalizeAppointmentInput } from './js/features/appointmentContract.js';
+import { appointmentCustomerOptions, prepareAppointmentCustomer } from './js/features/appointmentCustomers.js';
+import { dashboardTodayAppointments, dashboardUpcomingAppointments } from './js/features/dashboardAppointments.js';
 import { getCustomerSnapshot, initCustomersPage } from './js/features/customers.js';
 import { getCurrentUser, getUserProfile, requireAuthenticatedUser, initAuthPages, initLogoutButtons, getFirebaseErrorMessage } from './js/firebase/auth.js';
 import { firestore, clientEnvironment } from './js/firebase/config.js';
@@ -117,8 +119,8 @@ const showFormModal = ({ title, description = '', fields, values = {}, submitLab
 			input = document.createElement('select');
 			(field.options || []).forEach((option) => {
 				const optionElement = document.createElement('option');
-				optionElement.value = option;
-				optionElement.textContent = option.charAt(0).toUpperCase() + option.slice(1);
+				optionElement.value = typeof option === 'string' ? option : option.value;
+				optionElement.textContent = typeof option === 'string' ? option.charAt(0).toUpperCase() + option.slice(1) : option.label;
 				input.append(optionElement);
 			});
 		} else {
@@ -845,7 +847,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					getUserRecords('invoices', user),
 					getUserRecords('expenses', user)
 				]);
-				bookingsForCalendar = bookings.docs.map((record) => record.data());
+				bookingsForCalendar = bookings.docs.map((record) => ({ ...record.data(), id: record.id }));
 				invoiceRecords = invoices.docs.map((record) => ({ ...record.data(), id: record.id }));
 				renderInvoiceRows();
 				const invoiceData = invoiceRecords;
@@ -854,7 +856,9 @@ document.addEventListener('DOMContentLoaded', () => {
 				const customerTotals = getPeriodTotals(customers.docs.map((record) => record.data()), () => 1, ['createdAt']);
 				const bookingData = bookings.docs.map((record) => ({ ...record.data(), id: record.id }));
 				const today = new Date();
-				appointmentRecords = bookingData.filter((booking) => isSameDay(getRecordDate(booking, ['date', 'createdAt']), today));
+				// Dashboard's actionable Today list follows the same pending-only policy
+				// as upcoming notifications; history remains available on Appointments.
+				appointmentRecords = dashboardUpcomingAppointments(bookingData, today).filter((booking) => isSameDay(getRecordDate(booking, ['date']), today));
 				renderAppointmentRows(appointmentRecords);
 				const bookingTotals = getDayTotals(bookingData, () => 1, ['date', 'createdAt']);
 				const revenueTotals = getPeriodTotals(invoiceData.filter(isPaidInvoice), (invoice) => Number(invoice.amount || 0), ['createdAt', 'date']);
@@ -862,7 +866,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				const outstandingRecords = invoiceData.filter((invoice) => String(invoice.status || '').toLowerCase() !== 'paid');
 				const outstandingTotals = getPeriodTotals(outstandingRecords, (invoice) => Number(invoice.amount || 0), ['createdAt', 'date']);
 				const overdueInvoices = outstandingRecords.filter((invoice) => String(invoice.status || '').toLowerCase() === 'overdue');
-				const activeTodayAppointments = appointmentRecords.filter((booking) => !['completed', 'cancelled', 'canceled'].includes(String(booking.status || '').toLowerCase()));
+				const activeTodayAppointments = dashboardUpcomingAppointments(bookingData, today).filter((booking) => isSameDay(getRecordDate(booking, ['date']), today));
 				renderNotifications([
 					...(overdueInvoices.length ? [{ title: `${overdueInvoices.length} overdue invoice${overdueInvoices.length === 1 ? '' : 's'}`, detail: 'Review outstanding payments that need follow-up.', link: 'invoices.html', icon: 'fa-triangle-exclamation', tone: 'warning' }] : []),
 					...(activeTodayAppointments.length ? [{ title: `${activeTodayAppointments.length} appointment${activeTodayAppointments.length === 1 ? '' : 's'} today`, detail: 'Open the schedule to see your upcoming bookings.', link: 'appointments.html', icon: 'fa-calendar-check' }] : [])
@@ -892,11 +896,16 @@ document.addEventListener('DOMContentLoaded', () => {
 		};
 
 		const addRecordFromPrompt = async (collectionName, title, fields, user) => {
+			const customers = collectionName === 'bookings' ? (await getCustomerSnapshot(user)).docs.map(record => ({ id: record.id, ...record.data() })) : [];
+			const modalFields = collectionName === 'bookings'
+				? fields.map(field => field.name === 'customerId' ? { ...field, options: appointmentCustomerOptions(customers) } : field)
+				: fields;
 			const values = await showFormModal({
-				title, fields,
+				title, fields: modalFields,
 				onSubmit: async (rawValues) => {
+					const appointmentValues = collectionName === 'bookings' ? prepareAppointmentCustomer({ customers, values: rawValues }) : rawValues;
 					const record = collectionName === 'bookings'
-						? { ownerId: user.uid, ...normalizeAppointmentInput({ ...rawValues, customerId: '', service: '', staff: '', status: 'pending' }), createdAt: serverTimestamp(), updatedAt: serverTimestamp() }
+						? { ownerId: user.uid, ...normalizeAppointmentInput({ ...appointmentValues, service: '', staff: '', status: 'pending' }), createdAt: serverTimestamp(), updatedAt: serverTimestamp() }
 						: Object.fromEntries(fields.map((field) => [field.name, field.type === 'number' ? Number(rawValues[field.name]) : rawValues[field.name]]));
 					if (collectionName !== 'bookings') {
 						record.ownerId = user.uid;
@@ -1089,7 +1098,7 @@ document.addEventListener('DOMContentLoaded', () => {
 						{ name: 'email', label: 'Customer email' }
 					]],
 					'New Appointment': ['bookings', 'New Appointment', [
-						{ name: 'customerName', label: 'Customer name', required: true },
+						{ name: 'customerId', label: 'Customer', type: 'select', required: true, options: [] },
 						{ name: 'date', label: 'Appointment date', type: 'date', required: true },
 						{ name: 'time', label: 'Appointment time', type: 'time', required: true }
 					]],
@@ -1586,11 +1595,13 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (!isEditing && recordFeature?.generateNumber) generatedId = await recordFeature.generateNumber(user);
 			if (!isEditing && collectionName === 'expenses') generatedId = await generateNextReferenceId('expenses', 'expenseNumber', 'EXP', user);
 			const fieldSet = recordFeature?.fields || recordFieldSets[collectionName];
-			const fields = typeof fieldSet === 'function' ? fieldSet(customerHint, existing, generatedId) : fieldSet;
+			const fields = typeof fieldSet === 'function'
+				? fieldSet(recordFeature === appointmentsFeature ? customers : customerHint, existing, generatedId)
+				: fieldSet;
 			const title = `${isEditing ? 'Edit' : 'Add'} ${recordFeature?.singularTitle || pageSingularTitles[collectionName] || 'Record'}`;
 			const prepareValues = (values) => {
 				if (values.amount !== undefined) values.amount = Number(values.amount);
-				if ('customerName' in values) values.customerId = customers.find((customer) => String(customer.name || '').toLowerCase() === values.customerName.toLowerCase())?.id || '';
+				if (recordFeature === appointmentsFeature) return prepareAppointmentCustomer({ customers, values, existing, isEditing });
 				return values;
 			};
 			const values = await showFormModal({
