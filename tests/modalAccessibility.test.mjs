@@ -35,3 +35,20 @@ test('modal focus enters a dialog and safely restores to its opener', () => {
     assert.match(source, /element instanceof HTMLElement && element\.isConnected && !element\.disabled/);
     assert.match(source, /restoreModalFocus\(previouslyFocused\);/);
 });
+
+test('shared async failures replace loading states with an accessible retry action', () => {
+    assert.match(source, /const renderAsyncFailure/);
+    assert.match(source, /role="alert"/);
+    assert.match(source, /data-async-retry/);
+    assert.match(source, /\(\) => loadPageRecords\(user\)/);
+    assert.match(source, /\(\) => updateDashboardData\(user\)/);
+});
+
+test('message reads retry and sending is protected while pending', () => {
+    assert.match(source, /Messages could not be loaded/);
+    assert.match(source, /\(\) => loadMessages\(user\)/);
+    assert.match(source, /let sending = false/);
+    assert.match(source, /if \(sending\) return/);
+    assert.match(source, /sendButton\.disabled = true/);
+    assert.match(source, /finally \{ sending = false; if \(sendButton\) sendButton\.disabled = false; \}/);
+});

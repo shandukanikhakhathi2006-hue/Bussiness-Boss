@@ -73,6 +73,13 @@ const nextAppModalId = (part) => `app-modal-${part}-${++appModalSequence}`;
 const restoreModalFocus = (element) => {
 	if (element instanceof HTMLElement && element.isConnected && !element.disabled) element.focus();
 };
+const renderAsyncFailure = (target, message, retry) => {
+	if (!target) return;
+	const button = '<button type="button" class="secondary-button" data-async-retry>Retry</button>';
+	if (target.tagName === 'TBODY') target.innerHTML = `<tr><td colspan="8"><p role="alert">${message}</p>${button}</td></tr>`;
+	else target.innerHTML = `<div class="async-state" role="alert"><p>${message}</p>${button}</div>`;
+	target.querySelector('[data-async-retry]')?.addEventListener('click', retry, { once: true });
+};
 
 // Shared in-app dialog that replaces window.prompt() for creating/editing records.
 // Renders a small centered form (title + labeled fields + Save/Cancel) instead of the
@@ -920,6 +927,8 @@ document.addEventListener('DOMContentLoaded', () => {
 				updatePerformanceTrend('expenses', getPercentageChange(expenseTotals.current, expenseTotals.previous));
 				updatePerformanceTrend('profit', getPercentageChange(profitTotals.current, profitTotals.previous));
 			} catch (error) {
+				statCards.forEach((card) => { const value = card.querySelector('h2'); if (value) value.textContent = 'Unavailable'; });
+				renderAsyncFailure(document.querySelector('.dashboard .analytics-grid') || appointmentTableBody, 'Dashboard data could not be loaded. Check your connection and try again.', () => updateDashboardData(user));
 				showMessage('Dashboard data could not be loaded from Firestore.', 'error');
 			}
 		};
@@ -1539,15 +1548,28 @@ document.addEventListener('DOMContentLoaded', () => {
 			const chatMessages = pageShell.querySelector('#chatMessages');
 			const messageInput = pageShell.querySelector('#messageInput');
 			const sendButton = pageShell.querySelector('#sendButton');
-			const snapshot = await getDocs(query(collection(firestore, 'messages'), where('ownerId', '==', user.uid)));
+			if (conversationList) conversationList.innerHTML = '<p class="empty-state" role="status">Loading messages…</p>';
+			if (chatMessages) chatMessages.innerHTML = '<p class="empty-state" role="status">Loading messages…</p>';
+			let snapshot;
+			try { snapshot = await getDocs(query(collection(firestore, 'messages'), where('ownerId', '==', user.uid))); }
+			catch (error) {
+				console.error('Failed to load messages', error);
+				renderAsyncFailure(conversationList, 'Messages could not be loaded.', () => loadMessages(user));
+				renderAsyncFailure(chatMessages, 'Messages could not be loaded.', () => loadMessages(user));
+				return;
+			}
 			const records = snapshot.docs.map((record) => ({ id: record.id, ...record.data() }));
 			if (conversationList) conversationList.innerHTML = records.length ? records.map((record) => `<div class="conversation-item active"><div class="conversation-avatar">${pageEscape(initials(record.customerName || 'Customer'))}</div><div class="conversation-meta"><div class="conversation-topline"><span class="conversation-name">${pageEscape(record.customerName || 'Customer')}</span><span class="conversation-time">${pageEscape(pageDateText(record))}</span></div><div class="conversation-preview"><span>${pageEscape(record.text || '')}</span></div></div></div>`).join('') : '<p class="empty-state">No messages yet.</p>';
 			if (chatMessages) chatMessages.innerHTML = records.length ? records.map((record) => `<div class="message-row outgoing"><div class="message-bubble">${pageEscape(record.text || '')}</div></div>`).join('') : '<p class="empty-state">No messages yet.</p>';
+			let sending = false;
 			const sendMessage = async (event) => {
 				event?.preventDefault();
 				event?.stopImmediatePropagation();
+				if (sending) return;
 				const text = messageInput?.value.trim();
 				if (!text) return;
+				sending = true;
+				if (sendButton) sendButton.disabled = true;
 				try {
 					await addDoc(collection(firestore, 'messages'), { ownerId: user.uid, text, customerName: 'Business contact', createdAt: serverTimestamp() });
 					messageInput.value = '';
@@ -1555,7 +1577,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				} catch (error) {
 					console.error('Failed to send message', error);
 					showMessage('Your message could not be sent.', 'error');
-				}
+				} finally { sending = false; if (sendButton) sendButton.disabled = false; }
 			};
 			if (sendButton && messageInput && !sendButton.dataset.bound) {
 				sendButton.dataset.bound = 'true';
@@ -1672,6 +1694,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		const loadPageRecords = async (user) => {
 			if (!collectionName) return;
+			clearDemoContent();
 			try {
 				const records = recordFeature
 					? await recordFeature.getSnapshot(user)
@@ -1686,7 +1709,8 @@ document.addEventListener('DOMContentLoaded', () => {
 				}
 			} catch (error) {
 				console.error(`Failed to load ${collectionName}`, error);
-				if (tableBody) tableBody.innerHTML = '<tr><td colspan="8">Could not load your data.</td></tr>';
+				statCards.forEach((card) => { card.textContent = 'Unavailable'; });
+				renderAsyncFailure(tableBody, `Your ${pageName} could not be loaded.`, () => loadPageRecords(user));
 				showMessage(`Your ${pageName} could not be loaded.`, 'error');
 			}
 		};
