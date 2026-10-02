@@ -969,20 +969,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			await updateDashboardData(user);
 		});
 
-		menuButton?.addEventListener('click', () => {
-			// Keep this breakpoint aligned with dashboard.css: at 700px and below the
-			// sidebar becomes an off-canvas drawer; above it, the same control simply
-			// collapses the persistent sidebar.
-			if (window.matchMedia('(max-width: 700px)').matches) {
-				const isOpen = sidebar?.classList.toggle('open');
-				menuButton.setAttribute('aria-expanded', String(isOpen));
-				return;
-			}
-
-			const isCollapsed = document.body.classList.toggle('sidebar-collapsed');
-			menuButton.setAttribute('aria-expanded', String(!isCollapsed));
-		});
-
 		profileAvatarUpload?.addEventListener('click', (event) => event.stopPropagation());
 
 		profileMenuButton?.addEventListener('click', () => {
@@ -990,6 +976,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		});
 
 		profileMenuButton?.addEventListener('keydown', (event) => {
+			if (profileMenuButton.tagName === 'BUTTON') return;
 			if (event.key === 'Enter' || event.key === ' ') {
 				event.preventDefault();
 				setProfileDropdownOpen(profileDropdown?.hidden === true);
@@ -1239,6 +1226,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		profileMenuButton?.addEventListener('click', () => setProfileMenuOpen(profileDropdown?.hidden === true));
 		profileMenuButton?.addEventListener('keydown', (event) => {
+			if (profileMenuButton.tagName === 'BUTTON') return;
 			if (event.key === 'Enter' || event.key === ' ') {
 				event.preventDefault();
 				setProfileMenuOpen(profileDropdown?.hidden === true);

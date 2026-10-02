@@ -73,10 +73,42 @@ body {
     transition: transform 0.28s ease, width 0.28s ease;
 }
 
-body.sidebar-collapsed .sidebar {
+.sidebar-expand-button {
+    display: none;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+}
 
-    transform: translateX(-100%);
+.sidebar-expand-button:hover { background: #f1f5f9; }
+.sidebar-expand-button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.sidebar-expand-button img { display: block; width: 40px; height: 40px; border-radius: 8px; object-fit: cover; }
 
+@media (min-width: 701px) {
+    body.sidebar-collapsed .sidebar {
+        width: 72px;
+        padding: 18px 8px;
+        transform: none;
+    }
+
+    body.sidebar-collapsed .brand { align-items: center; padding: 0; }
+    body.sidebar-collapsed .brand > .logo,
+    body.sidebar-collapsed .brand-name,
+    body.sidebar-collapsed .nav-title,
+    body.sidebar-collapsed .nav-link span,
+    body.sidebar-collapsed .sidebar-footer { display: none; }
+    body.sidebar-collapsed .sidebar-expand-button { display: flex; }
+    body.sidebar-collapsed .nav-link { justify-content: center; gap: 0; padding: 11px 8px; }
+    body.sidebar-collapsed .nav-link:hover { transform: none; }
+    body.sidebar-collapsed .menu-button { display: none; }
+    body.sidebar-collapsed .main-content { margin-left: 72px; }
 }
 
 
@@ -139,6 +171,7 @@ body.sidebar-collapsed .sidebar {
 
     font-weight: 600;
 }
+
 
 
 /* NAVIGATION */
@@ -365,12 +398,6 @@ body.sidebar-collapsed .sidebar {
 
     transition: margin-left 0.28s ease;
 }
-
-body.sidebar-collapsed .main-content {
-
-    margin-left: 0;
-}
-
 
 /* =========================================
    TOP HEADER
@@ -880,19 +907,6 @@ body.sidebar-collapsed .main-content {
     height: 30px;
     object-fit: contain;
 }
-
-body.sidebar-collapsed .menu-button {
-    display: flex;
-}
-
-body.sidebar-collapsed .menu-button .fa-bars {
-    display: none;
-}
-
-body.sidebar-collapsed .menu-button .menu-logo {
-    display: block;
-}
-
 
 /* =========================================
    DASHBOARD
@@ -3004,9 +3018,11 @@ select {
 
     .sidebar {
 
+        width: min(180px, calc(100vw - 32px));
+
         transform: translateX(-100%);
 
-        transition: 0.3s;
+        transition: transform 0.3s ease;
     }
 
     .sidebar.open {
@@ -3022,6 +3038,10 @@ select {
     .menu-button {
 
         display: flex;
+    }
+
+    .nav-link {
+        min-height: 44px;
     }
 
     .top-header {
@@ -3146,6 +3166,39 @@ select {
     justify-content: center;
     padding: 20px;
     z-index: 1000;
+}
+
+.profile {
+    border: 0;
+    font: inherit;
+    text-align: inherit;
+}
+
+.sidebar-backdrop { display: none; }
+
+@media (max-width: 700px) {
+    /* Main-content controls reach z-index 150; keep the dimmer above that
+       root-level content while preserving the existing modal layer at 200. */
+    .sidebar { z-index: 152; }
+    .sidebar-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        border: 0;
+        background: rgba(15, 23, 42, .42);
+        z-index: 151;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .2s ease;
+    }
+    body:has(.sidebar.open) .sidebar-backdrop { opacity: 1; pointer-events: auto; }
+    .performance-summary { grid-template-columns: 1fr; gap: 12px; }
+    .table-actions, td:last-child { white-space: normal; }
+    .view-button { min-height: 36px; margin: 2px 2px 2px 0; }
+    .calendar-slot { gap: 8px; }
+    .calendar-slot-time { width: 48px; }
+    .calendar-slot-content { min-width: 0; }
+    .calendar-slot-booking { overflow-wrap: anywhere; padding: 9px 10px; min-height: 40px; }
 }
 
 .app-modal {

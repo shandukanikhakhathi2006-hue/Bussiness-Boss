@@ -31,6 +31,9 @@
     <aside class="sidebar" id="sidebar">
 
         <div class="brand">
+            <button type="button" class="sidebar-expand-button" aria-label="Expand navigation" aria-expanded="false" aria-controls="sidebar">
+                <img src="images/BussinessBoss-logo-2.jpeg.jpeg" alt="" />
+            </button>
             <img src="images/BussinessBoss-logo-2.jpeg.jpeg" alt="Business Boss logo" class="logo">
 
             <div class="brand-name">
@@ -157,7 +160,7 @@
 
                     <div class="profile-menu">
 
-                    <div class="profile" id="profileMenuButton" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-controls="profileDropdown">
+                    <button type="button" class="profile" id="profileMenuButton" aria-haspopup="true" aria-expanded="false" aria-controls="profileDropdown">
 
                         <label class="profile-avatar-upload" for="profileImageInput" title="Upload profile image">
                             <div class="profile-avatar" id="profileAvatar">
@@ -177,7 +180,7 @@
 
                         <i class="fa-solid fa-chevron-down"></i>
 
-                    </div>
+                    </button>
 
                     <div class="profile-dropdown" id="profileDropdown" role="menu" hidden>
                         <div class="profile-dropdown-header">
@@ -716,6 +719,7 @@
 
     </main>
 
+    <script src="navigation.js"></script>
     <script src="script.js" type="module"></script>
 </body>
 </html>

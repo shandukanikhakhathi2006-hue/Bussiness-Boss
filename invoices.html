@@ -13,6 +13,9 @@
 <body class="workspace-refined">
     <aside class="sidebar" id="sidebar">
         <div class="brand">
+            <button type="button" class="sidebar-expand-button" aria-label="Expand navigation" aria-expanded="false" aria-controls="sidebar">
+                <img src="images/BussinessBoss-logo-2.jpeg.jpeg" alt="" />
+            </button>
             <img src="images/BussinessBoss-logo-2.jpeg.jpeg" alt="Business Boss logo" class="logo" />
             <div class="brand-name"><strong>Business</strong><span>Boss</span></div>
         </div>
@@ -53,7 +56,7 @@
                 <div class="header-right">
 
 
-                    <div class="profile-menu"><div class="profile" id="profileMenuButton" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-controls="profileDropdown"><label class="profile-avatar-upload" for="profileImageInput" title="Upload profile image"><div class="profile-avatar" id="profileAvatar">BM</div><span class="profile-camera" aria-hidden="true"><i class="fa-solid fa-camera"></i></span></label><input id="profileImageInput" type="file" accept="image/png,image/jpeg,image/webp" hidden><div class="profile-info"><strong>Business Manager</strong><span>Administrator</span></div><i class="fa-solid fa-chevron-down"></i></div><div class="profile-dropdown" id="profileDropdown" role="menu" hidden><div class="profile-dropdown-header"><strong id="profileDropdownName">Business Manager</strong><span id="profileDropdownEmail">Signed-in account</span></div><button class="profile-dropdown-item" id="profileDropdownLogout" type="button" role="menuitem"><i class="fa-solid fa-right-from-bracket"></i> Sign out</button></div></div>
+                    <div class="profile-menu"><button type="button" class="profile" id="profileMenuButton" aria-haspopup="true" aria-expanded="false" aria-controls="profileDropdown"><label class="profile-avatar-upload" for="profileImageInput" title="Upload profile image"><div class="profile-avatar" id="profileAvatar">BM</div><span class="profile-camera" aria-hidden="true"><i class="fa-solid fa-camera"></i></span></label><input id="profileImageInput" type="file" accept="image/png,image/jpeg,image/webp" hidden><div class="profile-info"><strong>Business Manager</strong><span>Administrator</span></div><i class="fa-solid fa-chevron-down"></i></button><div class="profile-dropdown" id="profileDropdown" role="menu" hidden><div class="profile-dropdown-header"><strong id="profileDropdownName">Business Manager</strong><span id="profileDropdownEmail">Signed-in account</span></div><button class="profile-dropdown-item" id="profileDropdownLogout" type="button" role="menuitem"><i class="fa-solid fa-right-from-bracket"></i> Sign out</button></div></div>
                 </div>
             </div>
         </header>
@@ -119,22 +122,8 @@
     </main>
 
     <script src="live-clock.js"></script>
+    <script src="navigation.js"></script>
     <script src="script.js" type="module"></script>
 
-    <script>
-        const menuButton = document.getElementById('menuButton');
-        const sidebar = document.getElementById('sidebar');
-
-        if (menuButton && sidebar) {
-            menuButton.addEventListener('click', () => {
-                const isMobile = window.matchMedia('(max-width: 700px)').matches;
-                const isOpen = isMobile ? !sidebar.classList.contains('open') : document.body.classList.contains('sidebar-collapsed');
-                document.body.classList.toggle('sidebar-collapsed', !isOpen);
-                sidebar.classList.toggle('open', isOpen);
-                menuButton.setAttribute('aria-expanded', String(isOpen));
-                menuButton.setAttribute('aria-label', isOpen ? 'Close navigation' : 'Open navigation');
-            });
-        }
-    </script>
 </body>
 </html>
