@@ -16,6 +16,7 @@
         <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=Manrope:wght@600;700;800&amp;display=swap" rel="stylesheet">
 
         <link rel="stylesheet" href="index.css">
+        <link rel="stylesheet" href="public.css">
     </head>
     <body>
         <a class="skip-link" href="#main-content">Skip to content</a>
@@ -23,14 +24,19 @@
         <header class="site-header">
             <nav class="site-nav" aria-label="Main navigation">
                 <a href="index.html" class="brand" aria-label="BusinessBoss home"><img src="images/BussinessBoss-logo-2.jpeg.jpeg" alt="" class="brand-mark"><span>Business<span>Boss</span></span></a>
-                <div class="nav-links">
-                    <a href="features.html">Features</a>
-                    <a href="pricing.html">Pricing</a>
-                    <a href="Contact.html">Contact</a>
-                </div>
-                <div class="nav-actions">
-                    <a class="login-link" href="login.html">Log in</a>
-                    <a class="button button-small" href="signup.html">Start free</a>
+                <button class="nav-menu-toggle" type="button" aria-label="Open site navigation" aria-expanded="false" aria-controls="public-navigation-panel">
+                    <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
+                </button>
+                <div class="nav-panel" id="public-navigation-panel">
+                    <div class="nav-links">
+                        <a href="features.html">Features</a>
+                        <a href="pricing.html">Pricing</a>
+                        <a href="Contact.html">Contact</a>
+                    </div>
+                    <div class="nav-actions">
+                        <a class="login-link" href="login.html">Log in</a>
+                        <a class="button button-small" href="signup.html">Start free</a>
+                    </div>
                 </div>
             </nav>
         </header>
@@ -173,5 +179,6 @@
                 <a href="Contact.html">Contact</a>
             </div>
         </footer>
+        <script src="public-navigation.js"></script>
     </body>
 </html>
