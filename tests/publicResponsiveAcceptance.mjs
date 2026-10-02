@@ -41,8 +41,8 @@ const server = createServer(async (request, response) => {
 const pages = [
 	{ file: 'index.html', kind: 'marketing', action: '.hero-actions .button' },
 	{ file: 'features.html', kind: 'marketing', action: '.closing-cta .button' },
-	{ file: 'pricing.html', kind: 'marketing', action: '.pricing-card button' },
-	{ file: 'Contact.html', kind: 'marketing', action: '.contact-form button' },
+	{ file: 'pricing.html', kind: 'marketing', action: '.pricing-information .button' },
+	{ file: 'Contact.html', kind: 'marketing', action: '.contact-information .button' },
 	{ file: 'login.html', kind: 'auth', action: '.login-container button[type="submit"]', form: '.login-container' },
 	{ file: 'signup.html', kind: 'auth', action: '.signup-btn', form: '.signup-form' },
 	{ file: 'forgot-password.html', kind: 'auth', action: '.forgot-password-form button[type="submit"]', form: '.forgot-password-form' }
@@ -84,23 +84,58 @@ try {
 			const heading = page.locator('h1');
 			assert.equal(await heading.count(), 1, `${target.file} should have one h1 at ${viewport.width}px.`);
 			assert.equal(await heading.isVisible(), true, `${target.file} h1 should be visible at ${viewport.width}px.`);
+			const layoutWidth = await page.evaluate(() => document.documentElement.clientWidth);
 
 			const action = page.locator(target.action).first();
 			assert.equal(await action.isVisible(), true, `${target.file} primary action should be visible at ${viewport.width}px.`);
 			const actionBounds = await action.boundingBox();
-			assert.ok(actionBounds && actionBounds.x >= -1 && actionBounds.x + actionBounds.width <= viewport.width + 1,
+			assert.ok(actionBounds && actionBounds.x >= -1 && actionBounds.x + actionBounds.width <= layoutWidth + 1,
 				`${target.file} primary action should fit the viewport at ${viewport.width}px.`);
 
 			if (target.form) {
 				const form = page.locator(target.form);
 				assert.equal(await form.isVisible(), true, `${target.file} form should be visible at ${viewport.width}px.`);
 				const formBounds = await form.boundingBox();
-				assert.ok(formBounds && formBounds.x >= -1 && formBounds.x + formBounds.width <= viewport.width + 1,
+				assert.ok(formBounds && formBounds.x >= -1 && formBounds.x + formBounds.width <= layoutWidth + 1,
 					`${target.file} form should fit the viewport at ${viewport.width}px.`);
+				const controlsFit = await form.locator('input, textarea, select, button').evaluateAll(elements =>
+					elements.every(element => {
+						const checkboxLabel = element instanceof HTMLInputElement && element.type === 'checkbox'
+							? element.closest('label')
+							: null;
+						const rect = (checkboxLabel ?? element).getBoundingClientRect();
+						return rect.left >= -1 && rect.right <= document.documentElement.clientWidth + 1 && rect.height >= 40;
+					}));
+				assert.equal(controlsFit, true, `${target.file} form controls should fit and remain comfortably sized at ${viewport.width}px.`);
+			}
+
+			if (target.file === 'index.html') {
+				const copy = await page.locator('body').innerText();
+				assert.doesNotMatch(copy, /R\s*24,850|12\.5%|Payment received|No card required|Set up in minutes/i,
+					'Homepage should not present sample metrics or unverified signup promises as real.');
+			}
+
+			if (target.file === 'features.html') {
+				const copy = await page.locator('body').innerText();
+				assert.match(copy, /manually/i, 'Payment records should be described as manual entries.');
+				assert.doesNotMatch(copy, /inventory management|WhatsApp reminders|API access|multiple branches|staff management|automated reminders|Peach Payments/i,
+					'Features page should not advertise unverified functionality.');
+			}
+
+			if (target.file === 'pricing.html') {
+				const copy = await page.locator('body').innerText();
+				assert.doesNotMatch(copy, /R199|free trial|most popular|inventory management|WhatsApp reminders|API access|multiple branches|staff management/i,
+					'Pricing page should not advertise unverified prices, tiers, or differentiators.');
+			}
+
+			if (target.file === 'Contact.html') {
+				assert.equal(await page.locator('form').count(), 0, 'Contact page should not show a non-delivering form.');
+				assert.equal(await page.locator('a[href^="mailto:"]').count(), 0, 'Contact page should not select an unverified email address.');
 			}
 
 			const layout = await page.evaluate(() => ({
 				viewportWidth: window.innerWidth,
+				layoutWidth: document.documentElement.clientWidth,
 				documentWidth: document.documentElement.scrollWidth,
 				bodyWidth: document.body.scrollWidth,
 				heading: (() => {
@@ -109,12 +144,12 @@ try {
 				})(),
 				imagesWithinViewport: [...document.images].every(image => {
 					const rect = image.getBoundingClientRect();
-					return rect.left >= -1 && rect.right <= window.innerWidth + 1;
+					return rect.left >= -1 && rect.right <= document.documentElement.clientWidth + 1;
 				})
 			}));
-			assert.ok(layout.documentWidth <= viewport.width + 1 && layout.bodyWidth <= viewport.width + 1,
-				`${target.file} must not overflow horizontally at ${viewport.width}px (document ${layout.documentWidth}px, body ${layout.bodyWidth}px).`);
-			assert.ok(layout.heading.left >= -1 && layout.heading.right <= viewport.width + 1,
+			assert.ok(layout.documentWidth <= layout.layoutWidth + 1 && layout.bodyWidth <= layout.layoutWidth + 1,
+				`${target.file} must not overflow horizontally at ${viewport.width}px (layout ${layout.layoutWidth}px, document ${layout.documentWidth}px, body ${layout.bodyWidth}px).`);
+			assert.ok(layout.heading.left >= -1 && layout.heading.right <= layout.layoutWidth + 1,
 				`${target.file} h1 must stay within the viewport at ${viewport.width}px.`);
 			assert.equal(layout.imagesWithinViewport, true, `${target.file} images should stay within the viewport at ${viewport.width}px.`);
 

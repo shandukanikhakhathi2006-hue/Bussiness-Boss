@@ -492,27 +492,6 @@ document.addEventListener('DOMContentLoaded', () => {
 	initAuthPages(showMessage);
 	initLogoutButtons(showMessage);
 
-	const contactForm = document.querySelector('.contact-form form');
-	if (contactForm) {
-		contactForm.addEventListener('submit', (event) => {
-			event.preventDefault();
-			contactForm.reset();
-			showMessage('Thanks for reaching out. We will reply shortly.');
-		});
-	}
-
-	document.querySelectorAll('.pricing-card button').forEach((button) => {
-		button.addEventListener('click', () => {
-			const plan = button.closest('.pricing-card').querySelector('h2').textContent;
-			if (plan === 'Enterprise') {
-				window.location.href = 'Contact.html';
-				return;
-			}
-			localStorage.setItem('businessBossSelectedPlan', plan);
-			window.location.href = 'signup.html';
-		});
-	});
-
 	const dashboard = document.querySelector('.dashboard');
 	if (dashboard) {
 		const menuButton = document.querySelector('#menuButton');

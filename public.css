@@ -37,11 +37,9 @@
 
 html {
     scroll-behavior: smooth;
-    min-width: 320px;
 }
 
 body {
-    min-width: 320px;
     overflow-wrap: anywhere;
 }
 
@@ -65,6 +63,24 @@ input,
 select,
 textarea {
     -webkit-tap-highlight-color: transparent;
+}
+
+.skip-link {
+    position: fixed;
+    z-index: 100;
+    top: 8px;
+    left: 8px;
+    transform: translateY(-150%);
+    padding: 12px 16px;
+    border: 1px solid var(--public-border);
+    border-radius: var(--public-radius-control);
+    background: var(--public-surface);
+    color: var(--public-text);
+    box-shadow: var(--public-shadow-menu);
+}
+
+.skip-link:focus {
+    transform: none;
 }
 
 :focus-visible {
@@ -408,5 +424,731 @@ textarea {
         animation-duration: .01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: .01ms !important;
+    }
+}
+
+/* Public UX-B marketing layouts */
+.site-header {
+    padding-top: 18px;
+    padding-bottom: 18px;
+}
+
+.site-nav {
+    max-width: 1240px;
+}
+
+.nav-panel {
+    gap: clamp(18px, 3vw, 38px);
+}
+
+.nav-links,
+.nav-actions {
+    gap: clamp(14px, 2.2vw, 28px);
+}
+
+.nav-links a,
+.login-link {
+    min-height: 44px;
+}
+
+.button {
+    border-radius: 9px;
+    box-shadow: none;
+}
+
+.button:hover,
+.pricing-card button:hover,
+.contact-form button:hover {
+    transform: none;
+}
+
+.public-home {
+    display: block;
+    min-height: 100vh;
+    align-items: initial;
+    justify-content: initial;
+    padding: 0;
+    overflow-x: visible;
+    background: var(--public-workspace);
+    color: var(--public-text);
+    font-family: "DM Sans", sans-serif;
+}
+
+.public-home .hero {
+    width: min(100%, 1240px);
+    min-height: 0;
+    grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr);
+    gap: clamp(32px, 5vw, 72px);
+    padding: clamp(48px, 7vw, 92px) 24px clamp(72px, 9vw, 112px);
+}
+
+.public-home .hero h1 {
+    max-width: 620px;
+    font-size: clamp(42px, 5.4vw, 70px);
+    line-height: 1.04;
+    letter-spacing: -.055em;
+}
+
+.public-home .hero h1 em,
+.public-home .text-link {
+    color: var(--public-brand);
+}
+
+.public-home .hero-description {
+    max-width: 500px;
+    margin: 22px 0 28px;
+    color: var(--public-muted);
+    font-size: clamp(16px, 1.5vw, 19px);
+}
+
+.public-home .hero-actions {
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px 24px;
+}
+
+.public-home .hero-actions .button {
+    min-height: 50px;
+}
+
+.public-home .product-preview {
+    width: 100%;
+    max-width: 600px;
+    justify-self: end;
+}
+
+.public-home .preview-window {
+    padding: 10px;
+    border: 1px solid var(--public-border);
+    border-radius: 18px;
+    background: var(--public-surface);
+    box-shadow: 0 20px 50px rgb(23 37 84 / 9%);
+    transform: none;
+}
+
+.public-home .preview-window::before {
+    background: var(--public-brand);
+    box-shadow: 12px 0 #93c5fd, 24px 0 #cbd5e1;
+}
+
+.public-home .preview-shell {
+    min-height: 360px;
+    border: 1px solid #e8edf5;
+    background: var(--public-workspace);
+}
+
+.public-home .preview-sidebar {
+    flex: 0 0 52px;
+    background: #1e3a8a;
+}
+
+.public-home .preview-logo {
+    color: #1e3a8a;
+    background: #dbeafe;
+}
+
+.public-home .preview-content {
+    min-width: 0;
+    padding: clamp(14px, 2vw, 24px);
+}
+
+.public-home .preview-top {
+    gap: 12px;
+    justify-content: space-between;
+}
+
+.public-home .preview-top small {
+    color: var(--public-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .08em;
+}
+
+.public-home .preview-top strong {
+    max-width: 290px;
+    font: 700 clamp(14px, 1.8vw, 20px)/1.3 Manrope, sans-serif;
+    letter-spacing: -.04em;
+}
+
+.public-home .preview-avatar {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    place-items: center;
+    border: 1px solid var(--public-border);
+    border-radius: 50%;
+    background: #eff6ff;
+    color: var(--public-brand);
+    font-weight: 800;
+}
+
+.public-home .preview-workflows {
+    display: grid;
+    gap: 8px;
+    margin-top: 22px;
+}
+
+.public-home .preview-workflows article {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--public-border);
+    border-radius: 10px;
+    background: var(--public-surface);
+}
+
+.public-home .workflow-icon {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+    border-radius: 8px;
+    background: #eff6ff;
+    color: var(--public-brand);
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.public-home .preview-workflows article > div {
+    min-width: 0;
+}
+
+.public-home .preview-workflows strong,
+.public-home .preview-workflows small {
+    display: block;
+    overflow-wrap: anywhere;
+}
+
+.public-home .preview-workflows strong {
+    color: var(--public-text);
+    font-size: 13px;
+}
+
+.public-home .preview-workflows small {
+    margin-top: 3px;
+    color: var(--public-muted);
+    font-size: 11px;
+}
+
+.public-home .preview-workflows article > span:last-child {
+    color: var(--public-muted);
+}
+
+.home-workflows,
+.home-how {
+    width: min(100%, 1120px);
+    margin: 0 auto;
+    padding: clamp(52px, 7vw, 82px) 24px;
+    border-top: 1px solid var(--public-border);
+}
+
+.public-home .section-intro {
+    max-width: 650px;
+}
+
+.public-home .section-intro h2,
+.home-how h2 {
+    margin: 0;
+    color: var(--public-text);
+    font: 700 clamp(30px, 4vw, 46px)/1.12 Manrope, sans-serif;
+    letter-spacing: -.05em;
+    text-wrap: balance;
+}
+
+.public-home .section-intro > p:last-child {
+    max-width: 570px;
+    margin: 14px 0 0;
+    color: var(--public-muted);
+    line-height: 1.65;
+}
+
+.workflow-list {
+    margin-top: 32px;
+    border-top: 1px solid var(--public-border);
+}
+
+.workflow-list article {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 18px;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--public-border);
+}
+
+.workflow-list article > span {
+    color: var(--public-brand);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.workflow-list h3 {
+    margin: 0;
+    font: 700 18px/1.3 Manrope, sans-serif;
+}
+
+.workflow-list p {
+    margin: 4px 0 0;
+    color: var(--public-muted);
+    line-height: 1.5;
+}
+
+.workflow-list a {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    gap: 8px;
+    color: var(--public-brand);
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.home-how {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, .8fr);
+    align-items: start;
+    gap: 48px;
+    background: #eff6ff;
+}
+
+.home-how > p {
+    max-width: 490px;
+    margin: 4px 0 0;
+    color: #40516f;
+    font-size: 17px;
+    line-height: 1.7;
+}
+
+.public-home .closing-cta {
+    width: min(calc(100% - 48px), 1120px);
+    margin: 48px auto 72px;
+    padding: clamp(26px, 5vw, 48px);
+    border: 1px solid #1e3a8a;
+    border-radius: var(--public-radius-card);
+    background: #1e3a8a;
+    box-shadow: none;
+}
+
+.public-home .closing-cta h2 {
+    max-width: 600px;
+    font-size: clamp(28px, 3.7vw, 42px);
+}
+
+.public-home .button-light {
+    min-height: 48px;
+    color: #1e3a8a;
+}
+
+.marketing-page {
+    min-height: 100vh;
+    color: var(--public-text);
+    background: var(--public-workspace);
+}
+
+.marketing-page .page-hero {
+    width: min(100%, 900px);
+    padding: clamp(52px, 8vw, 92px) 24px clamp(38px, 6vw, 64px);
+}
+
+.marketing-page .page-hero h1 {
+    font-size: clamp(38px, 5vw, 64px);
+    letter-spacing: -.055em;
+}
+
+.marketing-page .page-hero > p:last-child {
+    color: var(--public-muted);
+    font-size: clamp(16px, 1.6vw, 19px);
+}
+
+.marketing-page .feature-list {
+    width: min(100%, 1120px);
+    padding-right: 24px;
+    padding-left: 24px;
+}
+
+.marketing-page .feature-row {
+    grid-template-columns: 56px minmax(0, 1fr) minmax(150px, 210px);
+    gap: clamp(16px, 3vw, 34px);
+    padding: 34px 0;
+}
+
+.marketing-page .feature-row h2 {
+    font-size: clamp(24px, 3vw, 32px);
+}
+
+.marketing-page .feature-row div:nth-child(2) > p:last-child {
+    max-width: 640px;
+    color: var(--public-muted);
+    line-height: 1.7;
+}
+
+.marketing-page .feature-row ul {
+    color: #40516f;
+    line-height: 1.8;
+}
+
+.marketing-page .closing-cta {
+    width: min(calc(100% - 48px), 1072px);
+    margin: 0 auto 64px;
+    padding: clamp(26px, 5vw, 46px);
+    border-radius: var(--public-radius-card);
+    background: #1e3a8a;
+    box-shadow: none;
+}
+
+.marketing-page .closing-cta h2 {
+    font-size: clamp(28px, 3.5vw, 40px);
+}
+
+.pricing-information,
+.contact-information {
+    display: grid;
+    width: min(calc(100% - 48px), 820px);
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 22px;
+    margin: 0 auto clamp(72px, 10vw, 112px);
+    padding: clamp(24px, 5vw, 42px);
+    border: 1px solid var(--public-border);
+    border-radius: var(--public-radius-card);
+    background: var(--public-surface);
+}
+
+.pricing-information-mark,
+.contact-information-mark {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    border-radius: 12px;
+    background: #eff6ff;
+    color: var(--public-brand);
+    font: 700 20px Manrope, sans-serif;
+}
+
+.pricing-information h2,
+.contact-information h2 {
+    margin: 0;
+    color: var(--public-text);
+    font: 700 clamp(23px, 3vw, 30px)/1.2 Manrope, sans-serif;
+    letter-spacing: -.04em;
+}
+
+.pricing-information p,
+.contact-information p {
+    margin: 12px 0 22px;
+    color: var(--public-muted);
+    line-height: 1.7;
+}
+
+.pricing-information .button,
+.contact-information .button {
+    min-height: 48px;
+}
+
+.marketing-page .site-footer,
+.auth-page .site-footer {
+    max-width: 1240px;
+    padding: 24px clamp(20px, 4vw, 48px) 36px;
+    border-top: 1px solid var(--public-border);
+    color: var(--public-muted);
+}
+
+.marketing-page .site-footer > div,
+.auth-page .site-footer > div {
+    flex-wrap: wrap;
+}
+
+.marketing-page .site-footer > div a,
+.auth-page .site-footer > div a {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* A focused, consistent auth surface for login, signup, and password reset. */
+.auth-page {
+    display: flex;
+    min-height: 100vh;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    overflow-x: visible;
+    background: var(--public-workspace);
+    color: var(--public-text);
+    font-family: "DM Sans", sans-serif;
+}
+
+.auth-page .auth-layout {
+    display: grid;
+    width: 100%;
+    min-height: 0;
+    flex: 1 0 auto;
+    grid-template-columns: minmax(0, 1fr);
+    place-items: center;
+    padding: 40px 20px;
+    background: transparent;
+}
+
+.auth-page .auth-panel {
+    display: block;
+    width: min(100%, 520px);
+    padding: 0;
+}
+
+.auth-page .auth-card {
+    width: 100%;
+    padding: clamp(24px, 5vw, 42px);
+    border: 1px solid var(--public-border);
+    border-radius: var(--public-radius-card);
+    background: var(--public-surface);
+    box-shadow: 0 14px 40px rgb(23 37 84 / 7%);
+}
+
+.auth-page .auth-brand {
+    margin-bottom: 34px;
+}
+
+.auth-page .auth-heading h1 {
+    font-size: clamp(28px, 4vw, 34px);
+}
+
+.auth-page .auth-heading > p:last-child {
+    color: var(--public-muted);
+}
+
+.auth-page .login-container > label,
+.auth-page .signup-form > label,
+.auth-page .forgot-password-form > label,
+.auth-page .form-grid label {
+    color: #40516f;
+    font-size: 14px;
+}
+
+.auth-page .login-container input:not([type="checkbox"]),
+.auth-page .signup-form input,
+.auth-page .forgot-password-form input {
+    min-height: 48px;
+    border-color: var(--public-border);
+    background: #fbfdff;
+}
+
+.auth-page .login-container input:focus,
+.auth-page .signup-form input:focus,
+.auth-page .forgot-password-form input:focus {
+    border-color: var(--public-brand);
+    box-shadow: var(--public-focus);
+}
+
+.auth-page .login-container button,
+.auth-page .signup-btn,
+.auth-page .forgot-password-form button {
+    min-height: 50px;
+    background: var(--public-brand);
+}
+
+.auth-page .login-container button:hover,
+.auth-page .signup-btn:hover,
+.auth-page .forgot-password-form button:hover {
+    background: var(--public-brand-hover);
+    transform: none;
+}
+
+.auth-page .checkbox-label {
+    min-height: 44px;
+    color: #40516f;
+}
+
+.auth-page .form-options > a,
+.auth-page .auth-switch a,
+.auth-page .back-link {
+    color: var(--public-brand);
+}
+
+.auth-page .google-btn {
+    min-height: 48px;
+    color: #40516f;
+}
+
+.auth-page .password-main {
+    width: min(100%, 520px);
+    margin: auto;
+    padding: 40px 20px;
+}
+
+.auth-page .password-main > .auth-brand {
+    margin-bottom: 24px;
+}
+
+.auth-page .password-card {
+    padding: clamp(24px, 5vw, 42px);
+    border-color: var(--public-border);
+    border-radius: var(--public-radius-card);
+    box-shadow: 0 14px 40px rgb(23 37 84 / 7%);
+}
+
+.auth-page .password-card h1 {
+    font-size: clamp(28px, 4vw, 34px);
+}
+
+.auth-page .password-card > p:not(.eyebrow) {
+    color: var(--public-muted);
+}
+
+.auth-page .auth-footer {
+    width: min(100%, 1240px);
+    flex: 0 0 auto;
+    margin: 0 auto;
+}
+
+@media (max-width: 850px) {
+    .public-home .hero {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .public-home .product-preview {
+        justify-self: center;
+    }
+
+    .home-how {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 20px;
+    }
+
+    .marketing-page .feature-row {
+        grid-template-columns: 48px minmax(0, 1fr);
+    }
+
+    .marketing-page .feature-row ul {
+        grid-column: 2;
+    }
+}
+
+@media (max-width: 620px) {
+    .public-home .hero {
+        gap: 34px;
+        padding: 46px 20px 66px;
+    }
+
+    .public-home .hero-actions {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .public-home .preview-shell {
+        min-height: 0;
+    }
+
+    .public-home .preview-sidebar {
+        flex-basis: 40px;
+        gap: 14px;
+    }
+
+    .public-home .preview-workflows article {
+        grid-template-columns: 30px minmax(0, 1fr) auto;
+        gap: 8px;
+        padding: 9px;
+    }
+
+    .public-home .workflow-icon {
+        width: 28px;
+        height: 28px;
+        font-size: 10px;
+    }
+
+    .public-home .preview-workflows strong {
+        font-size: 12px;
+    }
+
+    .public-home .preview-workflows small {
+        font-size: 10px;
+    }
+
+    .home-workflows,
+    .home-how {
+        padding-right: 20px;
+        padding-left: 20px;
+    }
+
+    .workflow-list article {
+        grid-template-columns: 30px minmax(0, 1fr);
+        gap: 10px;
+    }
+
+    .workflow-list article > div {
+        min-width: 0;
+    }
+
+    .workflow-list a {
+        grid-column: 2;
+    }
+
+    .public-home .closing-cta,
+    .marketing-page .closing-cta {
+        width: calc(100% - 40px);
+        margin-bottom: 48px;
+    }
+
+    .marketing-page .feature-row {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 12px;
+        padding: 26px 0;
+    }
+
+    .marketing-page .feature-row ul {
+        grid-column: auto;
+    }
+
+    .pricing-information,
+    .contact-information {
+        width: calc(100% - 40px);
+        grid-template-columns: minmax(0, 1fr);
+        gap: 16px;
+    }
+
+    .marketing-page .site-footer,
+    .auth-page .site-footer {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .auth-page .auth-layout {
+        padding: 24px 16px;
+    }
+
+    .auth-page .auth-card {
+        padding: 24px 20px;
+    }
+
+    .auth-page .signup-form > .form-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 360px) {
+    .public-home .preview-content {
+        padding: 10px;
+    }
+
+    .public-home .preview-top strong {
+        font-size: 13px;
+    }
+
+    .public-home .preview-sidebar {
+        flex-basis: 34px;
+    }
+
+    .public-home .workflow-list article {
+        gap: 7px;
+    }
+
+    .auth-page .auth-card,
+    .auth-page .password-card {
+        padding: 22px 16px;
     }
 }
