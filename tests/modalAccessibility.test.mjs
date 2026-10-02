@@ -113,5 +113,10 @@ test('all authenticated page profile triggers remain native buttons', () => {
         const markup = pageSource(page);
         assert.match(markup, /<button\b[^>]*id="profileMenuButton"/);
         assert.doesNotMatch(markup, /<div\b[^>]*id="profileMenuButton"/);
+        const trigger = markup.match(/<button\b[^>]*id="profileMenuButton"[^>]*>[\s\S]*?<\/button>/)?.[0];
+        assert.ok(trigger, `${page} should have a profile trigger`);
+        const triggerContent = trigger.replace(/^<button\b[^>]*>/i, '').replace(/<\/button>$/i, '');
+        assert.doesNotMatch(triggerContent, /<(?:button|input|select|textarea|label)\b/i, `${page} profile trigger must not nest interactive controls`);
+        assert.match(markup, /id="profilePhotoUploadButton"/);
     }
 });

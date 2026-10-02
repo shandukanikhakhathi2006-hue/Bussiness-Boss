@@ -534,6 +534,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		const profileAvatar = document.querySelector('#profileAvatar');
 		const profileImageInput = document.querySelector('#profileImageInput');
 		const profileAvatarUpload = document.querySelector('.profile-avatar-upload');
+		const profilePhotoUploadButton = document.querySelector('#profilePhotoUploadButton');
 		const profileMenuButton = document.querySelector('#profileMenuButton');
 		const profileDropdown = document.querySelector('#profileDropdown');
 		const profileDropdownName = document.querySelector('#profileDropdownName');
@@ -970,6 +971,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		});
 
 		profileAvatarUpload?.addEventListener('click', (event) => event.stopPropagation());
+		profilePhotoUploadButton?.addEventListener('click', () => profileImageInput?.click());
 
 		profileMenuButton?.addEventListener('click', () => {
 			setProfileDropdownOpen(profileDropdown?.hidden === true);
@@ -1184,6 +1186,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		const profileDropdownName = pageShell.closest('.main-content')?.querySelector('#profileDropdownName');
 		const profileDropdownEmail = pageShell.closest('.main-content')?.querySelector('#profileDropdownEmail');
 		const profileAvatarUpload = pageShell.closest('.main-content')?.querySelector('.profile-avatar-upload');
+		const profilePhotoUploadButton = pageShell.closest('.main-content')?.querySelector('#profilePhotoUploadButton');
 
 		const profileInitials = (name) => String(name || 'Business Manager').split(' ').filter(Boolean).slice(0, 2).map((part) => part[0].toUpperCase()).join('');
 		const renderPageProfile = (user, imageUrl = user.photoURL) => {
@@ -1233,6 +1236,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			}
 		});
 		profileAvatarUpload?.addEventListener('click', (event) => event.stopPropagation());
+		profilePhotoUploadButton?.addEventListener('click', () => profileImageInput?.click());
 		profileImageInput?.addEventListener('change', async (event) => {
 			const file = event.target.files?.[0];
 			const user = getCurrentUser();
