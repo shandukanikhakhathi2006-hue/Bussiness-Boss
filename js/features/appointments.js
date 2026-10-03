@@ -1,6 +1,6 @@
 import { firestore } from '../firebase/config.js';
 import { getDateRange } from '../utils/dates.js';
-import { appointmentRecordDate, isCompletedAppointment, isCancelledAppointment, createAppointmentCalendarState, moveAppointmentMonth, appointmentMonth, appointmentDaySlots } from './appointmentCalendar.js';
+import { appointmentRecordDate, appointmentDateKey, isCompletedAppointment, isCancelledAppointment, createAppointmentCalendarState, moveAppointmentMonth, appointmentMonth, appointmentDaySlots } from './appointmentCalendar.js';
 import { AppointmentMutationError, buildAppointmentCancellation, buildAppointmentCompletion, buildAppointmentCreate, buildAppointmentUpdate, createAppointmentInFlightGuard } from './appointmentCrud.js';
 import { appointmentCustomerOptions } from './appointmentCustomers.js';
 import { renderTableState } from '../utils/recordTable.js';
@@ -29,10 +29,12 @@ export const initAppointmentsPage = ({ pageName, pageShell, tableBody, statCards
 	const appointmentsBackToMonthButton = pageShell.querySelector('#appointmentsBackToMonthButton');
 	const appointmentsPaginationContainer = pageShell.querySelector('#appointmentsPagination');
 	const appointmentsResultCount = pageShell.querySelector('[data-record-result-count]');
+	const appointmentsPeriodHeading = pageShell.querySelector('#appointmentsPeriodHeading');
 	let appointmentsViewMode = 'table';
 	let calendarState = createAppointmentCalendarState();
 	let appointmentsCurrentPage = 1;
 	let appointmentsActiveRecordsCache = [];
+	let appointmentsLoadState = 'ready';
 	const mutationGuard = createAppointmentInFlightGuard();
 	const APPOINTMENTS_PAGE_SIZE = 8;
 
@@ -43,8 +45,35 @@ export const initAppointmentsPage = ({ pageName, pageShell, tableBody, statCards
 		week: 'No appointments scheduled for this week.',
 		month: 'No appointments scheduled for this month.'
 	};
+	const APPOINTMENT_PERIOD_HEADING = { today: 'Today', week: 'This week', month: 'This month' };
 	const getSelectedAppointmentPeriod = () => (appointmentPeriodSelect?.value in APPOINTMENT_PERIOD_LABELS ? appointmentPeriodSelect.value : 'today');
 	const getAppointmentPeriodRange = () => getDateRange(APPOINTMENT_PERIOD_LABELS[getSelectedAppointmentPeriod()]);
+	const formatAppointmentDate = (record) => {
+		const date = pageDate(record);
+		return date ? new Intl.DateTimeFormat('en-ZA', { dateStyle: 'medium' }).format(date) : 'Date not set';
+	};
+	const setCalendarStateMarkup = (target, message, state, includeRetry = false) => {
+		if (!target) return;
+		target.innerHTML = `<p class="appointments-calendar-state" role="${state === 'error' ? 'alert' : 'status'}">${pageEscape(message)}</p>${includeRetry ? '<button type="button" class="secondary-button" data-appointments-retry>Retry</button>' : ''}`;
+	};
+	const setCalendarError = (message) => {
+		appointmentsLoadState = 'error';
+		setCalendarStateMarkup(appointmentsCalendarGrid, message, 'error', true);
+		if (calendarState.selectedDay) setCalendarStateMarkup(appointmentsCalendarDaySlots, message, 'error', true);
+	};
+	const retryCalendarLoad = async (button) => {
+		const user = getCurrentUser();
+		if (!user || button.disabled) return;
+		button.disabled = true;
+		try {
+			await reloadRecords(user);
+		} catch (error) {
+			console.error('Failed to retry appointment load', error);
+			setCalendarError('Appointments could not be loaded. Please try again.');
+		} finally {
+			button.disabled = false;
+		}
+	};
 
 	// Active table policy matches the calendar: completed bookings stay stored.
 	const getFilteredAppointments = () => {
@@ -72,7 +101,7 @@ export const initAppointmentsPage = ({ pageName, pageShell, tableBody, statCards
 	const renderAppointmentsTable = (activeRecords) => {
 		appointmentsActiveRecordsCache = activeRecords;
 		if (!tableBody) return;
-		if (appointmentsResultCount) appointmentsResultCount.textContent = `${activeRecords.length} ${activeRecords.length === 1 ? 'appointment' : 'appointments'}`;
+		if (appointmentsResultCount) appointmentsResultCount.textContent = `${activeRecords.length} ${activeRecords.length === 1 ? 'appointment' : 'appointments'} shown; completed appointments are hidden.`;
 		if (!activeRecords.length) {
 			renderTableState(tableBody, { message: APPOINTMENT_EMPTY_TEXT[getSelectedAppointmentPeriod()] });
 			renderAppointmentsPagination(0);
@@ -87,7 +116,15 @@ export const initAppointmentsPage = ({ pageName, pageShell, tableBody, statCards
 		appointmentsCurrentPage = Math.min(Math.max(appointmentsCurrentPage, 1), totalPages);
 		const startIndex = (appointmentsCurrentPage - 1) * APPOINTMENTS_PAGE_SIZE;
 		const recordsForPage = sortedRecords.slice(startIndex, startIndex + APPOINTMENTS_PAGE_SIZE);
-		tableBody.innerHTML = recordsForPage.map((record) => `<tr data-record-id="${record.id}"><td>${pageEscape(record.time || 'No time set')}</td><td><div class="customer"><div class="customer-avatar">${pageEscape(initials(record.customerName))}</div><span>${pageEscape(record.customerName || 'Customer')}</span></div></td><td>${pageEscape(record.service || 'Appointment')}</td><td>${pageEscape(record.staff || 'Not assigned')}</td><td><span class="status-badge ${statusClass(record.status)}">${pageEscape(record.status || 'Pending')}</span></td><td>${String(record.status || 'pending').toLowerCase() === 'pending' ? '<button class="view-button" type="button" data-page-action="complete">Done</button> <button class="view-button" type="button" data-page-action="cancel">Cancel</button> ' : ''}<button class="view-button" type="button" data-page-action="edit">Edit</button> <button class="view-button" type="button" data-page-action="delete">Delete</button></td></tr>`).join('');
+		tableBody.innerHTML = recordsForPage.map((record) => {
+			const customerName = record.customerName || record.customer || 'Customer';
+			const status = String(record.status || 'pending');
+			const dateTime = `${formatAppointmentDate(record)}${record.time ? ` · ${record.time}` : ''}`;
+			const actions = status.toLowerCase() === 'pending'
+				? `<button class="view-button" type="button" data-page-action="complete" aria-label="Mark appointment with ${pageEscape(customerName)} done">Done</button><button class="view-button" type="button" data-page-action="cancel" aria-label="Cancel appointment with ${pageEscape(customerName)}">Cancel</button>`
+				: '';
+			return `<tr data-record-id="${pageEscape(record.id)}"><td><time class="appointment-date-time">${pageEscape(dateTime)}</time></td><td><div class="customer"><div class="customer-avatar" aria-hidden="true">${pageEscape(initials(customerName))}</div><span class="appointment-customer-name">${pageEscape(customerName)}</span></div></td><td class="appointment-service">${pageEscape(record.service || 'Appointment')}</td><td class="appointment-staff">${pageEscape(record.staff || 'Not assigned')}</td><td><span class="status-badge ${statusClass(status)}">${pageEscape(status)}</span></td><td class="appointment-actions">${actions}<button class="view-button" type="button" data-page-action="edit" aria-label="Edit appointment with ${pageEscape(customerName)}">Edit</button><button class="view-button" type="button" data-page-action="delete" aria-label="Delete appointment with ${pageEscape(customerName)}">Delete</button></td></tr>`;
+		}).join('');
 		renderAppointmentsPagination(totalPages);
 	};
 
@@ -97,19 +134,18 @@ export const initAppointmentsPage = ({ pageName, pageShell, tableBody, statCards
 		const periodRecords = getRecords().filter(inSelectedPeriod);
 		const completedInPeriod = periodRecords.filter(isCompletedAppointment);
 		const cancelledInPeriod = periodRecords.filter((record) => ['cancelled', 'canceled'].includes(String(record.status || '').toLowerCase()));
-		const pendingActive = activeRecords.filter((record) => !['cancelled', 'canceled'].includes(String(record.status || 'pending').toLowerCase()));
-		if (statCards[0]) statCards[0].textContent = activeRecords.length;
+		const pendingActive = activeRecords.filter((record) => String(record.status || 'pending').toLowerCase() === 'pending');
+		if (statCards[0]) statCards[0].textContent = periodRecords.length;
 		if (statCards[1]) statCards[1].textContent = completedInPeriod.length;
 		if (statCards[2]) statCards[2].textContent = pendingActive.length;
 		if (statCards[3]) statCards[3].textContent = cancelledInPeriod.length;
-		const periodLabelText = { today: "Today's Appointments", week: "This Week's Appointments", month: "This Month's Appointments" }[getSelectedAppointmentPeriod()];
 		const firstStatLabel = statCards[0]?.closest('.stat-card')?.querySelector('p');
-		if (firstStatLabel) firstStatLabel.textContent = periodLabelText;
+		if (firstStatLabel) firstStatLabel.textContent = `${APPOINTMENT_PERIOD_HEADING[getSelectedAppointmentPeriod()]} appointments`;
 	};
 
 	// The calendar reads the full owner-scoped cache. No month-specific queries.
 	const showAppointmentsCalendarMonthView = () => {
-		calendarState = { ...calendarState, selectedDay: null };
+		renderAppointmentsCalendarGrid();
 		if (appointmentsCalendarGrid) appointmentsCalendarGrid.hidden = false;
 		if (appointmentsCalendarToolbar) appointmentsCalendarToolbar.hidden = false;
 		if (appointmentsCalendarDayView) appointmentsCalendarDayView.hidden = true;
@@ -117,21 +153,38 @@ export const initAppointmentsPage = ({ pageName, pageShell, tableBody, statCards
 
 	const renderAppointmentsCalendarGrid = () => {
 		if (!appointmentsCalendarGrid || !appointmentsCalendarMonthLabel) return;
+		if (appointmentsLoadState !== 'ready') {
+			setCalendarStateMarkup(
+				appointmentsCalendarGrid,
+				appointmentsLoadState === 'loading' ? 'Loading appointments…' : 'Appointments could not be loaded.',
+				appointmentsLoadState,
+				appointmentsLoadState === 'error'
+			);
+			return;
+		}
 		const month = appointmentMonth(getRecords(), calendarState);
 		appointmentsCalendarMonthLabel.textContent = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(month.first);
-		const headings = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => `<span class="calendar-day-name">${day}</span>`).join('');
+		const headings = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+			.map((day) => `<span class="calendar-day-name" aria-label="${day}" title="${day}">${day.slice(0, 3)}</span>`)
+			.join('');
 		const blanks = '<span class="calendar-day empty" aria-hidden="true"></span>'.repeat(month.firstWeekday);
+		const todayKey = appointmentDateKey(new Date());
 		const days = month.days.map(({ key, day, records }) => {
 			const count = records.length;
 			const cancelled = records.filter(isCancelledAppointment).length;
-			const bookingText = count ? `${count} appt${count > 1 ? 's' : ''}${cancelled ? ` &middot; ${cancelled} cancelled` : ''}` : '';
-			return `<button type="button" class="calendar-day${count ? ' has-bookings' : ''}" data-date="${key}"><strong>${day}</strong><span>${bookingText}</span></button>`;
+			const selected = calendarState.selectedDay === key;
+			const date = appointmentRecordDate({ date: key });
+			const dateLabel = date ? new Intl.DateTimeFormat(undefined, { dateStyle: 'full' }).format(date) : key;
+			const bookingText = count ? `${count} ${count === 1 ? 'appointment' : 'appointments'}${cancelled ? `, ${cancelled} cancelled` : ''}` : 'No appointments';
+			const today = key === todayKey;
+			return `<button type="button" class="calendar-day${count ? ' has-bookings' : ''}${selected ? ' is-selected' : ''}${today ? ' is-today' : ''}" data-date="${key}" aria-label="${pageEscape(`${dateLabel}. ${bookingText}${selected ? '. Selected' : ''}${today ? '. Today' : ''}`)}" aria-pressed="${selected}"${today ? ' aria-current="date"' : ''}><strong>${day}</strong><span aria-hidden="true">${count || ''}</span></button>`;
 		}).join('');
 		appointmentsCalendarGrid.innerHTML = headings + blanks + days;
 	};
 
 	const appointmentBookingHtml = (record) => {
-		const content = `<strong>${pageEscape(record.time || 'No time set')}</strong> ${pageEscape(record.customerName || 'Customer')}${record.service ? ` &middot; ${pageEscape(record.service)}` : ''}${isCancelledAppointment(record) ? ' <span class="status-badge cancelled">Cancelled</span>' : ''}`;
+		const status = String(record.status || 'pending');
+		const content = `<strong>${pageEscape(record.time || 'No time set')}</strong><span class="appointment-calendar-customer">${pageEscape(record.customerName || record.customer || 'Customer')}</span>${record.service ? `<span class="appointment-calendar-service">${pageEscape(record.service)}</span>` : ''}<span class="status-badge ${statusClass(status)}">${pageEscape(status)}</span>`;
 		// Real bookings have document IDs. Sparse records without one remain readable.
 		return typeof record.id === 'string' && record.id
 			? `<button type="button" class="calendar-slot-booking" data-calendar-edit="${pageEscape(record.id)}" aria-label="${pageEscape(`Edit appointment: ${record.customerName || 'Customer'}, ${record.time || 'No time set'}`)}">${content}</button>`
@@ -140,13 +193,25 @@ export const initAppointmentsPage = ({ pageName, pageShell, tableBody, statCards
 
 	const renderAppointmentsCalendarDay = () => {
 		if (!appointmentsCalendarDaySlots || !appointmentsCalendarDayViewLabel || !calendarState.selectedDay) return;
+		if (appointmentsLoadState !== 'ready') {
+			setCalendarStateMarkup(
+				appointmentsCalendarDaySlots,
+				appointmentsLoadState === 'loading' ? 'Loading appointments…' : 'Appointments could not be loaded.',
+				appointmentsLoadState,
+				appointmentsLoadState === 'error'
+			);
+			if (appointmentsCalendarGrid) appointmentsCalendarGrid.hidden = true;
+			if (appointmentsCalendarToolbar) appointmentsCalendarToolbar.hidden = true;
+			if (appointmentsCalendarDayView) appointmentsCalendarDayView.hidden = false;
+			return;
+		}
 		const date = appointmentRecordDate({ date: calendarState.selectedDay });
 		if (!date) return;
 		appointmentsCalendarDayViewLabel.textContent = new Intl.DateTimeFormat(undefined, { dateStyle: 'full' }).format(date);
-		appointmentsCalendarDaySlots.innerHTML = appointmentDaySlots(getRecords(), calendarState.selectedDay).map(slot => {
-			const content = slot.records.length ? slot.records.map(appointmentBookingHtml).join('') : '<div class="calendar-slot-empty">No appointments</div>';
-			return `<div class="calendar-slot"><span class="calendar-slot-time">${slot.label}</span><div class="calendar-slot-content">${content}</div></div>`;
-		}).join('');
+		const bookedSlots = appointmentDaySlots(getRecords(), calendarState.selectedDay).filter((slot) => slot.records.length);
+		appointmentsCalendarDaySlots.innerHTML = bookedSlots.length
+			? bookedSlots.map((slot) => `<div class="calendar-slot"><span class="calendar-slot-time">${slot.label}</span><div class="calendar-slot-content">${slot.records.map(appointmentBookingHtml).join('')}</div></div>`).join('')
+			: '<p class="appointment-day-empty" role="status">No appointments scheduled for this day.</p>';
 		if (appointmentsCalendarGrid) appointmentsCalendarGrid.hidden = true;
 		if (appointmentsCalendarToolbar) appointmentsCalendarToolbar.hidden = true;
 		if (appointmentsCalendarDayView) appointmentsCalendarDayView.hidden = false;
@@ -154,12 +219,23 @@ export const initAppointmentsPage = ({ pageName, pageShell, tableBody, statCards
 
 	// CRUD replaces the loaded records, never the selected calendar month/day.
 	const refreshAppointmentsView = () => {
+		appointmentsLoadState = 'ready';
 		const activeRecords = getFilteredAppointments();
 		renderAppointmentsTable(activeRecords);
 		updateAppointmentsStats(activeRecords);
 		renderAppointmentsCalendarGrid();
 		if (calendarState.selectedDay) renderAppointmentsCalendarDay();
+		if (appointmentsPeriodHeading) appointmentsPeriodHeading.textContent = APPOINTMENT_PERIOD_HEADING[getSelectedAppointmentPeriod()];
 	};
+
+	const setLoading = () => {
+		appointmentsLoadState = 'loading';
+		appointmentsActiveRecordsCache = [];
+		renderTableState(tableBody, { message: 'Loading appointments…', state: 'loading' });
+		setCalendarStateMarkup(appointmentsCalendarGrid, 'Loading appointments…', 'loading');
+		if (calendarState.selectedDay) setCalendarStateMarkup(appointmentsCalendarDaySlots, 'Loading appointments…', 'loading');
+	};
+	const setError = (message) => setCalendarError(message);
 
 	appointmentPeriodSelect?.addEventListener('change', () => {
 		appointmentsCurrentPage = 1;
@@ -179,7 +255,10 @@ export const initAppointmentsPage = ({ pageName, pageShell, tableBody, statCards
 		const showingCalendar = appointmentsViewMode === 'calendar';
 		if (appointmentsTableView) appointmentsTableView.hidden = showingCalendar;
 		if (appointmentsCalendarView) appointmentsCalendarView.hidden = !showingCalendar;
-		appointmentsCalendarViewButton.textContent = showingCalendar ? 'Table View' : 'Calendar View';
+		appointmentsCalendarViewButton.setAttribute?.('aria-pressed', String(showingCalendar));
+		appointmentsCalendarViewButton.innerHTML = showingCalendar
+			? '<i class="fa-solid fa-table-list" aria-hidden="true"></i> Table view'
+			: '<i class="fa-regular fa-calendar" aria-hidden="true"></i> Calendar view';
 		if (showingCalendar) {
 			renderAppointmentsCalendarGrid();
 			if (calendarState.selectedDay) renderAppointmentsCalendarDay();
@@ -195,14 +274,25 @@ export const initAppointmentsPage = ({ pageName, pageShell, tableBody, statCards
 		calendarState = moveAppointmentMonth(calendarState, 1);
 		renderAppointmentsCalendarGrid();
 	});
-	appointmentsCalendarGrid?.addEventListener('click', (event) => {
+	appointmentsCalendarGrid?.addEventListener('click', async (event) => {
+		const retryButton = event.target.closest('[data-appointments-retry]');
+		if (retryButton) {
+			await retryCalendarLoad(retryButton);
+			return;
+		}
 		const dayButton = event.target.closest('.calendar-day:not(.empty)');
 		if (!dayButton?.dataset.date) return;
 		calendarState = { ...calendarState, selectedDay: dayButton.dataset.date };
+		renderAppointmentsCalendarGrid();
 		renderAppointmentsCalendarDay();
 	});
 	appointmentsBackToMonthButton?.addEventListener('click', showAppointmentsCalendarMonthView);
 	appointmentsCalendarDaySlots?.addEventListener('click', async (event) => {
+		const retryButton = event.target.closest('[data-appointments-retry]');
+		if (retryButton) {
+			await retryCalendarLoad(retryButton);
+			return;
+		}
 		const button = event.target.closest('[data-calendar-edit]');
 		if (!button) return;
 		event.stopPropagation();
@@ -262,7 +352,7 @@ export const initAppointmentsPage = ({ pageName, pageShell, tableBody, statCards
 			{ name: 'time', label: 'Booking time', type: 'time', required: true },
 			{ name: 'service', label: 'Service' },
 			{ name: 'staff', label: 'Staff member' },
-			{ name: 'status', label: 'Status', type: 'select', options: ['pending', 'completed', 'cancelled'] }
+			{ name: 'status', label: 'Status', type: 'select', defaultValue: 'pending', options: ['pending', 'completed', 'cancelled'] }
 		],
 		getSnapshot: (user) => getDocs(query(collection(firestore, 'bookings'), where('ownerId', '==', user.uid))),
 		saveRecord,
@@ -270,6 +360,8 @@ export const initAppointmentsPage = ({ pageName, pageShell, tableBody, statCards
 		cancelRecord,
 		deleteRecord,
 		refresh: refreshAppointmentsView,
+		setLoading,
+		setError,
 		isCreateButton: (button) => button.textContent.toLowerCase().includes('new appointment')
 	};
 	pageInstances.set(pageShell, feature);

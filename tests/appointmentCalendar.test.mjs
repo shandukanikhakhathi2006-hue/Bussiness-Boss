@@ -120,17 +120,68 @@ const fixture = (initial = []) => {
     feature.refresh();
     return { el, feature, table, stats, edits, setRecords(value) { records = value; feature.refresh(); },
         async navigate(delta) { for (let i = 0; i < Math.abs(delta); i++) await el(delta > 0 ? 'appointmentsNextMonthButton' : 'appointmentsPrevMonthButton').fire('click'); },
-        async day(key) { await el('appointmentsCalendarGrid').fire('click', { closest: () => ({ dataset: { date: key } }) }); }
+        async day(key) {
+            await el('appointmentsCalendarGrid').fire('click', {
+                closest: selector => selector === '[data-appointments-retry]' ? null : ({ dataset: { date: key } })
+            });
+        }
     };
 };
 const now = new Date();
 const next = moveAppointmentMonth(createAppointmentCalendarState(now), 1);
 const nextDate = `${next.year}-${String(next.month + 1).padStart(2, '0')}-10`;
+const todayKey = appointmentDateKey(now);
+test('table prioritizes date and time, keeps cancellation visible, and excludes completed appointments', () => {
+    const f = fixture([
+        booking({ id: 'pending-today', date: todayKey, time: '09:30', customerName: 'Pending Customer', service: 'Consulting' }),
+        booking({ id: 'cancelled-today', date: todayKey, time: '10:30', customerName: 'Cancelled Customer', status: 'cancelled' }),
+        booking({ id: 'completed-today', date: todayKey, time: '08:30', customerName: 'Completed Customer', status: 'completed' })
+    ]);
+    assert.match(f.table.innerHTML, /03 Oct 2026 · 09:30/);
+    assert.match(f.table.innerHTML, /Pending Customer/);
+    assert.match(f.table.innerHTML, /Consulting/);
+    assert.match(f.table.innerHTML, /cancelled/);
+    assert.doesNotMatch(f.table.innerHTML, /Completed Customer/);
+    assert.match(f.table.innerHTML, /data-record-id="pending-today"/);
+    assert.deepEqual(f.stats.map(stat => stat.textContent), [3, 1, 1, 1]);
+});
+test('calendar day selection is exposed, preserves the date when returning to month, and labels its empty state', async () => {
+    const f = fixture();
+    await f.day(todayKey);
+    assert.equal(f.el('appointmentsCalendarGrid').innerHTML.match(/data-date="[^"]+"[^>]*aria-pressed="true"/)?.[0].includes(`data-date="${todayKey}"`), true);
+    assert.match(f.el('appointmentsCalendarDaySlots').innerHTML, /No appointments scheduled for this day/);
+    await f.el('appointmentsBackToMonthButton').fire('click');
+    assert.equal(f.el('appointmentsCalendarDayView').hidden, true);
+    assert.match(f.el('appointmentsCalendarGrid').innerHTML, new RegExp(`data-date="${todayKey}"[^>]*aria-pressed="true"`));
+});
+test('calendar day schedule shows pending and cancelled status and excludes completed records', async () => {
+    const f = fixture([
+        booking({ id: 'pending-calendar', date: todayKey, customerName: 'Current Customer', service: 'Consulting' }),
+        booking({ id: 'cancelled-calendar', date: todayKey, time: '09:00', customerName: 'Cancelled Customer', status: 'cancelled' }),
+        booking({ id: 'completed-calendar', date: todayKey, time: '10:00', customerName: 'Completed Customer', status: 'completed' })
+    ]);
+    await f.day(todayKey);
+    assert.match(f.el('appointmentsCalendarDaySlots').innerHTML, /Current Customer/);
+    assert.match(f.el('appointmentsCalendarDaySlots').innerHTML, /Consulting/);
+    assert.match(f.el('appointmentsCalendarDaySlots').innerHTML, />pending</);
+    assert.match(f.el('appointmentsCalendarDaySlots').innerHTML, />cancelled</);
+    assert.doesNotMatch(f.el('appointmentsCalendarDaySlots').innerHTML, /Completed Customer/);
+    assert.ok(f.el('appointmentsCalendarDaySlots').innerHTML.indexOf('Current Customer') < f.el('appointmentsCalendarDaySlots').innerHTML.indexOf('Cancelled Customer'));
+});
+test('appointment loading and failure remain distinct calendar states with retry', () => {
+    const f = fixture();
+    f.feature.setLoading();
+    assert.match(f.table.innerHTML, /Loading appointments/);
+    assert.match(f.el('appointmentsCalendarGrid').innerHTML, /role="status"/);
+    f.feature.setError('The schedule could not be loaded.');
+    assert.match(f.el('appointmentsCalendarGrid').innerHTML, /role="alert"/);
+    assert.match(f.el('appointmentsCalendarGrid').innerHTML, /data-appointments-retry/);
+});
 for (const period of ['today', 'week', 'month']) {
     test(`${period} table filter does not constrain selected calendar month`, async () => {
         const f = fixture([booking({ date: nextDate })]); await f.navigate(1);
         f.el('appointmentPeriodFilter').value = period; await f.el('appointmentPeriodFilter').fire('change');
-        assert.match(f.el('appointmentsCalendarGrid').innerHTML, /1 appt/);
+        assert.match(f.el('appointmentsCalendarGrid').innerHTML, /1 appointment/);
         assert.doesNotMatch(f.table.innerHTML, /Alex/);
         assert.match(f.el('appointmentsCalendarGrid').innerHTML, new RegExp(nextDate));
     });
@@ -153,7 +204,9 @@ test('native event button selects correct booking through injected existing Edit
     const f = fixture([booking({ date: nextDate }), booking({ id: 'two', date: nextDate })]); await f.navigate(1); await f.day(nextDate);
     assert.match(f.el('appointmentsCalendarDaySlots').innerHTML, /<button type="button"[^>]+data-calendar-edit="two"[^>]+aria-label="Edit appointment:/);
     const button = { dataset: { calendarEdit: 'two' }, disabled: false };
-    const event = await f.el('appointmentsCalendarDaySlots').fire('click', { closest: () => button });
+    const event = await f.el('appointmentsCalendarDaySlots').fire('click', {
+        closest: selector => selector === '[data-appointments-retry]' ? null : button
+    });
     assert.deepEqual(f.edits, [{ user: { uid: 'owner' }, id: 'two' }]); assert.equal(event.stopped, true); assert.equal(button.disabled, false);
 });
 test('stale or foreign event cannot open an edit', async () => {
@@ -176,10 +229,10 @@ for (const action of ['create', 'edit', 'complete', 'cancel', 'delete']) {
         assert.equal(f.el('appointmentsCalendarDayView').hidden, false);
         const visibleDay = ['create', 'cancel'].includes(action);
         assert.equal(f.el('appointmentsCalendarDaySlots').innerHTML.includes('Alex'), visibleDay);
-        assert.equal(f.el('appointmentsCalendarGrid').innerHTML.includes('1 appt'), !['complete', 'delete'].includes(action));
+        assert.equal(f.el('appointmentsCalendarGrid').innerHTML.includes('1 appointment'), !['complete', 'delete'].includes(action));
         if (action === 'cancel') {
-            assert.match(f.el('appointmentsCalendarGrid').innerHTML, /1 cancelled/);
-            assert.match(f.el('appointmentsCalendarDaySlots').innerHTML, />Cancelled</);
+            assert.match(f.el('appointmentsCalendarGrid').innerHTML, /1 appointment, 1 cancelled/);
+            assert.match(f.el('appointmentsCalendarDaySlots').innerHTML, />cancelled</);
         }
         if (action === 'edit') { await f.day(nextDate.replace(/10$/, '11')); assert.match(f.el('appointmentsCalendarDaySlots').innerHTML, /Alex/); }
     });

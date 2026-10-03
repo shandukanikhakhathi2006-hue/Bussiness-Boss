@@ -92,13 +92,14 @@ const renderAsyncFailure = (target, message, retry) => {
 // Resolves with an object of trimmed string values keyed by field name on Save, or null
 // if the person cancels (Escape, backdrop click, the X, or the Cancel button).
 // Required and numeric fields are validated inline before the dialog will close on Save.
-const showFormModal = ({ title, description = '', fields, values = {}, submitLabel = 'Save', destructive = false, onSubmit, getErrorMessage }) => new Promise((resolve) => {
+const showFormModal = ({ title, description = '', fields, values = {}, submitLabel = 'Save', destructive = false, onSubmit, getErrorMessage, className = '' }) => new Promise((resolve) => {
 	const previouslyFocused = document.activeElement;
 	const overlay = document.createElement('div');
 	overlay.className = 'app-modal-overlay';
 
 	const modal = document.createElement('div');
 	modal.className = 'app-modal';
+	if (className) modal.classList.add(className);
 	modal.setAttribute('role', 'dialog');
 	modal.setAttribute('aria-modal', 'true');
 
@@ -133,6 +134,7 @@ const showFormModal = ({ title, description = '', fields, values = {}, submitLab
 	fields.forEach((field, index) => {
 		const wrapper = document.createElement('div');
 		wrapper.className = 'form-field';
+		wrapper.dataset.fieldName = field.name;
 		const label = document.createElement('label');
 		label.textContent = field.label;
 		const inputId = `modal-field-${field.name}-${index}`;
@@ -1214,7 +1216,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		const clearDemoContent = () => {
 			statCards.forEach((card) => { card.textContent = 'Loading...'; });
-			renderTableState(tableBody, { message: 'Loading records…', state: 'loading' });
+			if (appointmentsFeature) appointmentsFeature.setLoading();
+			else renderTableState(tableBody, { message: 'Loading records…', state: 'loading' });
 			pageShell.querySelectorAll('.service-list').forEach((list) => { list.innerHTML = '<div>Loading...</div>'; });
 		};
 
@@ -1578,7 +1581,12 @@ document.addEventListener('DOMContentLoaded', () => {
 				return values;
 			};
 			const values = await showFormModal({
-				title, fields, values: existing, submitLabel: isEditing ? 'Save changes' : 'Add',
+				title,
+				description: recordFeature === appointmentsFeature
+					? 'Choose the customer record and booking details. Duplicate customer names include available contact details.'
+					: '',
+				className: recordFeature === appointmentsFeature ? 'appointment-form-dialog' : '',
+				fields, values: existing, submitLabel: isEditing ? 'Save changes' : 'Add',
 				onSubmit: persistWhileOpen ? (rawValues) => persistWhileOpen(prepareValues(rawValues)) : undefined,
 				getErrorMessage: appointmentValidationMessage
 			});
@@ -1634,6 +1642,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				statCards.forEach((card) => { card.textContent = 'Unavailable'; });
 				if (pageResultsCount) pageResultsCount.textContent = `${pageName} could not be loaded.`;
 				renderAsyncFailure(tableBody, `Your ${pageName} could not be loaded.`, () => loadPageRecords(user));
+				if (appointmentsFeature) appointmentsFeature.setError('Appointments could not be loaded. Check your connection and try again.');
 				showMessage(`Your ${pageName} could not be loaded.`, 'error');
 			}
 		};
@@ -1785,8 +1794,11 @@ document.addEventListener('DOMContentLoaded', () => {
 			const recordId = button.closest('tr')?.dataset.recordId;
 			if (button.dataset.pageAction === 'edit') await savePageRecord(getCurrentUser(), recordId);
 			if (button.dataset.pageAction === 'cancel' && recordId && appointmentsFeature) {
+				const appointment = pageRecords.find((record) => record.id === recordId);
+				const customerName = appointment?.customerName || appointment?.customer || 'this customer';
 				const confirmation = await showFormModal({
-					title: 'Cancel appointment?', description: 'The appointment will remain in your records as cancelled.',
+					title: `Cancel appointment for ${customerName}?`,
+					description: 'The appointment will remain in your records with cancelled status.',
 					fields: [], submitLabel: 'Cancel appointment', destructive: true
 				});
 				if (confirmation === null) return;
@@ -1804,13 +1816,24 @@ document.addEventListener('DOMContentLoaded', () => {
 			const customerName = pageName === 'customers'
 				? pageRecords.find((record) => record.id === recordId)?.name
 				: null;
+			const appointment = pageName === 'appointments'
+				? pageRecords.find((record) => record.id === recordId)
+				: null;
+			const appointmentCustomer = appointment?.customerName || appointment?.customer || 'this customer';
+			const appointmentDate = appointment?.date ? pageDateText(appointment) : 'Date not set';
+			const appointmentTime = appointment?.time || 'Time not set';
+			const appointmentService = appointment?.service || 'Service not specified';
 			const confirmation = await showFormModal({
-				title: customerName ? `Delete ${customerName}?` : `Delete ${recordFeature?.singularTitle || pageSingularTitles[collectionName] || 'record'}?`,
+				title: appointment
+					? `Delete appointment for ${appointmentCustomer}?`
+					: customerName ? `Delete ${customerName}?` : `Delete ${recordFeature?.singularTitle || pageSingularTitles[collectionName] || 'record'}?`,
 				description: customerName
 					? `${customerName} will be permanently removed from your customer directory. This action cannot be undone.`
-					: 'This action permanently removes the record and cannot be undone.',
+					: appointment
+						? `${appointmentCustomer} is booked for ${appointmentService} on ${appointmentDate} at ${appointmentTime}. This appointment will be permanently deleted.`
+						: 'This action permanently removes the record and cannot be undone.',
 				fields: [],
-				submitLabel: 'Delete record',
+				submitLabel: appointment ? 'Delete appointment' : 'Delete record',
 				destructive: true
 			});
 			if (confirmation === null) return;
@@ -1823,6 +1846,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					await loadPageRecords(getCurrentUser());
 					showMessage(`${pageName.slice(0, -1)} deleted.`);
 					if (pageName === 'customers') pageShell.querySelector('.page-actions .primary-button')?.focus();
+					if (pageName === 'appointments') pageShell.querySelector('.page-actions .primary-button')?.focus();
 				} catch (error) {
 					console.error(`Failed to delete ${collectionName}`, error);
 					showMessage('The record could not be deleted.', 'error');

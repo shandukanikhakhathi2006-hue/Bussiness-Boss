@@ -4505,6 +4505,25 @@ select {
             border: 0;
         }
 
+        .workspace-refined .appointments-page .table-container thead tr {
+            position: relative;
+            display: block;
+            width: 1px;
+            min-width: 0;
+        }
+
+        .workspace-refined .appointments-page .table-container thead th {
+            position: absolute;
+            inset-inline-start: 0;
+            width: 1px;
+            min-width: 0;
+            max-width: 1px;
+            height: 1px;
+            padding: 0;
+            border: 0;
+            overflow: hidden;
+        }
+
         .workspace-refined .table-container tbody {
             display: grid;
             width: 100%;
@@ -4677,5 +4696,442 @@ select {
 
     .workspace-refined .customer-metrics .stat-card > h2 {
         font-size: 21px;
+    }
+}
+
+.workspace-refined .appointments-page .page-header {
+    align-items: center;
+}
+
+.workspace-refined .appointments-toolbar {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 16px;
+    margin: -4px 0 20px;
+    padding: 14px 16px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+}
+
+.workspace-refined .appointments-period-control {
+    display: grid;
+    gap: 6px;
+    min-width: 190px;
+}
+
+.workspace-refined .appointments-period-control label {
+    color: var(--text-secondary);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+}
+
+.workspace-refined .appointments-view-toggle {
+    min-height: 42px;
+}
+
+.workspace-refined .appointments-metrics {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.workspace-refined .appointments-metrics .stat-card {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.workspace-refined .appointments-metrics .stat-card > h2 {
+    margin: 0;
+}
+
+.workspace-refined .appointments-schedule .section-title-row {
+    align-items: center;
+    gap: 12px;
+    padding: 16px 22px 0;
+}
+
+.workspace-refined .appointments-schedule .section-title-row h3 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+}
+
+.workspace-refined .appointments-schedule .record-result-count {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: var(--font-size-xs);
+}
+
+.workspace-refined .appointments-schedule .table-container {
+    margin-top: 8px;
+}
+
+.workspace-refined .appointments-page .appointment-date-time,
+.workspace-refined .appointments-page .appointment-customer-name,
+.workspace-refined .appointments-page .appointment-service,
+.workspace-refined .appointments-page .appointment-staff {
+    overflow-wrap: anywhere;
+}
+
+.workspace-refined .appointments-page .appointment-actions {
+    white-space: nowrap;
+}
+
+.workspace-refined .appointments-page .appointment-actions .view-button {
+    min-height: 38px;
+    margin: 2px 4px 2px 0;
+}
+
+.workspace-refined .appointments-calendar {
+    padding: 20px 22px 24px;
+}
+
+.workspace-refined .appointments-calendar .calendar-toolbar {
+    align-items: center;
+    margin-bottom: 18px;
+}
+
+.workspace-refined .appointments-calendar .calendar-toolbar > button {
+    min-width: 42px;
+    min-height: 42px;
+}
+
+.workspace-refined .appointments-calendar .calendar-toolbar h3 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-semibold);
+    text-align: center;
+}
+
+.workspace-refined .appointments-calendar .calendar-grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.workspace-refined .appointments-calendar .calendar-day-name {
+    padding: 8px 0;
+    color: var(--text-secondary);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+}
+
+.workspace-refined .appointments-calendar button.calendar-day {
+    position: relative;
+    min-width: 0;
+    min-height: 74px;
+    aspect-ratio: auto;
+    justify-content: flex-start;
+    gap: 5px;
+    padding: 10px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    background: var(--surface);
+    text-align: left;
+}
+
+.workspace-refined .appointments-calendar .calendar-day strong {
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+}
+
+.workspace-refined .appointments-calendar .calendar-day span {
+    color: var(--text-secondary);
+    font-size: 10px;
+    text-align: left;
+}
+
+.workspace-refined .appointments-calendar .calendar-day.has-bookings {
+    border-color: #bfdbfe;
+    background: #eff6ff;
+}
+
+.workspace-refined .appointments-calendar .calendar-day.is-today strong {
+    color: var(--brand-primary);
+    font-weight: var(--font-weight-bold);
+}
+
+.workspace-refined .appointments-calendar .calendar-day.is-selected {
+    border-color: var(--brand-primary);
+    box-shadow: inset 0 0 0 1px var(--brand-primary);
+}
+
+.workspace-refined .appointments-calendar .calendar-day.empty {
+    min-height: 0;
+    border-color: transparent;
+    background: transparent;
+}
+
+.workspace-refined .appointments-day-view {
+    padding-top: 4px;
+}
+
+.workspace-refined .appointments-day-view .calendar-day-view-header {
+    flex-wrap: wrap;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.workspace-refined .appointments-day-view .calendar-day-view-header h3 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: var(--font-size-md);
+}
+
+.workspace-refined .appointments-day-view .calendar-slot {
+    gap: 16px;
+    padding: 12px 0;
+}
+
+.workspace-refined .appointments-day-view .calendar-slot-time {
+    width: 62px;
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    font-variant-numeric: tabular-nums;
+}
+
+.workspace-refined .appointments-day-view .calendar-slot-content {
+    min-width: 0;
+}
+
+.workspace-refined .appointments-day-view .calendar-slot-booking {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px 14px;
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    padding: 10px 12px;
+    border: 1px solid #dbeafe;
+    border-radius: 9px;
+    background: #f8fbff;
+    text-align: left;
+}
+
+.workspace-refined .appointments-day-view .calendar-slot-booking strong {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.workspace-refined .appointments-day-view .calendar-slot-booking .status-badge {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+}
+
+.workspace-refined .appointment-calendar-customer,
+.workspace-refined .appointment-calendar-service {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.workspace-refined .appointment-calendar-customer {
+    color: var(--text-primary);
+    font-weight: var(--font-weight-semibold);
+}
+
+.workspace-refined .appointment-calendar-service {
+    grid-column: 2;
+    color: var(--text-secondary);
+    font-size: var(--font-size-xs);
+}
+
+.workspace-refined .appointment-day-empty,
+.workspace-refined .appointments-calendar-state {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: 22px 16px;
+    border: 1px dashed var(--border-subtle);
+    border-radius: var(--radius-card);
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.workspace-refined .appointments-calendar [data-appointments-retry] {
+    grid-column: 1 / -1;
+    justify-self: center;
+    min-height: 44px;
+}
+
+.workspace-refined .appointment-form-dialog {
+    max-width: 560px;
+}
+
+.workspace-refined .appointment-form-dialog .app-modal-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.workspace-refined .appointment-form-dialog .form-field[data-field-name="customerId"],
+.workspace-refined .appointment-form-dialog .form-field[data-field-name="status"] {
+    grid-column: 1 / -1;
+}
+
+.workspace-refined .appointment-form-dialog .form-field label {
+    margin-bottom: 7px;
+    color: var(--text-primary);
+    font-weight: var(--font-weight-semibold);
+}
+
+.workspace-refined .appointment-form-dialog .app-modal-description {
+    line-height: 1.55;
+}
+
+@media (max-width: 960px) {
+    .workspace-refined .appointments-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 700px) {
+    .workspace-refined .appointments-page .page-actions {
+        width: 100%;
+    }
+
+    .workspace-refined .appointments-page .page-actions > .primary-button {
+        width: 100%;
+    }
+
+    .workspace-refined .appointments-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .workspace-refined .appointments-period-control {
+        width: 100%;
+    }
+
+    .workspace-refined .appointments-view-toggle {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .workspace-refined .appointments-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .workspace-refined .appointments-metrics .stat-card {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 4px;
+        padding: 14px;
+    }
+
+    .workspace-refined .appointments-metrics .stat-card > :is(p, h2) {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .workspace-refined .appointments-schedule .section-title-row {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 14px 16px 0;
+    }
+
+    .workspace-refined .appointments-page .table-container tbody td.appointment-staff {
+        display: none;
+    }
+
+    .workspace-refined .appointments-page .table-container tbody td.appointment-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px;
+        min-width: 0;
+        white-space: normal;
+    }
+
+    .workspace-refined .appointments-page .appointment-actions .view-button {
+        min-height: 40px;
+        margin: 0 4px 0 0;
+    }
+
+    .workspace-refined .appointments-calendar {
+        padding: 16px 12px 20px;
+    }
+
+    .workspace-refined .appointments-calendar .calendar-grid {
+        gap: 4px;
+    }
+
+    .workspace-refined .appointments-calendar button.calendar-day {
+        min-height: 52px;
+        padding: 7px;
+    }
+
+    .workspace-refined .appointments-calendar .calendar-day-name {
+        font-size: 10px;
+    }
+
+    .workspace-refined .appointments-day-view .calendar-day-view-header {
+        align-items: flex-start;
+        flex-direction: column-reverse;
+    }
+
+    .workspace-refined .appointments-day-view .calendar-slot {
+        gap: 8px;
+    }
+
+    .workspace-refined .appointments-day-view .calendar-slot-time {
+        width: 48px;
+        font-size: var(--font-size-xs);
+    }
+
+    .workspace-refined .appointments-day-view .calendar-slot-booking {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .workspace-refined .appointments-day-view .calendar-slot-booking strong {
+        grid-column: 1;
+    }
+
+    .workspace-refined .appointments-day-view .calendar-slot-booking .status-badge {
+        grid-column: 2;
+        grid-row: 1 / span 3;
+    }
+
+    .workspace-refined .appointment-calendar-service {
+        grid-column: 1;
+    }
+
+    .workspace-refined .appointment-form-dialog .app-modal-fields {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .workspace-refined .appointment-form-dialog .form-field[data-field-name="customerId"],
+    .workspace-refined .appointment-form-dialog .form-field[data-field-name="status"] {
+        grid-column: auto;
+    }
+}
+
+@media (max-width: 360px) {
+    .workspace-refined .appointments-calendar {
+        padding-inline: 8px;
+    }
+
+    .workspace-refined .appointments-calendar .calendar-grid {
+        gap: 2px;
+    }
+
+    .workspace-refined .appointments-calendar button.calendar-day {
+        min-height: 44px;
+        padding: 5px;
+    }
+
+    .workspace-refined .appointments-calendar .calendar-day span {
+        font-size: 9px;
+    }
+
+    .workspace-refined .appointments-day-view .calendar-slot {
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .workspace-refined .appointments-day-view .calendar-slot-time {
+        width: auto;
     }
 }

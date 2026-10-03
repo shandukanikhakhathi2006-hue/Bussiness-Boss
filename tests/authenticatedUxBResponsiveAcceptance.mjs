@@ -65,6 +65,24 @@ try {
 			await heading.waitFor({ state: 'visible' });
 			const result = await page.evaluate(() => ({
 				overflow: document.documentElement.scrollWidth > window.innerWidth + 1,
+				overflowingElements: [...document.querySelectorAll('body *')]
+					.filter((element) => element.getClientRects().length)
+					.map((element) => {
+						const bounds = element.getBoundingClientRect();
+						return {
+							tag: element.tagName.toLowerCase(),
+							className: typeof element.className === 'string' ? element.className : '',
+							id: element.id,
+							left: Math.round(bounds.left),
+							right: Math.round(bounds.right),
+							width: Math.round(bounds.width),
+							scrollWidth: element.scrollWidth,
+							clientWidth: element.clientWidth
+						};
+					})
+					.filter((element) => element.right > window.innerWidth + 1)
+					.sort((first, second) => second.right - first.right)
+					.slice(0, 8),
 				headingText: document.querySelector('main h1')?.textContent.trim(),
 				visiblePageActions: [...document.querySelectorAll('.page-actions button, form button[type="submit"]')]
 					.filter((button) => !button.disabled && button.getClientRects().length > 0).length,
@@ -79,7 +97,7 @@ try {
 					}))
 			}));
 			if (!result.headingText) throw new Error(`${viewport.name} ${file}: the page h1 is empty.`);
-			if (result.overflow) throw new Error(`${viewport.name} ${file}: page-wide horizontal overflow detected.`);
+			if (result.overflow) throw new Error(`${viewport.name} ${file}: page-wide horizontal overflow detected: ${JSON.stringify(result.overflowingElements)}`);
 			if (viewport.width <= 390 && result.tableOverflows.length) {
 				throw new Error(`${viewport.name} ${file}: a record table overflows its mobile card container: ${JSON.stringify(result.tableOverflows)}`);
 			}
@@ -269,6 +287,166 @@ try {
 				if (!dialogFits) throw new Error(`${viewport.name} customers.html: the record form does not fit the viewport.`);
 				await page.keyboard.press('Escape');
 				await dialog.waitFor({ state: 'detached' });
+			}
+
+			if (file === 'appointments.html') {
+				await page.waitForFunction(() =>
+					document.querySelector('.appointments-page tbody')?.getAttribute('aria-busy') === 'false');
+				const scheduleLayout = await page.evaluate(() => {
+					const rect = selector => {
+						const element = document.querySelector(selector);
+						const bounds = element?.getBoundingClientRect();
+						return bounds ? { top: bounds.top, right: bounds.right, bottom: bounds.bottom, left: bounds.left, width: bounds.width, height: bounds.height } : null;
+					};
+					return {
+						metrics: document.querySelectorAll('.appointments-metrics .stat-card').length,
+						columns: document.querySelectorAll('.appointments-schedule thead th').length,
+						toolbar: rect('.appointments-toolbar'),
+						metricsRect: rect('.appointments-metrics'),
+						schedule: rect('.appointments-schedule'),
+						primaryAction: rect('.appointments-page .page-actions .primary-button'),
+						pageOverflow: document.documentElement.scrollWidth > window.innerWidth + 1
+					};
+				});
+				if (scheduleLayout.metrics !== 4 || scheduleLayout.columns !== 6
+					|| !scheduleLayout.toolbar || !scheduleLayout.metricsRect || !scheduleLayout.schedule
+					|| !scheduleLayout.primaryAction || scheduleLayout.pageOverflow
+					|| scheduleLayout.toolbar.bottom > scheduleLayout.metricsRect.top
+					|| scheduleLayout.metricsRect.bottom > scheduleLayout.schedule.top) {
+					throw new Error(`${viewport.name} appointments.html: schedule hierarchy or spacing is invalid: ${JSON.stringify(scheduleLayout)}`);
+				}
+
+				const periodFilter = page.getByLabel('Filter appointments by period');
+				for (const [period, headingText] of [['week', 'This week'], ['month', 'This month'], ['today', 'Today']]) {
+					await periodFilter.selectOption(period);
+					if ((await page.locator('#appointmentsPeriodHeading').textContent()).trim() !== headingText) {
+						throw new Error(`${viewport.name} appointments.html: period heading did not follow the selected period.`);
+					}
+				}
+
+				const viewToggle = page.locator('#appointmentsCalendarViewButton');
+				await viewToggle.click();
+				if (await viewToggle.getAttribute('aria-pressed') !== 'true') {
+					throw new Error(`${viewport.name} appointments.html: calendar view state was not exposed.`);
+				}
+				const calendarSpacing = await page.evaluate(() => {
+					const grid = document.querySelector('#appointmentsCalendarGrid');
+					const calendar = document.querySelector('#appointmentsCalendarView');
+					const gridRect = grid.getBoundingClientRect();
+					const bounds = [...grid.querySelectorAll('.calendar-day:not(.empty)')].map(day => day.getBoundingClientRect());
+					return {
+						overflow: calendar.scrollWidth > calendar.clientWidth + 1,
+						dayWidth: Math.min(...bounds.map(day => day.width)),
+						dayHeight: Math.min(...bounds.map(day => day.height)),
+						allDaysInside: bounds.every(day => day.left >= gridRect.left - 1 && day.right <= gridRect.right + 1)
+					};
+				});
+				if (calendarSpacing.overflow || !calendarSpacing.allDaysInside
+					|| calendarSpacing.dayWidth < 32 || calendarSpacing.dayHeight < 40) {
+					throw new Error(`${viewport.name} appointments.html: calendar spacing is too tight or overflowing: ${JSON.stringify(calendarSpacing)}`);
+				}
+				const todayKey = await page.evaluate(() => {
+					const date = new Date();
+					return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+				});
+				const todayCell = page.locator(`#appointmentsCalendarGrid [data-date="${todayKey}"]`);
+				await todayCell.click();
+				if (await todayCell.getAttribute('aria-pressed') !== 'true'
+					|| !(await page.locator('#appointmentsCalendarDayView').isVisible())) {
+					throw new Error(`${viewport.name} appointments.html: selecting a date did not open the selected-day schedule.`);
+				}
+				const dayContent = page.locator('#appointmentsCalendarDaySlots');
+				if (!await dayContent.locator('[data-calendar-edit], .appointment-day-empty').count()) {
+					throw new Error(`${viewport.name} appointments.html: selected day has neither appointments nor a valid empty state.`);
+				}
+				await page.getByRole('button', { name: 'Back to month' }).click();
+				const selectedDay = page.locator(`#appointmentsCalendarGrid [data-date="${todayKey}"]`);
+				if (await selectedDay.getAttribute('aria-pressed') !== 'true') {
+					throw new Error(`${viewport.name} appointments.html: selected day was lost when returning to the month.`);
+				}
+				await viewToggle.click();
+				if (await viewToggle.getAttribute('aria-pressed') !== 'false') {
+					throw new Error(`${viewport.name} appointments.html: switching back to the table did not update the view state.`);
+				}
+
+				if (viewport.width === 1440) {
+					const customerName = 'UX-C Browser Customer';
+					await page.getByRole('button', { name: 'New Appointment' }).click();
+					const createDialog = page.getByRole('dialog', { name: 'Add Appointment' });
+					await createDialog.waitFor({ state: 'visible' });
+					const dialogFits = await createDialog.evaluate(element => {
+						const bounds = element.getBoundingClientRect();
+						const fields = [...element.querySelectorAll('.form-field')].map(field => field.getBoundingClientRect());
+						return bounds.left >= 0 && bounds.right <= innerWidth + 1
+							&& bounds.top >= 0 && bounds.bottom <= innerHeight + 1
+							&& fields.every(field => field.width > 0 && field.height > 0);
+					});
+					if (!dialogFits) throw new Error('desktop appointments.html: appointment form spacing does not fit the viewport.');
+					const customerSelect = createDialog.getByLabel('Customer');
+					const customerOptions = await customerSelect.locator('option').evaluateAll(options =>
+						options.map(option => ({ value: option.value, label: option.textContent.trim() })));
+					const customerOption = customerOptions.find(option => option.label.includes('ux-c-browser@example.test'))
+						|| customerOptions.find(option => option.label === customerName);
+					if (!customerOption) {
+						throw new Error(`appointments.html: the intended customer option was unavailable: ${JSON.stringify(customerOptions)}`);
+					}
+					await customerSelect.selectOption(customerOption.value);
+					const today = await page.evaluate(() => {
+						const date = new Date();
+						return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+					});
+					await createDialog.getByLabel('Booking date').fill(today);
+					await createDialog.getByLabel('Booking time').fill('11:15');
+					await createDialog.getByLabel('Service').fill('UX-E Browser Service');
+					await createDialog.getByLabel('Staff member').fill('UX-E Browser Staff');
+					if (await createDialog.getByLabel('Status').inputValue() !== 'pending') {
+						throw new Error('appointments.html: new appointments must default to pending status.');
+					}
+					await createDialog.getByRole('button', { name: 'Add' }).click();
+					try {
+						await createDialog.waitFor({ state: 'detached' });
+					} catch (error) {
+						const formState = await createDialog.evaluate(dialog => ({
+							error: dialog.querySelector('.app-modal-error')?.textContent,
+							submitDisabled: dialog.querySelector('button[type="submit"]')?.disabled,
+							fields: [...dialog.querySelectorAll('.form-field')].map(field => ({
+								label: field.querySelector('label')?.textContent,
+								value: field.querySelector('input, select')?.value
+							}))
+						}));
+						throw new Error(`appointments.html: appointment creation did not complete: ${JSON.stringify(formState)}. ${error.message}`);
+					}
+					const appointmentRow = page.locator('.appointments-schedule tbody tr[data-record-id]').filter({ hasText: 'UX-E Browser Service' });
+					await appointmentRow.waitFor({ state: 'visible' });
+					const appointmentId = await appointmentRow.getAttribute('data-record-id');
+					await appointmentRow.getByRole('button', { name: `Edit appointment with ${customerName}` }).click();
+					const editDialog = page.getByRole('dialog', { name: 'Edit Appointment' });
+					await editDialog.waitFor({ state: 'visible' });
+					await editDialog.getByLabel('Service').fill('UX-E Edited Service');
+					await editDialog.getByRole('button', { name: 'Save changes' }).click();
+					await editDialog.waitFor({ state: 'detached' });
+					const editedRow = page.locator('.appointments-schedule tbody tr[data-record-id]').filter({ hasText: 'UX-E Edited Service' });
+					await editedRow.waitFor({ state: 'visible' });
+					if (await editedRow.getAttribute('data-record-id') !== appointmentId) {
+						throw new Error('appointments.html: editing changed the appointment document ID.');
+					}
+					await editedRow.getByRole('button', { name: `Delete appointment with ${customerName}` }).click();
+					const deleteDialog = page.getByRole('dialog', { name: `Delete appointment for ${customerName}?` });
+					await deleteDialog.waitFor({ state: 'visible' });
+					if (!(await deleteDialog.textContent()).includes('UX-E Edited Service')) {
+						throw new Error('appointments.html: delete confirmation did not identify the booked appointment details.');
+					}
+					await deleteDialog.getByRole('button', { name: 'Delete appointment' }).click();
+					await deleteDialog.waitFor({ state: 'detached' });
+					await page.waitForFunction(id => ![...document.querySelectorAll('.appointments-schedule tbody tr[data-record-id]')]
+						.some(row => row.dataset.recordId === id), appointmentId);
+				}
+
+				await page.getByRole('button', { name: 'New Appointment' }).click();
+				const appointmentDialog = page.getByRole('dialog', { name: 'Add Appointment' });
+				await appointmentDialog.waitFor({ state: 'visible' });
+				await page.keyboard.press('Escape');
+				await appointmentDialog.waitFor({ state: 'detached' });
 			}
 		}
 

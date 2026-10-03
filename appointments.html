@@ -69,75 +69,83 @@
             </div>
         </header>
 
-        <section class="page-shell">
+        <section class="page-shell appointments-page">
             <div class="page-header">
                 <div>
                     <h1 class="page-title">Appointments</h1>
-                    <p class="page-subtitle">Schedule and manage your appointments.</p>
+                    <p class="page-subtitle">Manage bookings and see what is coming up.</p>
                 </div>
                 <div class="page-actions">
+                    <button class="primary-button" type="button"><i class="fa-solid fa-plus" aria-hidden="true"></i> New Appointment</button>
+                </div>
+            </div>
+
+            <div class="appointments-toolbar" role="group" aria-label="Schedule controls">
+                <div class="appointments-period-control">
+                    <label for="appointmentPeriodFilter">Show appointments</label>
                     <select class="toolbar-select" id="appointmentPeriodFilter" aria-label="Filter appointments by period">
                         <option value="today" selected>Today</option>
                         <option value="week">This Week</option>
                         <option value="month">This Month</option>
                     </select>
-                    <button class="secondary-button" id="appointmentsCalendarViewButton" type="button">Calendar View</button>
-                    <button class="primary-button" type="button"><i class="fa-solid fa-plus"></i> New Appointment</button>
                 </div>
+                <button class="secondary-button appointments-view-toggle" id="appointmentsCalendarViewButton" type="button" aria-pressed="false">
+                    <i class="fa-regular fa-calendar" aria-hidden="true"></i> Calendar view
+                </button>
             </div>
 
-            <div class="stats-grid">
-                <div class="stat-card"><div class="stat-top"><div class="stat-icon blue"><i class="fa-solid fa-calendar-check"></i></div><span class="trend positive"></span></div><p>Today's Appointments</p><h2>—</h2><small><i class="fa-solid fa-arrow-up"></i> today</small></div>
-                <div class="stat-card"><div class="stat-top"><div class="stat-icon green"><i class="fa-solid fa-check"></i></div><span class="trend positive"></span></div><p>Completed</p><h2>—</h2><small>done today</small></div>
-                <div class="stat-card"><div class="stat-top"><div class="stat-icon orange"><i class="fa-solid fa-clock"></i></div><span class="trend positive"></span></div><p>Pending</p><h2>—</h2><small>waiting</small></div>
-                <div class="stat-card"><div class="stat-top"><div class="stat-icon red"><i class="fa-solid fa-xmark"></i></div><span class="trend negative"></span></div><p>Cancelled</p><h2>—</h2><small>rescheduled</small></div>
+            <div class="stats-grid appointments-metrics" role="group" aria-label="Appointment status summary">
+                <div class="stat-card"><p>Appointments</p><h2>—</h2></div>
+                <div class="stat-card"><p>Completed</p><h2>—</h2></div>
+                <div class="stat-card"><p>Pending</p><h2>—</h2></div>
+                <div class="stat-card"><p>Cancelled</p><h2>—</h2></div>
             </div>
 
-            <section class="content-card">
+            <section class="content-card appointments-schedule" aria-labelledby="appointmentsScheduleHeading">
                 <div class="card-header">
-                    <div><h2>Appointment Schedule</h2><p>Plan and track upcoming bookings.</p></div>
+                    <div><h2 id="appointmentsScheduleHeading">Schedule</h2><p>Your appointments for the selected period.</p></div>
                 </div>
 
                 <div class="section-title-row">
-                    <h3 class="live-date calendar-date"></h3>
+                    <h3 class="calendar-date" id="appointmentsPeriodHeading">Today</h3>
                     <p class="record-result-count" data-record-result-count role="status" aria-live="polite" aria-atomic="true"></p>
                 </div>
 
                 <div id="appointmentsTableView">
                 <div class="table-container">
-                    <table>
+                    <table aria-label="Appointments for selected period">
                         <thead>
                             <tr>
-                                <th>TIME</th>
-                                <th>CUSTOMER</th>
-                                <th>SERVICE</th>
-                                <th>STAFF</th>
-                                <th>STATUS</th>
-                                <th>ACTION</th>
+                                <th scope="col">Date &amp; time</th>
+                                <th scope="col">Customer</th>
+                                <th scope="col">Service</th>
+                                <th scope="col">Staff</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Actions</th>
                             </tr>
                         </thead>
-                        <tbody aria-busy="true"><tr><td colspan="6" class="loading-cell" role="status">Loading records…</td></tr></tbody>
+                        <tbody aria-busy="true"><tr><td colspan="6" class="loading-cell" role="status">Loading appointments…</td></tr></tbody>
                     </table>
                 </div>
 
                 <div class="pagination" id="appointmentsPagination" hidden></div>
                 </div>
 
-                <div class="calendar-embed" id="appointmentsCalendarView" hidden>
-                    <div class="calendar-toolbar" id="appointmentsCalendarToolbar">
+                <div class="calendar-embed appointments-calendar" id="appointmentsCalendarView" hidden>
+                    <div class="calendar-toolbar" id="appointmentsCalendarToolbar" role="group" aria-label="Calendar month navigation">
                         <button class="secondary-button" id="appointmentsPrevMonthButton" type="button" aria-label="Previous month"><i class="fa-solid fa-chevron-left"></i></button>
-                        <strong id="appointmentsCalendarMonthLabel"></strong>
+                        <h3 id="appointmentsCalendarMonthLabel" aria-live="polite"></h3>
                         <button class="secondary-button" id="appointmentsNextMonthButton" type="button" aria-label="Next month"><i class="fa-solid fa-chevron-right"></i></button>
                     </div>
-                    <div class="calendar-grid" id="appointmentsCalendarGrid" aria-live="polite"></div>
-                    <div class="calendar-day-view" id="appointmentsCalendarDayView" hidden>
+                    <div class="calendar-grid" id="appointmentsCalendarGrid" role="group" aria-label="Appointments by day"></div>
+                    <div class="calendar-day-view appointments-day-view" id="appointmentsCalendarDayView" aria-live="polite" hidden>
                         <div class="calendar-day-view-header">
                             <button class="secondary-button" id="appointmentsBackToMonthButton" type="button">
                                 <i class="fa-solid fa-arrow-left"></i> Back to month
                             </button>
-                            <strong id="appointmentsCalendarDayViewLabel"></strong>
+                            <h3 id="appointmentsCalendarDayViewLabel"></h3>
                         </div>
-                        <div class="calendar-day-slots" id="appointmentsCalendarDaySlots" aria-live="polite"></div>
+                        <div class="calendar-day-slots" id="appointmentsCalendarDaySlots"></div>
                     </div>
                 </div>
             </section>
