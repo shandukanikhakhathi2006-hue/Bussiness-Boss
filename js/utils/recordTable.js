@@ -14,7 +14,8 @@ export const renderTableState = (tableBody, { message, actionLabel, state = 'emp
 	const button = actionLabel
 		? `<button type="button" class="secondary-button" data-clear-filters>${escapeHtml(actionLabel)}</button>`
 		: '';
-	tableBody.innerHTML = `<tr class="table-state-row table-state-${escapeHtml(state)}"><td class="table-state-cell" colspan="${columnCount}"><p class="table-state-message" role="${state === 'error' ? 'alert' : 'status'}">${escapeHtml(message)}</p>${button}</td></tr>`;
+	const loadingClass = state === 'loading' ? ' loading-cell' : '';
+	tableBody.innerHTML = `<tr class="table-state-row table-state-${escapeHtml(state)}"><td class="table-state-cell${loadingClass}" colspan="${columnCount}"><p class="table-state-message" role="${state === 'error' ? 'alert' : 'status'}">${escapeHtml(message)}</p>${button}</td></tr>`;
 	tableBody.setAttribute?.('aria-busy', String(state === 'loading'));
 };
 

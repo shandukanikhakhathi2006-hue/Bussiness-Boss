@@ -88,6 +88,79 @@ try {
 				throw new Error(`${viewport.name} ${file}: primary record actions are not visible.`);
 			}
 
+			if (file === 'dashboard.html') {
+				await page.waitForFunction(() =>
+					document.querySelector('#appointmentTableBody')?.getAttribute('aria-busy') === 'false'
+					&& document.querySelector('#invoiceTableBody')?.getAttribute('aria-busy') === 'false');
+				const dashboardState = await page.evaluate(() => ({
+					headingCount: document.querySelectorAll('main h1').length,
+					attentionVisible: document.querySelector('#dashboardAttention')?.getClientRects().length > 0,
+					metrics: document.querySelectorAll('.dashboard-metrics [data-metric-value]').length,
+					hasFullChart: Boolean(document.querySelector('#revenueChartLine')),
+					appointmentRows: document.querySelectorAll('#appointmentTableBody tr').length,
+					invoiceRows: document.querySelectorAll('#invoiceTableBody tr').length
+				}));
+				if (dashboardState.headingCount !== 1 || !dashboardState.attentionVisible || dashboardState.metrics !== 3) {
+					throw new Error(`${viewport.name} dashboard: expected one visible heading, attention area, and three compact metrics: ${JSON.stringify(dashboardState)}`);
+				}
+				if (dashboardState.hasFullChart) throw new Error(`${viewport.name} dashboard: the Reports-style full chart should not appear on the dashboard.`);
+				if (!dashboardState.appointmentRows || !dashboardState.invoiceRows) {
+					throw new Error(`${viewport.name} dashboard: schedule or invoice state did not render.`);
+				}
+
+				if (viewport.width === 1440) {
+					const testCustomer = 'UX-C Browser Customer';
+					await page.getByRole('button', { name: 'Add Customer' }).click();
+					const newCustomer = page.getByRole('dialog');
+					await newCustomer.waitFor({ state: 'visible' });
+					await newCustomer.getByLabel('Customer name').fill(testCustomer);
+					await newCustomer.getByLabel('Customer email').fill('ux-c-browser@example.test');
+					await newCustomer.getByRole('button', { name: 'Save' }).click();
+					await newCustomer.waitFor({ state: 'detached' });
+
+					await page.getByRole('button', { name: 'New Appointment' }).click();
+					const newAppointment = page.getByRole('dialog');
+					await newAppointment.waitFor({ state: 'visible' });
+					const today = await page.evaluate(() => {
+						const date = new Date();
+						return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+					});
+					await newAppointment.getByLabel('Customer').selectOption({ label: testCustomer });
+					await newAppointment.getByLabel('Appointment date').fill(today);
+					await newAppointment.getByLabel('Appointment time').fill('09:30');
+					await newAppointment.getByRole('button', { name: 'Save' }).click();
+					await newAppointment.waitFor({ state: 'detached' });
+					await page.waitForFunction((customerName) =>
+						document.querySelector('#appointmentTableBody')?.textContent.includes(customerName)
+						&& document.querySelector('#appointmentTableBody')?.textContent.includes('pending')
+						&& Number(document.querySelector('[data-attention-value="appointments"]')?.textContent) >= 1, testCustomer);
+
+					await page.getByRole('button', { name: 'Create Invoice' }).click();
+					const newInvoice = page.getByRole('dialog');
+					await newInvoice.waitFor({ state: 'visible' });
+					await newInvoice.getByLabel('Customer name').fill(testCustomer);
+					await newInvoice.getByLabel('Invoice amount').fill('1250');
+					await newInvoice.getByLabel('Status').selectOption('pending');
+					await newInvoice.getByRole('button', { name: 'Save' }).click();
+					await newInvoice.waitFor({ state: 'detached' });
+					await page.waitForFunction((customerName) =>
+						document.querySelector('#invoiceTableBody')?.textContent.includes(customerName)
+						&& (document.querySelector('[data-metric-value="outstanding"]')?.textContent.match(/\d/g) || []).join('').includes('1250'), testCustomer);
+				}
+
+				const primaryAction = page.getByRole('button', { name: 'New Appointment' });
+				await primaryAction.click();
+				const appointmentDialog = page.getByRole('dialog');
+				await appointmentDialog.waitFor({ state: 'visible' });
+				await page.keyboard.press('Escape');
+				await appointmentDialog.waitFor({ state: 'detached' });
+				await page.locator('#viewCalendarButton').click();
+				const calendarDialog = page.getByRole('dialog', { name: 'Business Calendar' });
+				await calendarDialog.waitFor({ state: 'visible' });
+				await page.getByRole('button', { name: 'Close calendar' }).click();
+				await calendarDialog.waitFor({ state: 'hidden' });
+			}
+
 			if (file === 'customers.html') {
 				const createButton = page.locator('.page-actions .primary-button').first();
 				await createButton.click();

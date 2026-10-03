@@ -3,13 +3,14 @@ import { initInvoicesPage } from './js/features/invoices.js';
 import { initAppointmentsPage } from './js/features/appointments.js';
 import { AppointmentValidationError, normalizeAppointmentInput } from './js/features/appointmentContract.js';
 import { appointmentCustomerOptions, prepareAppointmentCustomer } from './js/features/appointmentCustomers.js';
-import { dashboardTodayAppointments, dashboardUpcomingAppointments } from './js/features/dashboardAppointments.js';
+import { dashboardUpcomingAppointments } from './js/features/dashboardAppointments.js';
+import { dashboardInvoiceRecords, dashboardInvoicesNeedingFollowUp } from './js/features/dashboardInvoices.js';
 import { getCustomerSnapshot, initCustomersPage } from './js/features/customers.js';
 import { getCurrentUser, getUserProfile, requireAuthenticatedUser, initAuthPages, initLogoutButtons, getFirebaseErrorMessage } from './js/firebase/auth.js';
 import { firestore, clientEnvironment } from './js/firebase/config.js';
-import { getFirstRecordDate, isSameDay, getDateRange, getPeriodGranularity } from './js/utils/dates.js';
+import { getFirstRecordDate, isSameDay, getDateRange } from './js/utils/dates.js';
 import { formatCurrency, money, formatAxisValue } from './js/utils/currency.js';
-import { isPaidInvoice, buildPeriodSeries, getPercentageChange, getPeriodTotals, getDayTotals, sumAmounts, calculateProfit } from './js/utils/calculations.js';
+import { isPaidInvoice, getPercentageChange, getPeriodTotals, sumAmounts, calculateProfit } from './js/utils/calculations.js';
 import { observeResponsiveTableLabels, renderTableState } from './js/utils/recordTable.js';
 import {
 	updateProfile,
@@ -60,7 +61,6 @@ const getFirstDisplayName = (nameOrEmail) => {
 
 // Rounds a revenue chart's highest value up to a clean number (1, 2, 5, or 10 times a power of
 // ten) so a y-axis reads "R2,000 / R1,500 / R1,000..." instead of an awkward exact figure.
-// Shared by the dashboard's revenue chart and the reports page's revenue chart.
 const getNiceAxisMaximum = (value) => {
 	if (value <= 0) return 10;
 	const magnitude = 10 ** Math.floor(Math.log10(value));
@@ -532,21 +532,23 @@ document.addEventListener('DOMContentLoaded', () => {
 		const profileDropdown = document.querySelector('#profileDropdown');
 		const profileDropdownName = document.querySelector('#profileDropdownName');
 		const profileDropdownEmail = document.querySelector('#profileDropdownEmail');
-		const revenueChartLine = document.querySelector('#revenueChartLine');
-		const revenueChartLabels = document.querySelector('#revenueChartLabels');
-		const revenueYAxis = dashboard.querySelector('.chart .y-axis');
-		const serviceRevenueTotal = document.querySelector('#serviceRevenueTotal');
-		const serviceRevenueList = document.querySelector('#serviceRevenueList');
 		const appointmentTableBody = document.querySelector('#appointmentTableBody');
 		const viewAllAppointmentsButton = document.querySelector('#viewAllAppointmentsButton');
 		const searchInput = document.querySelector('#searchInput');
-		const newTransactionButton = document.querySelector('#newTransactionButton');
 		const notificationsButton = document.querySelector('#notificationsButton');
 		const notificationsPanel = document.querySelector('#notificationsPanel');
 		const notificationsList = document.querySelector('#notificationsList');
 		const notificationsSummary = document.querySelector('#notificationsSummary');
 		const notificationDot = document.querySelector('#notificationDot');
-		const statCards = dashboard.querySelectorAll('.stat-card');
+		const appointmentAttentionCount = dashboard.querySelector('[data-attention-value="appointments"]');
+		const appointmentAttentionSummary = dashboard.querySelector('[data-attention-summary="appointments"]');
+		const overdueAttentionCount = dashboard.querySelector('[data-attention-value="overdue-invoices"]');
+		const overdueAttentionSummary = dashboard.querySelector('[data-attention-summary="overdue-invoices"]');
+		const customerMetric = dashboard.querySelector('[data-metric-value="customers"]');
+		const outstandingMetric = dashboard.querySelector('[data-metric-value="outstanding"]');
+		const monthlyRevenueMetric = dashboard.querySelector('[data-metric-value="monthly-revenue"]');
+		const invoiceHeading = dashboard.querySelector('#invoiceHeading');
+		const invoiceDescription = dashboard.querySelector('#invoiceDescription');
 		let bookingsForCalendar = [];
 		let calendarDate = new Date();
 
@@ -565,35 +567,16 @@ document.addEventListener('DOMContentLoaded', () => {
 				: '<div class="notification-item"><span class="notification-item-icon"><i class="fa-solid fa-check"></i></span><span><strong>You are all caught up</strong><span>No business records need attention right now.</span></span></div>';
 		};
 
-		newTransactionButton?.addEventListener('click', async () => {
-			const choice = await showFormModal({
-				title: 'Create a new record',
-				submitLabel: 'Continue',
-				fields: [{
-					name: 'recordType',
-					label: 'What would you like to create?',
-					type: 'select',
-					options: ['Invoice', 'Payment', 'Expense'],
-					required: true
-				}]
-			});
-			if (!choice) return;
-			const destinations = { Invoice: 'invoices.html?new=1', Payment: 'payments.html?new=1', Expense: 'expenses.html?new=1' };
-			window.location.href = destinations[choice.recordType] || 'invoices.html?new=1';
-		});
 		let invoiceRecords = [];
+		let dashboardInvoices = [];
 		let showingAllInvoices = false;
 		let appointmentRecords = [];
 		let showingAllAppointments = false;
 		const periodSelect = document.querySelector('#periodSelect');
 		let latestInvoiceData = [];
 		let latestExpenseData = [];
-		statCards.forEach((card) => {
-			const value = card.querySelector('h2');
-			if (value) value.textContent = 'Loading...';
-		});
-		if (appointmentTableBody) appointmentTableBody.innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
-		if (invoiceTableBody) invoiceTableBody.innerHTML = '<tr><td colspan="6">Loading...</td></tr>';
+		if (appointmentTableBody) renderTableState(appointmentTableBody, { message: 'Loading appointments…', state: 'loading' });
+		if (invoiceTableBody) renderTableState(invoiceTableBody, { message: 'Loading invoices…', state: 'loading' });
 
 		const getInitials = (name) => String(name || 'Business Manager')
 			.split(' ')
@@ -643,83 +626,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		const getRecordDate = (record, fields = ['createdAt']) => getFirstRecordDate(record, fields);
 
-		const formatTrend = (change) => `${change > 0 ? '+' : ''}${change}%`;
-
-		const updateTrend = (key, change) => {
-			const trend = dashboard.querySelector(`[data-trend="${key}"]`);
-			if (!trend) return;
-			trend.textContent = formatTrend(change);
-			trend.classList.toggle('positive', change >= 0);
-			trend.classList.toggle('negative', change < 0);
-		};
-
-		const updatePerformanceTrend = (key, change) => {
-			const trend = dashboard.querySelector(`[data-performance-trend="${key}"]`);
-			if (!trend) return;
-			trend.textContent = formatTrend(change);
-			trend.classList.toggle('green-text', change >= 0);
-			trend.classList.toggle('red-text', change < 0);
-		};
-
-		// Renders the revenue chart, Y-axis, and Business Performance figures for whichever
-		// period is currently selected in #periodSelect, using the cached invoice/expense data
-		// (no refetch needed when the dropdown changes).
-		const renderRevenueChartForPeriod = () => {
+		const renderFinancialSnapshotForPeriod = () => {
 			const period = periodSelect?.value || 'This Month';
 			const range = getDateRange(period);
-			const granularity = getPeriodGranularity(period);
-			const paidRecords = latestInvoiceData.filter(isPaidInvoice);
-			const revenueSeries = buildPeriodSeries(paidRecords, range, granularity, ['createdAt', 'date'], (invoice) => Number(invoice.amount || 0));
-			const expenseSeries = buildPeriodSeries(latestExpenseData, range, granularity, ['createdAt', 'date'], (expense) => Number(expense.amount || 0));
-			const revenueTotal = revenueSeries.values.reduce((sum, value) => sum + value, 0);
-			const expenseTotal = expenseSeries.values.reduce((sum, value) => sum + value, 0);
+			const totalForPeriod = (records, dateFields) => records.reduce((total, record) => {
+				const date = getRecordDate(record, dateFields);
+				if (!date || date < range.start || date >= range.end) return total;
+				return total + Number(record.amount || 0);
+			}, 0);
+			const revenueTotal = totalForPeriod(latestInvoiceData.filter(isPaidInvoice), ['createdAt', 'date']);
+			const expenseTotal = totalForPeriod(latestExpenseData, ['createdAt', 'date']);
 			const profit = calculateProfit(revenueTotal, expenseTotal);
 
-			if (dashboard.querySelector('[data-performance-value="revenue"]')) {
-				dashboard.querySelector('[data-performance-value="revenue"]').textContent = formatCurrency(revenueTotal);
-				dashboard.querySelector('[data-performance-value="expenses"]').textContent = formatCurrency(expenseTotal);
-				dashboard.querySelector('[data-performance-value="profit"]').textContent = formatCurrency(profit);
-			}
-			if (serviceRevenueTotal) serviceRevenueTotal.textContent = formatCurrency(revenueTotal);
-
-			const rawMaximum = Math.max(...revenueSeries.values, 0);
-			const axisMaximum = getNiceAxisMaximum(rawMaximum);
-			if (revenueChartLine) {
-				const pointCount = revenueSeries.values.length;
-				revenueChartLine.setAttribute('points', revenueSeries.values.map((value, index) => {
-					const x = pointCount > 1 ? (index / (pointCount - 1)) * 700 : 350;
-					const y = 220 - (value / axisMaximum) * 185;
-					return `${x},${y}`;
-				}).join(' '));
-			}
-			if (revenueChartLabels) {
-				revenueChartLabels.innerHTML = revenueSeries.labels.map((label) => `<span>${escapeHtml(label)}</span>`).join('');
-			}
-			if (revenueYAxis) {
-				const steps = 5;
-				revenueYAxis.innerHTML = Array.from({ length: steps + 1 }, (_, index) => `<span>R${formatAxisValue(axisMaximum * (1 - index / steps))}</span>`).join('');
-			}
-
-			if (serviceRevenueList) {
-				const serviceTotals = paidRecords.reduce((totals, invoice) => {
-					const date = getRecordDate(invoice, ['createdAt', 'date']);
-					if (!date || date < range.start || date >= range.end) return totals;
-					const service = invoice.service || invoice.serviceName || invoice.category || 'Other';
-					totals[service] = (totals[service] || 0) + Number(invoice.amount || 0);
-					return totals;
-				}, {});
-				const colors = ['blue-dot', 'purple-dot', 'green-dot', 'orange-dot', 'red-dot'];
-				const services = Object.entries(serviceTotals).sort(([, first], [, second]) => second - first).slice(0, 5);
-				serviceRevenueList.innerHTML = services.length
-					? services.map(([service, total], index) => `<div><span><i class="service-dot ${colors[index]}"></i>${escapeHtml(service)}</span><strong>${revenueTotal ? Math.round((total / revenueTotal) * 100) : 0}%</strong></div>`).join('')
-					: '<div><span><i class="service-dot blue-dot"></i>No service data</span><strong>0%</strong></div>';
-			}
+			dashboard.querySelector('[data-performance-value="revenue"]').textContent = formatCurrency(revenueTotal);
+			dashboard.querySelector('[data-performance-value="expenses"]').textContent = formatCurrency(expenseTotal);
+			dashboard.querySelector('[data-performance-value="profit"]').textContent = formatCurrency(profit);
 		};
 
 		const renderRevenueAnalytics = (records, expenses) => {
 			latestInvoiceData = records;
 			latestExpenseData = expenses;
-			renderRevenueChartForPeriod();
+			renderFinancialSnapshotForPeriod();
 		};
 
 		const escapeHtml = (value) => String(value ?? '')
@@ -743,8 +670,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		const renderAppointmentRows = (records) => {
 			if (!appointmentTableBody) return;
+			if (viewAllAppointmentsButton) viewAllAppointmentsButton.hidden = records.length <= 5;
 			if (!records.length) {
-				renderTableState(appointmentTableBody, { message: 'No appointments scheduled for today.' });
+				renderTableState(appointmentTableBody, { message: 'No active appointments scheduled for today.' });
 				return;
 			}
 			// Records are already filtered to today, so sort by time-of-day (HH:MM as minutes
@@ -764,19 +692,27 @@ document.addEventListener('DOMContentLoaded', () => {
 						<td>${escapeHtml(appointmentTime)}</td>
 						<td><div class="customer"><div class="customer-avatar">${escapeHtml(getInitials(customerName))}</div><span>${escapeHtml(customerName)}</span></div></td>
 						<td>${escapeHtml(booking.service || booking.serviceName || 'Appointment')}</td>
-						<td><span class="status ${getBookingStatusClass(status)}">${escapeHtml(status)}</span></td>
-				<td><button class="view-button" type="button" data-dashboard-link="appointments.html">View schedule</button></td>
+						<td><span class="status-badge ${getBookingStatusClass(status)}">${escapeHtml(status)}</span></td>
+						<td><button class="view-button" type="button" data-dashboard-link="appointments.html">View schedule</button></td>
 					</tr>`;
 			}).join('');
 		};
 
 		const renderInvoiceRows = () => {
 			if (!invoiceTableBody) return;
-			if (!invoiceRecords.length) {
+			const hasFollowUpInvoices = dashboardInvoicesNeedingFollowUp(invoiceRecords).length > 0;
+			if (invoiceHeading) invoiceHeading.textContent = hasFollowUpInvoices ? 'Invoices needing follow-up' : 'Recent invoices';
+			if (invoiceDescription) {
+				invoiceDescription.textContent = hasFollowUpInvoices
+					? 'Overdue invoices first, followed by other unpaid invoices.'
+					: 'No invoices need follow-up. Here are your most recent records.';
+			}
+			if (viewAllInvoicesButton) viewAllInvoicesButton.hidden = dashboardInvoices.length <= 5;
+			if (!dashboardInvoices.length) {
 				renderTableState(invoiceTableBody, { message: 'No invoices found yet.' });
 				return;
 			}
-			const recordsToShow = showingAllInvoices ? invoiceRecords : invoiceRecords.slice(0, 5);
+			const recordsToShow = showingAllInvoices ? dashboardInvoices : dashboardInvoices.slice(0, 5);
 			invoiceTableBody.innerHTML = recordsToShow.map((invoice) => {
 				const invoiceNumber = invoice.invoiceNumber || invoice.number || invoice.id;
 				const status = String(invoice.status || 'Pending');
@@ -785,11 +721,16 @@ document.addEventListener('DOMContentLoaded', () => {
 						<td><strong>${escapeHtml(invoiceNumber)}</strong></td>
 						<td>${escapeHtml(invoice.customerName || invoice.customer || 'Customer')}</td>
 						<td>${money(invoice.amount)}</td>
-						<td>${escapeHtml(invoice.dueDate || invoice.date || 'Not set')}</td>
-						<td><span class="status ${getInvoiceStatusClass(status)}">${escapeHtml(status)}</span></td>
-				<td><button class="view-button" type="button" data-dashboard-link="invoices.html">View invoices</button></td>
+						<td>${escapeHtml(invoice.dueDate || invoice.issueDate || invoice.date || 'Not set')}</td>
+						<td><span class="status-badge ${getInvoiceStatusClass(status)}">${escapeHtml(status)}</span></td>
+						<td><button class="view-button" type="button" data-dashboard-link="invoices.html">View invoices</button></td>
 					</tr>`;
 			}).join('');
+			if (viewAllInvoicesButton) {
+				viewAllInvoicesButton.hidden = dashboardInvoices.length <= 5;
+				viewAllInvoicesButton.textContent = showingAllInvoices ? 'Show fewer' : 'View all';
+				viewAllInvoicesButton.setAttribute('aria-expanded', String(showingAllInvoices));
+			}
 		};
 
 		const renderCalendar = () => {
@@ -879,50 +820,46 @@ document.addEventListener('DOMContentLoaded', () => {
 				]);
 				bookingsForCalendar = bookings.docs.map((record) => ({ ...record.data(), id: record.id }));
 				invoiceRecords = invoices.docs.map((record) => ({ ...record.data(), id: record.id }));
+				dashboardInvoices = dashboardInvoiceRecords(invoiceRecords);
 				renderInvoiceRows();
 				const invoiceData = invoiceRecords;
 				const expenseData = expenses.docs.map((record) => record.data());
 				renderRevenueAnalytics(invoiceData, expenseData);
-				const customerTotals = getPeriodTotals(customers.docs.map((record) => record.data()), () => 1, ['createdAt']);
 				const bookingData = bookings.docs.map((record) => ({ ...record.data(), id: record.id }));
 				const today = new Date();
-				// Dashboard's actionable Today list follows the same pending-only policy
-				// as upcoming notifications; history remains available on Appointments.
 				appointmentRecords = dashboardUpcomingAppointments(bookingData, today).filter((booking) => isSameDay(getRecordDate(booking, ['date']), today));
 				renderAppointmentRows(appointmentRecords);
-				const bookingTotals = getDayTotals(bookingData, () => 1, ['date', 'createdAt']);
 				const revenueTotals = getPeriodTotals(invoiceData.filter(isPaidInvoice), (invoice) => Number(invoice.amount || 0), ['createdAt', 'date']);
-				const expenseTotals = getPeriodTotals(expenseData, (expense) => Number(expense.amount || 0), ['createdAt', 'date']);
-				const outstandingRecords = invoiceData.filter((invoice) => String(invoice.status || '').toLowerCase() !== 'paid');
-				const outstandingTotals = getPeriodTotals(outstandingRecords, (invoice) => Number(invoice.amount || 0), ['createdAt', 'date']);
-				const overdueInvoices = outstandingRecords.filter((invoice) => String(invoice.status || '').toLowerCase() === 'overdue');
-				const activeTodayAppointments = dashboardUpcomingAppointments(bookingData, today).filter((booking) => isSameDay(getRecordDate(booking, ['date']), today));
+				const outstandingRecords = dashboardInvoicesNeedingFollowUp(invoiceData);
+				const overdueInvoices = outstandingRecords.filter((invoice) => String(invoice.status || '').trim().toLowerCase() === 'overdue');
+				if (appointmentAttentionCount) appointmentAttentionCount.textContent = appointmentRecords.length.toLocaleString();
+				if (appointmentAttentionSummary) {
+					appointmentAttentionSummary.textContent = appointmentRecords.length
+						? 'Active appointments on your schedule today.'
+						: 'No active appointments scheduled today.';
+				}
+				if (overdueAttentionCount) overdueAttentionCount.textContent = overdueInvoices.length.toLocaleString();
+				if (overdueAttentionSummary) {
+					overdueAttentionSummary.textContent = overdueInvoices.length
+						? 'Review invoices marked overdue.'
+						: 'No invoices are currently marked overdue.';
+				}
+				if (customerMetric) customerMetric.textContent = customers.size.toLocaleString();
+				if (outstandingMetric) outstandingMetric.textContent = formatCurrency(sumAmounts(outstandingRecords));
+				if (monthlyRevenueMetric) monthlyRevenueMetric.textContent = formatCurrency(revenueTotals.current);
 				renderNotifications([
 					...(overdueInvoices.length ? [{ title: `${overdueInvoices.length} overdue invoice${overdueInvoices.length === 1 ? '' : 's'}`, detail: 'Review outstanding payments that need follow-up.', link: 'invoices.html', icon: 'fa-triangle-exclamation', tone: 'warning' }] : []),
-					...(activeTodayAppointments.length ? [{ title: `${activeTodayAppointments.length} appointment${activeTodayAppointments.length === 1 ? '' : 's'} today`, detail: 'Open the schedule to see your upcoming bookings.', link: 'appointments.html', icon: 'fa-calendar-check' }] : [])
+					...(appointmentRecords.length ? [{ title: `${appointmentRecords.length} appointment${appointmentRecords.length === 1 ? '' : 's'} today`, detail: 'Open the schedule to see your upcoming bookings.', link: 'appointments.html', icon: 'fa-calendar-check' }] : [])
 				]);
-				const profitTotals = {
-					current: calculateProfit(revenueTotals.current, expenseTotals.current),
-					previous: calculateProfit(revenueTotals.previous, expenseTotals.previous)
-				};
-
-				if (statCards[0]) statCards[0].querySelector('h2').textContent = customers.size.toLocaleString();
-				if (statCards[1]) statCards[1].querySelector('h2').textContent = bookingTotals.current.toLocaleString();
-				if (statCards[2]) statCards[2].querySelector('h2').textContent = formatCurrency(revenueTotals.current);
-				if (statCards[3]) statCards[3].querySelector('h2').textContent = formatCurrency(outstandingTotals.current);
-				if (statCards[4]) statCards[4].querySelector('h2').textContent = formatCurrency(expenseTotals.current);
-
-				updateTrend('customers', getPercentageChange(customerTotals.current, customerTotals.previous));
-				updateTrend('bookings', getPercentageChange(bookingTotals.current, bookingTotals.previous));
-				updateTrend('revenue', getPercentageChange(revenueTotals.current, revenueTotals.previous));
-				updateTrend('outstanding', getPercentageChange(outstandingTotals.current, outstandingTotals.previous));
-				updateTrend('expenses', getPercentageChange(expenseTotals.current, expenseTotals.previous));
-				updatePerformanceTrend('revenue', getPercentageChange(revenueTotals.current, revenueTotals.previous));
-				updatePerformanceTrend('expenses', getPercentageChange(expenseTotals.current, expenseTotals.previous));
-				updatePerformanceTrend('profit', getPercentageChange(profitTotals.current, profitTotals.previous));
 			} catch (error) {
-				statCards.forEach((card) => { const value = card.querySelector('h2'); if (value) value.textContent = 'Unavailable'; });
-				renderAsyncFailure(document.querySelector('.dashboard .analytics-grid') || appointmentTableBody, 'Dashboard data could not be loaded. Check your connection and try again.', () => updateDashboardData(user));
+				[customerMetric, outstandingMetric, monthlyRevenueMetric, appointmentAttentionCount, overdueAttentionCount]
+					.filter(Boolean)
+					.forEach((metric) => { metric.textContent = 'Unavailable'; });
+				if (appointmentAttentionSummary) appointmentAttentionSummary.textContent = 'Appointments could not be loaded.';
+				if (overdueAttentionSummary) overdueAttentionSummary.textContent = 'Invoice follow-up status could not be loaded.';
+				dashboard.querySelectorAll('[data-performance-value]').forEach((value) => { value.textContent = 'Unavailable'; });
+				if (appointmentTableBody) renderAsyncFailure(appointmentTableBody, 'Appointments could not be loaded. Check your connection and try again.', () => updateDashboardData(user));
+				if (invoiceTableBody) renderAsyncFailure(invoiceTableBody, 'Invoices could not be loaded. Check your connection and try again.', () => updateDashboardData(user));
 				showMessage('Dashboard data could not be loaded from Firestore.', 'error');
 			}
 		};
@@ -1027,14 +964,12 @@ document.addEventListener('DOMContentLoaded', () => {
 		});
 
 		viewAllInvoicesButton?.addEventListener('click', () => {
-			if (!invoiceRecords.length) {
+			if (!dashboardInvoices.length) {
 				showMessage('There are no saved invoices to display yet.');
 				return;
 			}
 			showingAllInvoices = !showingAllInvoices;
 			renderInvoiceRows();
-			viewAllInvoicesButton.textContent = showingAllInvoices ? 'Show Recent' : 'View All';
-			viewAllInvoicesButton.setAttribute('aria-expanded', String(showingAllInvoices));
 		});
 
 		viewAllAppointmentsButton?.addEventListener('click', () => {
@@ -1050,7 +985,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			viewAllAppointmentsButton.setAttribute('aria-expanded', String(showingAllAppointments));
 		});
 
-		periodSelect?.addEventListener('change', renderRevenueChartForPeriod);
+		periodSelect?.addEventListener('change', renderFinancialSnapshotForPeriod);
 
 		viewCalendarButton?.addEventListener('click', () => {
 			calendarDate = new Date();
