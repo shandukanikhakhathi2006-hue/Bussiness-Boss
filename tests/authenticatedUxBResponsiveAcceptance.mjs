@@ -162,6 +162,101 @@ try {
 			}
 
 			if (file === 'customers.html') {
+				await page.waitForFunction(() =>
+					document.querySelector('.customer-directory tbody')?.getAttribute('aria-busy') === 'false');
+				const customerLayout = await page.evaluate(() => ({
+					metrics: [...document.querySelectorAll('.customer-metrics .stat-card > p')].map((card) => card.textContent.trim()),
+					columnCount: document.querySelectorAll('.customer-directory thead th').length,
+					clearButtons: document.querySelectorAll('.customer-directory [data-clear-filters]').length,
+					clearInitiallyHidden: document.querySelector('.customer-directory [data-clear-filters]')?.hidden
+				}));
+				if (customerLayout.metrics.join('|') !== 'Total customers|Active customers|Inactive customers'
+					|| customerLayout.columnCount !== 5 || customerLayout.clearButtons !== 1 || !customerLayout.clearInitiallyHidden) {
+					throw new Error(`${viewport.name} customers.html: customer directory controls or summaries are inconsistent: ${JSON.stringify(customerLayout)}`);
+				}
+
+				if (viewport.width === 1440) {
+					const customerName = 'UX-D Browser Customer';
+					const createCustomer = async (email, status) => {
+						await page.getByRole('button', { name: 'Add Customer' }).click();
+						const customerDialog = page.getByRole('dialog');
+						await customerDialog.waitFor({ state: 'visible' });
+						await customerDialog.getByLabel('Customer name').fill(customerName);
+						await customerDialog.getByLabel('Customer email').fill(email);
+						await customerDialog.getByLabel('Customer phone').fill('010 555 0134');
+						await customerDialog.getByLabel('Status').selectOption(status);
+						await customerDialog.getByRole('button', { name: 'Add' }).click();
+						await customerDialog.waitFor({ state: 'detached' });
+					};
+					await createCustomer('ux-d-one@example.test', 'active');
+					await createCustomer('ux-d-two@example.test', 'inactive');
+
+					const duplicateRows = page.locator('.customer-directory tbody tr[data-record-id]').filter({ hasText: customerName });
+					await page.waitForFunction((name) =>
+						[...document.querySelectorAll('.customer-directory tbody tr[data-record-id]')]
+							.filter((row) => row.textContent.includes(name)).length === 2, customerName);
+					const customerIds = await duplicateRows.evaluateAll((rows) => rows.map((row) => row.dataset.recordId));
+					if (!customerIds[0] || !customerIds[1] || customerIds[0] === customerIds[1]) {
+						throw new Error('customers.html: same-name customers did not retain distinct document IDs.');
+					}
+					const activeCustomerId = await page.locator('.customer-directory tbody tr[data-record-id]')
+						.filter({ hasText: 'ux-d-one@example.test' }).getAttribute('data-record-id');
+
+					const search = page.getByRole('searchbox', { name: 'Search customers by name or contact' });
+					await search.fill('ux-d-two@example.test');
+					if (await page.locator('.customer-directory tbody tr[data-record-id]').count() !== 1
+						|| !(await page.locator('.customer-directory tbody').textContent()).includes('ux-d-two@example.test')) {
+						throw new Error('customers.html: contact search did not isolate the matching customer.');
+					}
+					const clearFilters = page.getByRole('button', { name: 'Clear filters' });
+					if (!(await clearFilters.isVisible())) throw new Error('customers.html: clear filters did not appear for an active search.');
+					await clearFilters.click();
+					if (!(await page.locator('.customer-directory [data-clear-filters]').isHidden())
+						|| (await duplicateRows.count()) !== 2) {
+						throw new Error('customers.html: clearing the search did not restore the full directory.');
+					}
+
+					await page.getByLabel('Filter by customer status').selectOption('inactive');
+					if (await page.locator('.customer-directory tbody tr[data-record-id]').count() !== 1
+						|| !(await page.locator('.customer-directory tbody').textContent()).includes('ux-d-two@example.test')) {
+						throw new Error('customers.html: status filtering did not isolate inactive customers.');
+					}
+					await page.getByRole('button', { name: 'Clear filters' }).click();
+					await page.getByLabel('Filter by customer status').selectOption('all');
+
+					const activeRow = page.locator('.customer-directory tbody tr[data-record-id]').filter({ hasText: 'ux-d-one@example.test' });
+					await activeRow.getByRole('button', { name: `Edit ${customerName}` }).click();
+					const editDialog = page.getByRole('dialog');
+					await editDialog.waitFor({ state: 'visible' });
+					await editDialog.getByLabel('Customer name').fill(`${customerName} Edited`);
+					await editDialog.getByRole('button', { name: 'Save changes' }).click();
+					await editDialog.waitFor({ state: 'detached' });
+					const editedRow = page.locator('.customer-directory tbody tr[data-record-id]').filter({ hasText: 'ux-d-one@example.test' });
+					await page.waitForFunction((email) =>
+						[...document.querySelectorAll('.customer-directory tbody tr[data-record-id]')]
+							.some((row) => row.textContent.includes(email) && row.textContent.includes('UX-D Browser Customer Edited')),
+					'ux-d-one@example.test');
+					if (await editedRow.getAttribute('data-record-id') !== activeCustomerId) {
+						throw new Error('customers.html: editing a customer changed its document ID.');
+					}
+
+					await editedRow.getByRole('button', { name: `Delete ${customerName} Edited` }).click();
+					const deleteDialog = page.getByRole('dialog', { name: `Delete ${customerName} Edited?` });
+					await deleteDialog.waitFor({ state: 'visible' });
+					if (!(await deleteDialog.textContent()).includes('permanently removed from your customer directory')) {
+						throw new Error('customers.html: delete confirmation did not identify the customer action.');
+					}
+					await deleteDialog.getByRole('button', { name: 'Delete record' }).click();
+					await deleteDialog.waitFor({ state: 'detached' });
+					await page.waitForFunction((email) =>
+						![...document.querySelectorAll('.customer-directory tbody tr[data-record-id]')]
+							.some((row) => row.textContent.includes(email)), 'ux-d-one@example.test');
+					await page.waitForFunction(() => {
+						const button = document.querySelector('.page-actions .primary-button');
+						return button && document.activeElement === button;
+					});
+				}
+
 				const createButton = page.locator('.page-actions .primary-button').first();
 				await createButton.click();
 				const dialog = page.getByRole('dialog');

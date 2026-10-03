@@ -4612,3 +4612,70 @@ select {
     .workspace-refined [hidden] {
         display: none !important;
     }
+
+.workspace-refined .customer-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-width: 940px;
+}
+
+.workspace-refined .customer-directory .customer,
+.workspace-refined .customer-directory .customer-contact {
+    min-width: 0;
+}
+
+.workspace-refined .customer-directory .customer-name,
+.workspace-refined .customer-directory .customer-contact span {
+    overflow-wrap: anywhere;
+}
+
+.workspace-refined .customer-directory .customer-contact {
+    display: grid;
+    gap: 3px;
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.workspace-refined .customer-directory .customer-actions {
+    white-space: nowrap;
+}
+
+.workspace-refined .customer-directory .customer-actions .view-button {
+    margin-right: 8px;
+}
+
+@media (max-width: 700px) {
+    .workspace-refined .customer-metrics {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .workspace-refined .customer-metrics .stat-card {
+        padding: 14px;
+    }
+
+    .workspace-refined .customer-directory .customer {
+        align-items: flex-start;
+        flex-wrap: nowrap;
+    }
+
+    .workspace-refined .customer-directory .customer-actions {
+        white-space: normal;
+    }
+
+    .workspace-refined .customer-directory .customer-actions .view-button {
+        margin: 0 6px 0 0;
+    }
+}
+
+@media (max-width: 390px) {
+    .workspace-refined .customer-metrics .stat-card {
+        padding: 12px 10px;
+    }
+
+    .workspace-refined .customer-metrics .stat-card > p {
+        font-size: 11px;
+    }
+
+    .workspace-refined .customer-metrics .stat-card > h2 {
+        font-size: 21px;
+    }
+}

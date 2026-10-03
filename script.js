@@ -1104,6 +1104,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		const reportPeriodSelect = pageShell.querySelector('#reportPeriodSelect');
 		const pageSearch = pageShell.querySelector('.toolbar-search input');
 		const pageResultsCount = pageShell.querySelector('[data-record-result-count]');
+		const clearFiltersButton = pageShell.querySelector('[data-clear-filters]');
 		let pageRecords = [];
 		const genericPaginationContainer = pageShell.querySelector('.pagination:not(#appointmentsPagination)');
 		let pageCurrentPage = 1;
@@ -1223,7 +1224,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		};
 
 		const customersFeature = pageName === 'customers'
-			? initCustomersPage({ pageName, tableBody, statCards, pageEscape, initials, statusClass, updatePageTrends })
+			? initCustomersPage({ pageName, tableBody, statCards, pageEscape, initials, statusClass })
 			: null;
 
 
@@ -1668,12 +1669,18 @@ document.addEventListener('DOMContentLoaded', () => {
 			return true;
 		});
 
+		const recordMatchesSearch = (record, searchValue) => {
+			if (!searchValue) return true;
+			if (pageName === 'customers') {
+				return [record.name, record.email, record.phone]
+					.some((value) => String(value || '').toLowerCase().includes(searchValue));
+			}
+			return Object.values(record).join(' ').toLowerCase().includes(searchValue);
+		};
+
 		const getFilteredPageRecords = () => {
 			const searchValue = pageSearch?.value.toLowerCase().trim() || '';
-			return pageRecords.filter((record) => (
-				recordMatchesFilters(record)
-				&& (searchValue === '' || Object.values(record).join(' ').toLowerCase().includes(searchValue))
-			));
+			return pageRecords.filter((record) => recordMatchesFilters(record) && recordMatchesSearch(record, searchValue));
 		};
 
 		const renderGenericPagination = (records) => {
@@ -1690,9 +1697,18 @@ document.addEventListener('DOMContentLoaded', () => {
 		const renderFilteredPageRecords = () => {
 			if (!collectionName || pageName === 'appointments') return;
 			const records = getFilteredPageRecords();
-			if (pageResultsCount) pageResultsCount.textContent = `${records.length} ${pageName} ${records.length === 1 ? 'record' : 'records'}`;
+			const hasActiveFilters = Boolean(pageSearch?.value.trim()) || pageFilterSelects.some((select) => select.value && select.value !== 'all');
+			if (clearFiltersButton && pageName === 'customers') clearFiltersButton.hidden = !hasActiveFilters;
+			if (pageResultsCount) {
+				pageResultsCount.textContent = pageName === 'customers'
+					? `${records.length}${records.length === 1 ? ' customer' : ' customers'}${hasActiveFilters ? ' found' : ''}`
+					: `${records.length} ${pageName} ${records.length === 1 ? 'record' : 'records'}`;
+			}
 			if (pageRecords.length && !records.length) {
-				renderTableState(tableBody, { message: 'No matching records. Adjust your search or filters.', actionLabel: 'Clear filters' });
+				renderTableState(tableBody, {
+					message: 'No matching records. Adjust your search or filters.',
+					...(pageName === 'customers' ? {} : { actionLabel: 'Clear filters' })
+				});
 				renderGenericPagination(records);
 				return;
 			}
@@ -1717,7 +1733,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			const searchValue = pageSearch?.value.toLowerCase().trim() || '';
 			const records = pageRecords.filter((record) => (
 				recordMatchesFilters(record)
-				&& (!searchValue || Object.values(record).join(' ').toLowerCase().includes(searchValue))
+				&& recordMatchesSearch(record, searchValue)
 			));
 			const columns = recordFeature?.exportColumns || {
 				expenses: [['Expense number', 'expenseNumber'], ['Description', 'description'], ['Category', 'category'], ['Vendor', 'vendor'], ['Date', 'date'], ['Amount', 'amount'], ['Status', 'status']],
@@ -1785,9 +1801,14 @@ document.addEventListener('DOMContentLoaded', () => {
 				} finally { button.disabled = false; }
 			}
 		if (button.dataset.pageAction === 'delete' && recordId) {
+			const customerName = pageName === 'customers'
+				? pageRecords.find((record) => record.id === recordId)?.name
+				: null;
 			const confirmation = await showFormModal({
-				title: `Delete ${recordFeature?.singularTitle || pageSingularTitles[collectionName] || 'record'}?`,
-				description: 'This action permanently removes the record and cannot be undone.',
+				title: customerName ? `Delete ${customerName}?` : `Delete ${recordFeature?.singularTitle || pageSingularTitles[collectionName] || 'record'}?`,
+				description: customerName
+					? `${customerName} will be permanently removed from your customer directory. This action cannot be undone.`
+					: 'This action permanently removes the record and cannot be undone.',
 				fields: [],
 				submitLabel: 'Delete record',
 				destructive: true
@@ -1801,6 +1822,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					else await deleteDoc(doc(firestore, collectionName, recordId));
 					await loadPageRecords(getCurrentUser());
 					showMessage(`${pageName.slice(0, -1)} deleted.`);
+					if (pageName === 'customers') pageShell.querySelector('.page-actions .primary-button')?.focus();
 				} catch (error) {
 					console.error(`Failed to delete ${collectionName}`, error);
 					showMessage('The record could not be deleted.', 'error');

@@ -1,8 +1,6 @@
 import { firestore } from '../firebase/config.js';
 import { money } from '../utils/currency.js';
-import { getFirstRecordDate } from '../utils/dates.js';
 import { renderTableState } from '../utils/recordTable.js';
-import { getPeriodTotals, getPercentageChange } from '../utils/calculations.js';
 import { collection, deleteDoc, doc, getDocs, query, serverTimestamp, setDoc, where } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
 
 // Shared by the dashboard and record forms; every read remains owner-scoped.
@@ -10,30 +8,26 @@ export const getCustomerSnapshot = (user) =>
 	getDocs(query(collection(firestore, 'customers'), where('ownerId', '==', user.uid)));
 
 // The shared controller owns modal, feedback, pagination and event lifecycles.
-export const initCustomersPage = ({ pageName, tableBody, statCards, pageEscape, initials, statusClass, updatePageTrends }) => {
+export const initCustomersPage = ({ pageName, tableBody, statCards, pageEscape, initials, statusClass }) => {
 	if (pageName !== 'customers') return null;
-
-	const pageDate = (record) => getFirstRecordDate(record, ['date', 'createdAt', 'issueDate']);
-	const periodTotals = (records, getValue) => getPeriodTotals(records, getValue, ['date', 'createdAt', 'issueDate']);
 
 	const renderRows = (records) => {
 		if (!tableBody) return;
 		if (!records.length) {
-			renderTableState(tableBody, { message: 'No customers found yet.' });
+			renderTableState(tableBody, { message: 'No customers yet. Add a customer to start your directory.' });
 			return;
 		}
-		tableBody.innerHTML = records.map((record) => `<tr data-record-id="${record.id}"><td><div class="customer"><div class="customer-avatar">${pageEscape(initials(record.name))}</div><span>${pageEscape(record.name || 'Customer')}</span></div></td><td>${pageEscape(record.email || 'Not set')}</td><td>${pageEscape(record.phone || 'Not set')}</td><td>${money(record.totalSpent)}</td><td><span class="status-badge ${statusClass(record.status)}">${pageEscape(record.status || 'Active')}</span></td><td><button class="view-button" type="button" data-page-action="edit">Edit</button> <button class="view-button" type="button" data-page-action="delete">Delete</button></td></tr>`).join('');
+		tableBody.innerHTML = records.map((record) => {
+			const name = record.name || 'Customer';
+			const contact = [record.email, record.phone].filter(Boolean);
+			return `<tr data-record-id="${pageEscape(record.id)}"><td><div class="customer"><div class="customer-avatar" aria-hidden="true">${pageEscape(initials(name))}</div><span class="customer-name">${pageEscape(name)}</span></div></td><td><div class="customer-contact">${contact.length ? contact.map((value) => `<span>${pageEscape(value)}</span>`).join('') : '<span>No contact details</span>'}</div></td><td>${money(record.totalSpent)}</td><td><span class="status-badge ${statusClass(record.status)}">${pageEscape(record.status || 'Active')}</span></td><td class="customer-actions"><button class="view-button" type="button" data-page-action="edit" aria-label="Edit ${pageEscape(name)}">Edit</button><button class="view-button" type="button" data-page-action="delete" aria-label="Delete ${pageEscape(name)}">Delete</button></td></tr>`;
+		}).join('');
 	};
 
 	const updateStats = (records) => {
 		if (statCards[0]) statCards[0].textContent = records.length;
 		if (statCards[1]) statCards[1].textContent = records.filter((record) => String(record.status || 'active').toLowerCase() === 'active').length;
-		if (statCards[2]) statCards[2].textContent = records.filter((record) => { const date = pageDate(record); const now = new Date(); return date && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear(); }).length;
-		if (statCards[3]) statCards[3].textContent = records.filter((record) => String(record.group || record.type || '').toLowerCase() === 'vip').length;
-		if (statCards[4]) statCards[4].textContent = records.filter((record) => String(record.status || '').toLowerCase() === 'inactive').length;
-		const customerTotals = periodTotals(records, () => 1);
-		const newCustomers = records.filter((record) => { const date = pageDate(record); const now = new Date(); return date && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear(); });
-		updatePageTrends([getPercentageChange(customerTotals.current, customerTotals.previous), getPercentageChange(records.filter((record) => String(record.status || 'active').toLowerCase() === 'active').length, 0), getPercentageChange(newCustomers.length, 0), 0, 0]);
+		if (statCards[2]) statCards[2].textContent = records.filter((record) => String(record.status || '').toLowerCase() === 'inactive').length;
 	};
 
 	const saveRecord = async (user, values, recordId = null) => {
