@@ -3,6 +3,7 @@ import { getDateRange } from '../utils/dates.js';
 import { appointmentRecordDate, isCompletedAppointment, isCancelledAppointment, createAppointmentCalendarState, moveAppointmentMonth, appointmentMonth, appointmentDaySlots } from './appointmentCalendar.js';
 import { AppointmentMutationError, buildAppointmentCancellation, buildAppointmentCompletion, buildAppointmentCreate, buildAppointmentUpdate, createAppointmentInFlightGuard } from './appointmentCrud.js';
 import { appointmentCustomerOptions } from './appointmentCustomers.js';
+import { renderTableState } from '../utils/recordTable.js';
 import { collection, deleteDoc, doc, getDocs, query, serverTimestamp, setDoc, where } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
 
 // One feature instance owns the calendar and period listeners for each page shell.
@@ -27,6 +28,7 @@ export const initAppointmentsPage = ({ pageName, pageShell, tableBody, statCards
 	const appointmentsNextMonthButton = pageShell.querySelector('#appointmentsNextMonthButton');
 	const appointmentsBackToMonthButton = pageShell.querySelector('#appointmentsBackToMonthButton');
 	const appointmentsPaginationContainer = pageShell.querySelector('#appointmentsPagination');
+	const appointmentsResultCount = pageShell.querySelector('[data-record-result-count]');
 	let appointmentsViewMode = 'table';
 	let calendarState = createAppointmentCalendarState();
 	let appointmentsCurrentPage = 1;
@@ -70,8 +72,9 @@ export const initAppointmentsPage = ({ pageName, pageShell, tableBody, statCards
 	const renderAppointmentsTable = (activeRecords) => {
 		appointmentsActiveRecordsCache = activeRecords;
 		if (!tableBody) return;
+		if (appointmentsResultCount) appointmentsResultCount.textContent = `${activeRecords.length} ${activeRecords.length === 1 ? 'appointment' : 'appointments'}`;
 		if (!activeRecords.length) {
-			tableBody.innerHTML = `<tr><td colspan="6">${APPOINTMENT_EMPTY_TEXT[getSelectedAppointmentPeriod()]}</td></tr>`;
+			renderTableState(tableBody, { message: APPOINTMENT_EMPTY_TEXT[getSelectedAppointmentPeriod()] });
 			renderAppointmentsPagination(0);
 			return;
 		}

@@ -100,6 +100,7 @@
 
                 <div class="section-title-row">
                     <h3 class="live-date calendar-date"></h3>
+                    <p class="record-result-count" data-record-result-count role="status" aria-live="polite" aria-atomic="true"></p>
                 </div>
 
                 <div id="appointmentsTableView">
@@ -115,7 +116,7 @@
                                 <th>ACTION</th>
                             </tr>
                         </thead>
-                        <tbody><tr><td colspan="10" class="loading-cell" role="status">Loading records…</td></tr></tbody>
+                        <tbody aria-busy="true"><tr><td colspan="6" class="loading-cell" role="status">Loading records…</td></tr></tbody>
                     </table>
                 </div>
 

@@ -87,11 +87,12 @@
 
                 <div class="page-toolbar">
                     <div class="toolbar-group">
-                        <div class="toolbar-search"><i class="fa-solid fa-magnifying-glass"></i><input type="text" placeholder="Search invoices" /></div>
+                        <div class="toolbar-search"><i class="fa-solid fa-magnifying-glass"></i><input type="text" placeholder="Search invoices" aria-label="Search invoices" /></div>
                         <select class="toolbar-select" id="invoiceStatusFilter" aria-label="Filter by invoice status"><option value="all">All Status</option><option value="paid">Paid</option><option value="pending">Pending</option><option value="overdue">Overdue</option></select>
                         <select class="toolbar-select" id="invoiceTimeFilter" aria-label="Filter invoices by time"><option value="all">All Time</option><option value="month">This Month</option><option value="90days">Last 90 Days</option></select>
                     </div>
                     <button class="secondary-button" type="button" data-clear-filters>Clear filters</button>
+                    <p class="record-result-count" data-record-result-count role="status" aria-live="polite" aria-atomic="true"></p>
                 </div>
 
                 <div class="table-container">
@@ -107,16 +108,11 @@
                                 <th>ACTION</th>
                             </tr>
                         </thead>
-                        <tbody><tr><td colspan="10" class="loading-cell" role="status">Loading records…</td></tr></tbody>
+                        <tbody aria-busy="true"><tr><td colspan="7" class="loading-cell" role="status">Loading records…</td></tr></tbody>
                     </table>
                 </div>
 
-                <div class="pagination">
-                    <button type="button">1</button>
-                    <button type="button" class="active">2</button>
-                    <button type="button">3</button>
-                    <button type="button">Next</button>
-                </div>
+                <div class="pagination" hidden></div>
             </section>
         </section>
     </main>

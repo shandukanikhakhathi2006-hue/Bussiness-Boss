@@ -10,6 +10,7 @@ import { firestore, clientEnvironment } from './js/firebase/config.js';
 import { getFirstRecordDate, isSameDay, getDateRange, getPeriodGranularity } from './js/utils/dates.js';
 import { formatCurrency, money, formatAxisValue } from './js/utils/currency.js';
 import { isPaidInvoice, buildPeriodSeries, getPercentageChange, getPeriodTotals, getDayTotals, sumAmounts, calculateProfit } from './js/utils/calculations.js';
+import { observeResponsiveTableLabels, renderTableState } from './js/utils/recordTable.js';
 import {
 	updateProfile,
 	updateEmail,
@@ -76,7 +77,11 @@ const restoreModalFocus = (element) => {
 const renderAsyncFailure = (target, message, retry) => {
 	if (!target) return;
 	const button = '<button type="button" class="secondary-button" data-async-retry>Retry</button>';
-	if (target.tagName === 'TBODY') target.innerHTML = `<tr><td colspan="8"><p role="alert">${message}</p>${button}</td></tr>`;
+	if (target.tagName === 'TBODY') {
+		const columnCount = target.closest('table')?.querySelectorAll('thead th').length || 1;
+		target.innerHTML = `<tr class="table-state-row table-state-error"><td class="table-state-cell" colspan="${columnCount}"><p class="table-state-message" role="alert">${message}</p>${button}</td></tr>`;
+		target.setAttribute('aria-busy', 'false');
+	}
 	else target.innerHTML = `<div class="async-state" role="alert"><p>${message}</p>${button}</div>`;
 	target.querySelector('[data-async-retry]')?.addEventListener('click', retry, { once: true });
 };
@@ -151,6 +156,7 @@ const showFormModal = ({ title, description = '', fields, values = {}, submitLab
 		}
 		input.id = inputId;
 		input.name = field.name;
+		input.required = Boolean(field.required);
 		const existingValue = values[field.name];
 		input.value = existingValue !== undefined && existingValue !== null ? existingValue : (field.defaultValue ?? '');
 		if (field.disabled) input.disabled = true;
@@ -161,6 +167,7 @@ const showFormModal = ({ title, description = '', fields, values = {}, submitLab
 
 	const errorMessage = document.createElement('p');
 	errorMessage.className = 'app-modal-error';
+	errorMessage.id = nextAppModalId('error');
 	errorMessage.setAttribute('role', 'alert');
 	errorMessage.setAttribute('aria-atomic', 'true');
 
@@ -237,15 +244,21 @@ const showFormModal = ({ title, description = '', fields, values = {}, submitLab
 		for (const field of fields) {
 			const input = inputs[field.name];
 			const rawValue = input.value.trim();
+			input.removeAttribute('aria-invalid');
+			input.removeAttribute('aria-describedby');
 			if (field.required && !rawValue) {
 				errorMessage.textContent = `${field.label} is required.`;
 				errorMessage.classList.add('visible');
+				input.setAttribute('aria-invalid', 'true');
+				input.setAttribute('aria-describedby', errorMessage.id);
 				input.focus();
 				return;
 			}
 			if (field.type === 'number' && rawValue && !Number.isFinite(Number(rawValue))) {
 				errorMessage.textContent = `${field.label} must be a number.`;
 				errorMessage.classList.add('visible');
+				input.setAttribute('aria-invalid', 'true');
+				input.setAttribute('aria-describedby', errorMessage.id);
 				input.focus();
 				return;
 			}
@@ -269,6 +282,7 @@ const showFormModal = ({ title, description = '', fields, values = {}, submitLab
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+	observeResponsiveTableLabels(document.querySelector('.main-content'));
 	if (clientEnvironment.local && window.location.pathname.endsWith('/invoices.html')) {
 		const link = document.createElement('a');
 		link.href = 'invoices-v2.html';
@@ -730,7 +744,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		const renderAppointmentRows = (records) => {
 			if (!appointmentTableBody) return;
 			if (!records.length) {
-				appointmentTableBody.innerHTML = '<tr><td colspan="5">No appointments scheduled for today.</td></tr>';
+				renderTableState(appointmentTableBody, { message: 'No appointments scheduled for today.' });
 				return;
 			}
 			// Records are already filtered to today, so sort by time-of-day (HH:MM as minutes
@@ -759,7 +773,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		const renderInvoiceRows = () => {
 			if (!invoiceTableBody) return;
 			if (!invoiceRecords.length) {
-				invoiceTableBody.innerHTML = '<tr><td colspan="6">No invoices found yet.</td></tr>';
+				renderTableState(invoiceTableBody, { message: 'No invoices found yet.' });
 				return;
 			}
 			const recordsToShow = showingAllInvoices ? invoiceRecords : invoiceRecords.slice(0, 5);
@@ -1154,6 +1168,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		const statCards = pageShell.querySelectorAll('.stat-card h2');
 		const reportPeriodSelect = pageShell.querySelector('#reportPeriodSelect');
 		const pageSearch = pageShell.querySelector('.toolbar-search input');
+		const pageResultsCount = pageShell.querySelector('[data-record-result-count]');
 		let pageRecords = [];
 		const genericPaginationContainer = pageShell.querySelector('.pagination:not(#appointmentsPagination)');
 		let pageCurrentPage = 1;
@@ -1263,7 +1278,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		const clearDemoContent = () => {
 			statCards.forEach((card) => { card.textContent = 'Loading...'; });
-			if (tableBody) tableBody.innerHTML = '<tr><td colspan="8">Loading...</td></tr>';
+			renderTableState(tableBody, { message: 'Loading records…', state: 'loading' });
 			pageShell.querySelectorAll('.service-list').forEach((list) => { list.innerHTML = '<div>Loading...</div>'; });
 		};
 
@@ -1303,7 +1318,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (recordFeature?.renderRows) return recordFeature.renderRows(records);
 			if (!tableBody || !collectionName) return;
 			if (!records.length) {
-				tableBody.innerHTML = `<tr><td colspan="8">No ${pageName} found yet.</td></tr>`;
+				renderTableState(tableBody, { message: `No ${pageName} found yet.` });
 				return;
 			}
 
@@ -1681,6 +1696,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			} catch (error) {
 				console.error(`Failed to load ${collectionName}`, error);
 				statCards.forEach((card) => { card.textContent = 'Unavailable'; });
+				if (pageResultsCount) pageResultsCount.textContent = `${pageName} could not be loaded.`;
 				renderAsyncFailure(tableBody, `Your ${pageName} could not be loaded.`, () => loadPageRecords(user));
 				showMessage(`Your ${pageName} could not be loaded.`, 'error');
 			}
@@ -1739,6 +1755,12 @@ document.addEventListener('DOMContentLoaded', () => {
 		const renderFilteredPageRecords = () => {
 			if (!collectionName || pageName === 'appointments') return;
 			const records = getFilteredPageRecords();
+			if (pageResultsCount) pageResultsCount.textContent = `${records.length} ${pageName} ${records.length === 1 ? 'record' : 'records'}`;
+			if (pageRecords.length && !records.length) {
+				renderTableState(tableBody, { message: 'No matching records. Adjust your search or filters.', actionLabel: 'Clear filters' });
+				renderGenericPagination(records);
+				return;
+			}
 			const pageCount = Math.max(1, Math.ceil(records.length / GENERIC_PAGE_SIZE));
 			pageCurrentPage = Math.min(pageCurrentPage, pageCount);
 			const start = (pageCurrentPage - 1) * GENERIC_PAGE_SIZE;
@@ -1782,12 +1804,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		pageSearch?.addEventListener('input', applyPageFilters);
 		pageFilterSelects.forEach((select) => select.addEventListener('change', applyPageFilters));
-		pageShell.querySelectorAll('[data-clear-filters]').forEach((button) => {
-			button.addEventListener('click', () => {
-				if (pageSearch) pageSearch.value = '';
-				pageFilterSelects.forEach((select) => { select.value = 'all'; });
-				applyPageFilters();
-			});
+		pageShell.addEventListener('click', (event) => {
+			if (!event.target.closest('[data-clear-filters]')) return;
+			if (pageSearch) pageSearch.value = '';
+			pageFilterSelects.forEach((select) => { select.value = 'all'; });
+			applyPageFilters();
 		});
 		genericPaginationContainer?.addEventListener('click', (event) => {
 			const page = Number(event.target.closest('[data-page-number]')?.dataset.pageNumber);

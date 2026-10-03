@@ -1,6 +1,7 @@
 import { firestore } from '../firebase/config.js';
 import { money } from '../utils/currency.js';
 import { getFirstRecordDate } from '../utils/dates.js';
+import { renderTableState } from '../utils/recordTable.js';
 import { getPeriodTotals, getPercentageChange } from '../utils/calculations.js';
 import { collection, deleteDoc, doc, getDocs, query, serverTimestamp, setDoc, where } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
 
@@ -18,7 +19,7 @@ export const initCustomersPage = ({ pageName, tableBody, statCards, pageEscape, 
 	const renderRows = (records) => {
 		if (!tableBody) return;
 		if (!records.length) {
-			tableBody.innerHTML = '<tr><td colspan="8">No customers found yet.</td></tr>';
+			renderTableState(tableBody, { message: 'No customers found yet.' });
 			return;
 		}
 		tableBody.innerHTML = records.map((record) => `<tr data-record-id="${record.id}"><td><div class="customer"><div class="customer-avatar">${pageEscape(initials(record.name))}</div><span>${pageEscape(record.name || 'Customer')}</span></div></td><td>${pageEscape(record.email || 'Not set')}</td><td>${pageEscape(record.phone || 'Not set')}</td><td>${money(record.totalSpent)}</td><td><span class="status-badge ${statusClass(record.status)}">${pageEscape(record.status || 'Active')}</span></td><td><button class="view-button" type="button" data-page-action="edit">Edit</button> <button class="view-button" type="button" data-page-action="delete">Delete</button></td></tr>`).join('');

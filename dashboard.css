@@ -3634,7 +3634,7 @@ select {
 
 /* UX-A workspace foundation. Legacy feature rules remain until each page migrates. */
 .workspace-refined {
-    min-width: 320px;
+    min-width: 0;
     background: var(--workspace-background);
     color: var(--text-primary);
     font-family: var(--font-family);
@@ -4023,3 +4023,254 @@ select {
         animation-iteration-count: 1 !important;
     }
 }
+
+    .workspace-refined .page-toolbar {
+        min-width: 0;
+    }
+
+    .workspace-refined .main-content {
+        min-width: 0;
+    }
+
+    .workspace-refined .toolbar-search {
+        flex: 1 1 220px;
+        min-width: 0;
+    }
+
+    .workspace-refined .record-result-count {
+        margin: 0 auto 0 0;
+        color: var(--text-secondary);
+        font-size: var(--font-size-xs);
+    }
+
+    .workspace-refined .section-title-row {
+        flex-wrap: wrap;
+    }
+
+    .workspace-refined .table-state-cell {
+        padding: 24px 18px;
+        text-align: center;
+    }
+
+    .workspace-refined .table-state-message {
+        margin: 0;
+        color: var(--text-secondary);
+        overflow-wrap: anywhere;
+    }
+
+    .workspace-refined .table-state-cell > .secondary-button {
+        min-height: 40px;
+        margin-top: 12px;
+    }
+
+    .workspace-refined .app-modal {
+        max-height: calc(100vh - 24px);
+        max-height: calc(100dvh - 24px);
+    }
+
+    .workspace-refined .app-modal-fields {
+        min-width: 0;
+    }
+
+    .workspace-refined .app-modal-fields > *,
+    .workspace-refined .form-field {
+        min-width: 0;
+    }
+
+    .workspace-refined .app-modal :is(input, select, textarea) {
+        width: 100%;
+        min-height: 42px;
+    }
+
+    .workspace-refined .app-modal-error {
+        overflow-wrap: anywhere;
+    }
+
+    .workspace-refined .app-modal-actions {
+        flex-wrap: wrap;
+    }
+
+    .workspace-refined .app-modal-actions > button {
+        min-height: 44px;
+    }
+
+    @media (max-width: 700px) {
+        .workspace-refined .help-grid,
+        .workspace-refined .help-content-grid {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .workspace-refined .help-card > div:last-child,
+        .workspace-refined .help-content-grid > *,
+        .workspace-refined .contact-row > div {
+            min-width: 0;
+        }
+
+        .workspace-refined .contact-row a,
+        .workspace-refined .contact-row span,
+        .workspace-refined .article-list li > span {
+            overflow-wrap: anywhere;
+        }
+
+        .workspace-refined .page-toolbar {
+            align-items: stretch;
+        }
+
+        .workspace-refined .form-grid {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .workspace-refined .profile-photo-box {
+            flex-wrap: wrap;
+        }
+
+        .workspace-refined .toolbar-group {
+            width: 100%;
+            min-width: 0;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .workspace-refined .toolbar-search,
+        .workspace-refined .toolbar-select {
+            width: 100%;
+            min-width: 0;
+        }
+
+        .workspace-refined .page-toolbar > [data-clear-filters] {
+            min-height: 44px;
+            align-self: flex-start;
+        }
+
+        .workspace-refined .table-container {
+            overflow: visible;
+            padding: 0 12px 12px;
+        }
+
+        .workspace-refined .table-container table {
+            display: block;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            border-collapse: separate;
+        }
+
+        .workspace-refined .table-container thead {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        .workspace-refined .table-container tbody {
+            display: grid;
+            width: 100%;
+            min-width: 0;
+            gap: 12px;
+        }
+
+        .workspace-refined .table-container tbody tr {
+            display: grid;
+            width: 100%;
+            min-width: 0;
+            overflow: hidden;
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-card);
+            background: var(--surface);
+        }
+
+        .workspace-refined .table-container tbody td {
+            display: grid;
+            grid-template-columns: minmax(5.25rem, 34%) minmax(0, 1fr);
+            align-items: start;
+            gap: 10px;
+            min-width: 0;
+            padding: 10px 12px;
+            border-top: 1px solid var(--border-subtle);
+            overflow-wrap: anywhere;
+        }
+
+        .workspace-refined .table-container tbody td:first-child {
+            border-top: 0;
+        }
+
+        .workspace-refined .table-container tbody td[data-label]::before {
+            content: attr(data-label);
+            color: var(--text-secondary);
+            font-size: var(--font-size-xs);
+            font-weight: var(--font-weight-semibold);
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+
+        .workspace-refined .table-container tbody td[colspan] {
+            display: block;
+            padding: 18px 14px;
+            text-align: center;
+        }
+
+        .workspace-refined .table-container tbody td[colspan]::before {
+            content: none;
+        }
+
+        .workspace-refined .table-container .customer,
+        .workspace-refined .table-container .table-actions {
+            min-width: 0;
+            flex-wrap: wrap;
+        }
+
+        .workspace-refined .table-container .view-button {
+            min-height: 40px;
+            margin: 2px 4px 2px 0;
+            white-space: normal;
+        }
+
+        .workspace-refined .pagination {
+            justify-content: flex-start;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 12px 16px 16px;
+        }
+
+        .workspace-refined .pagination button {
+            min-width: 40px;
+            min-height: 40px;
+        }
+
+        .workspace-refined .app-modal-overlay {
+            align-items: flex-start;
+            padding: 12px;
+        }
+
+        .workspace-refined .app-modal {
+            width: 100%;
+            max-height: calc(100vh - 24px);
+            max-height: calc(100dvh - 24px);
+            padding: 18px;
+        }
+
+        .workspace-refined .app-modal-actions > button {
+            flex: 1 1 120px;
+        }
+    }
+
+    @media (max-width: 360px) {
+        .workspace-refined .table-container {
+            padding-inline: 8px;
+        }
+
+        .workspace-refined .table-container tbody td {
+            grid-template-columns: minmax(4.5rem, 32%) minmax(0, 1fr);
+            gap: 7px;
+            padding-inline: 9px;
+        }
+    }
+
+    .workspace-refined [hidden] {
+        display: none !important;
+    }

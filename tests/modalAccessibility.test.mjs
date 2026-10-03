@@ -5,6 +5,7 @@ import fs from 'node:fs';
 const source = fs.readFileSync(new URL('../script.js', import.meta.url), 'utf8');
 const navigationSource = fs.readFileSync(new URL('../navigation.js', import.meta.url), 'utf8');
 const styles = fs.readFileSync(new URL('../dashboard.css', import.meta.url), 'utf8');
+const recordTableSource = fs.readFileSync(new URL('../js/utils/recordTable.js', import.meta.url), 'utf8');
 const sidebarPages = ['dashboard.html', 'appointments.html', 'customers.html', 'expenses.html', 'invoices.html', 'payments.html', 'messages.html', 'reports.html', 'settings.html', 'help.html'];
 const pageSource = page => fs.readFileSync(new URL(`../${page}`, import.meta.url), 'utf8');
 
@@ -18,6 +19,39 @@ test('form validation and save failures use an atomic live alert', () => {
     assert.match(source, /errorMessage\.setAttribute\('role', 'alert'\);/);
     assert.match(source, /errorMessage\.setAttribute\('aria-atomic', 'true'\);/);
     assert.match(source, /errorMessage\.classList\.add\('visible'\);/);
+});
+
+test('record dialogs expose required fields and associate validation errors', () => {
+    assert.match(source, /input\.required = Boolean\(field\.required\);/);
+    assert.match(source, /input\.setAttribute\('aria-invalid', 'true'\);/);
+    assert.match(source, /input\.setAttribute\('aria-describedby', errorMessage\.id\);/);
+});
+
+test('record tables derive mobile labels and render truthful empty states', () => {
+    assert.match(recordTableSource, /querySelectorAll\('thead th'\)/);
+    assert.match(recordTableSource, /cell\.dataset\.label = labels\[index\]/);
+    assert.match(recordTableSource, /colspan="\$\{columnCount\}"/);
+    assert.match(recordTableSource, /state === 'error' \? 'alert' : 'status'/);
+    assert.match(source, /No matching records\. Adjust your search or filters\./);
+    assert.match(source, /actionLabel: 'Clear filters'/);
+});
+
+test('record tables use a responsive card layout and fitting modal controls', () => {
+    assert.match(styles, /@media \(max-width: 700px\)[\s\S]*?\.table-container tbody \{\s*display: grid;/);
+    assert.match(styles, /td\[data-label\]::before\s*\{\s*content: attr\(data-label\);/);
+    assert.match(styles, /\.app-modal-actions > button \{\s*min-height: 44px;/);
+    assert.match(styles, /\.workspace-refined \{\s*min-width: 0;/);
+});
+
+test('generic record pages keep only live pagination and one customer clear action', () => {
+    for (const page of ['customers.html', 'expenses.html', 'invoices.html', 'payments.html']) {
+        const markup = pageSource(page);
+        assert.match(markup, /<div class="pagination" hidden><\/div>/, `${page} should leave pagination to the shared renderer`);
+        assert.doesNotMatch(markup, /<div class="pagination">[\s\S]*?<button[^>]*>\s*[123]/);
+        assert.match(markup, /data-record-result-count/);
+    }
+    const customers = pageSource('customers.html');
+    assert.equal((customers.match(/data-clear-filters/g) || []).length, 1);
 });
 
 test('confirmation dialog is labelled and described', () => {

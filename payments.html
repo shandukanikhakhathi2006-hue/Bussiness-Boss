@@ -85,7 +85,7 @@
 
                 <div class="page-toolbar">
                     <div class="toolbar-group">
-                        <div class="toolbar-search"><i class="fa-solid fa-magnifying-glass"></i><input type="text" placeholder="Search payment ID" /></div>
+                        <div class="toolbar-search"><i class="fa-solid fa-magnifying-glass"></i><input type="text" placeholder="Search payment ID" aria-label="Search payments" /></div>
                         <select class="toolbar-select" id="paymentMethodFilter" aria-label="Filter by payment method">
                             <option value="all">All Methods</option>
                             <option value="cash">Cash</option>
@@ -93,6 +93,7 @@
                         </select>
                     </div>
                     <button class="secondary-button" type="button" data-clear-filters>Clear filters</button>
+                    <p class="record-result-count" data-record-result-count role="status" aria-live="polite" aria-atomic="true"></p>
                 </div>
 
                 <div class="table-container">
@@ -109,15 +110,11 @@
                                 <th>ACTION</th>
                             </tr>
                         </thead>
-                        <tbody><tr><td colspan="10" class="loading-cell" role="status">Loading records…</td></tr></tbody>
+                        <tbody aria-busy="true"><tr><td colspan="8" class="loading-cell" role="status">Loading records…</td></tr></tbody>
                     </table>
                 </div>
 
-                <div class="pagination">
-                    <button type="button">1</button>
-                    <button type="button" class="active">2</button>
-                    <button type="button">3</button>
-                </div>
+                <div class="pagination" hidden></div>
             </section>
         </section>
     </main>

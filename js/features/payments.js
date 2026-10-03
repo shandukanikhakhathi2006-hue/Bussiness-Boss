@@ -1,5 +1,6 @@
 import { firestore } from '../firebase/config.js';
 import { money } from '../utils/currency.js';
+import { renderTableState } from '../utils/recordTable.js';
 import { collection, deleteDoc, doc, getDocs, query, serverTimestamp, setDoc, where } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
 
 const pageInstances = new WeakMap();
@@ -11,7 +12,7 @@ export const initPaymentsPage = ({ pageName, pageShell, tableBody, pageEscape, p
 	const renderRows = (records) => {
 		if (!tableBody) return;
 		if (!records.length) {
-			tableBody.innerHTML = '<tr><td colspan="8">No payments found yet.</td></tr>';
+			renderTableState(tableBody, { message: 'No payments found yet.' });
 			return;
 		}
 		tableBody.innerHTML = records.map((record) => `<tr data-record-id="${record.id}"><td><strong>${pageEscape(record.paymentNumber || record.id)}</strong></td><td>${pageEscape(record.customerName || 'Customer')}</td><td>${pageEscape(record.invoiceNumber || record.invoiceId || 'Not linked')}</td><td>${pageEscape(pageDateText(record))}</td><td>${pageEscape(record.method || 'Not set')}</td><td>${money(record.amount)}</td><td><span class="status-badge ${statusClass(record.status)}">${pageEscape(record.status || 'Received')}</span></td><td><button class="view-button" type="button" data-page-action="edit">Edit</button> <button class="view-button" type="button" data-page-action="delete">Delete</button></td></tr>`).join('');
