@@ -1258,11 +1258,37 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (!tableBody || !collectionName) return;
 			if (!records.length) {
 				renderTableState(tableBody, { message: `No ${pageName} found yet.` });
+				const mobileList = pageShell.querySelector('.record-card-list');
+				if (mobileList) {
+					mobileList.hidden = true;
+					mobileList.innerHTML = '';
+				}
 				return;
 			}
 
+			const renderMobileCardList = (list, items) => {
+				if (!list) return;
+				list.hidden = !items.length;
+				list.innerHTML = items.map((record) => {
+					if (collectionName === 'expenses') {
+						const description = record.description || record.vendor || 'Expense';
+						const vendor = record.vendor || 'Not set';
+						return `<article class="record-card expense-record-card" data-record-id="${pageEscape(record.id)}"><div class="record-card-header"><strong>${pageEscape(description)}</strong><span class="status-badge ${statusClass(record.status)}">${pageEscape(record.status || 'Approved')}</span></div><div class="record-card-grid"><span><em>Amount</em><strong>${money(record.amount)}</strong></span><span><em>Date</em><strong>${pageEscape(pageDateText(record))}</strong></span><span><em>Category</em><strong>${pageEscape(record.category || 'Other')}</strong></span><span><em>Vendor</em><strong>${pageEscape(vendor)}</strong></span></div><div class="record-card-actions"><button type="button" class="view-button" data-page-action="edit">Edit</button><button type="button" class="view-button" data-page-action="delete">Delete</button></div></article>`;
+					}
+					if (collectionName === 'payments') {
+						return `<article class="record-card payment-record-card" data-record-id="${pageEscape(record.id)}"><div class="record-card-header"><strong>${pageEscape(record.paymentNumber || record.id)}</strong><span class="status-badge ${statusClass(record.status)}">${pageEscape(record.status || 'Received')}</span></div><div class="record-card-grid"><span><em>Amount</em><strong>${money(record.amount)}</strong></span><span><em>Customer</em><strong>${pageEscape(record.customerName || 'Customer')}</strong></span><span><em>Invoice</em><strong>${pageEscape(record.invoiceNumber || record.invoiceId || 'Not linked')}</strong></span><span><em>Date</em><strong>${pageEscape(pageDateText(record))}</strong></span><span><em>Method</em><strong>${pageEscape(record.method || 'Not set')}</strong></span></div><div class="record-card-actions"><button type="button" class="view-button" data-page-action="edit">Edit</button><button type="button" class="view-button" data-page-action="delete">Delete</button></div></article>`;
+					}
+					return '';
+				}).join('');
+			};
+
 			if (collectionName === 'expenses') {
 				tableBody.innerHTML = records.map((record) => `<tr data-record-id="${record.id}"><td><strong>${pageEscape(record.expenseNumber || record.id)}</strong></td><td>${pageEscape(record.category || 'Other')}</td><td>${pageEscape(pageDateText(record))}</td><td>${pageEscape(record.vendor || record.description || 'Not set')}</td><td>${money(record.amount)}</td><td><span class="status-badge ${statusClass(record.status)}">${pageEscape(record.status || 'Approved')}</span></td><td><button class="view-button" type="button" data-page-action="edit">Edit</button> <button class="view-button" type="button" data-page-action="delete">Delete</button></td></tr>`).join('');
+				renderMobileCardList(pageShell.querySelector('.record-card-list'), records);
+			}
+			if (collectionName === 'payments') {
+				tableBody.innerHTML = records.map((record) => `<tr data-record-id="${record.id}"><td><strong>${pageEscape(record.paymentNumber || record.id)}</strong></td><td>${pageEscape(record.customerName || 'Customer')}</td><td>${pageEscape(record.invoiceNumber || record.invoiceId || 'Not linked')}</td><td>${pageEscape(pageDateText(record))}</td><td>${pageEscape(record.method || 'Not set')}</td><td>${money(record.amount)}</td><td><span class="status-badge ${statusClass(record.status)}">${pageEscape(record.status || 'Received')}</span></td><td><button class="view-button" type="button" data-page-action="edit">Edit</button> <button class="view-button" type="button" data-page-action="delete">Delete</button></td></tr>`).join('');
+				renderMobileCardList(pageShell.querySelector('.record-card-list'), records);
 			}
 		};
 
@@ -1675,6 +1701,9 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (select.id === 'expenseCategoryFilter') {
 				return String(record.category || '').toLowerCase() === value;
 			}
+			if (select.id === 'paymentMethodFilter') {
+				return String(record.method || '').toLowerCase() === value;
+			}
 			return true;
 		});
 
@@ -1707,7 +1736,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (!collectionName || pageName === 'appointments') return;
 			const records = getFilteredPageRecords();
 			const hasActiveFilters = Boolean(pageSearch?.value.trim()) || pageFilterSelects.some((select) => select.value && select.value !== 'all');
-			if (clearFiltersButton && pageName === 'customers') clearFiltersButton.hidden = !hasActiveFilters;
+			if (clearFiltersButton) clearFiltersButton.hidden = !hasActiveFilters;
 			if (pageResultsCount) {
 				pageResultsCount.textContent = pageName === 'customers'
 					? `${records.length}${records.length === 1 ? ' customer' : ' customers'}${hasActiveFilters ? ' found' : ''}`

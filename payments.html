@@ -61,11 +61,11 @@
             </div>
         </header>
 
-        <section class="page-shell">
+        <section class="page-shell payments-page">
             <div class="page-header">
                 <div>
                     <h1 class="page-title">Payments</h1>
-                    <p class="page-subtitle">Track and manage all customer payments.</p>
+                    <p class="page-subtitle">Record and review customer payments as bookkeeping entries.</p>
                 </div>
                 <div class="page-actions">
                     <button class="secondary-button" type="button">Export</button>
@@ -73,17 +73,16 @@
                 </div>
             </div>
 
-            <div class="stats-grid">
-                <div class="stat-card"><div class="stat-top"><div class="stat-icon blue"><i class="fa-solid fa-credit-card"></i></div><span class="trend positive"></span></div><p>Total Payments</p><h2>—</h2><small><i class="fa-solid fa-arrow-up"></i> current</small></div>
-                <div class="stat-card"><div class="stat-top"><div class="stat-icon green"><i class="fa-solid fa-money-bill-wave"></i></div><span class="trend positive"></span></div><p>Received</p><h2>—</h2><small>this month</small></div>
-                <div class="stat-card"><div class="stat-top"><div class="stat-icon orange"><i class="fa-solid fa-clock"></i></div><span class="trend positive"></span></div><p>Pending</p><h2>—</h2><small>awaiting payment</small></div>
-                <div class="stat-card"><div class="stat-top"><div class="stat-icon red"><i class="fa-solid fa-rotate-left"></i></div><span class="trend negative"></span></div><p>Refunds</p><h2>—</h2><small>processing</small></div>
+            <div class="stats-grid payments-summary" role="group" aria-label="Payment summary metrics">
+                <div class="stat-card"><div class="stat-top"><div class="stat-icon blue"><i class="fa-solid fa-credit-card"></i></div></div><p>Total Payments</p><h2>—</h2><small>recorded</small></div>
+                <div class="stat-card"><div class="stat-top"><div class="stat-icon green"><i class="fa-solid fa-money-bill-wave"></i></div></div><p>Received</p><h2>—</h2><small>settled</small></div>
+                <div class="stat-card"><div class="stat-top"><div class="stat-icon orange"><i class="fa-solid fa-clock"></i></div></div><p>Pending</p><h2>—</h2><small>awaiting follow-up</small></div>
             </div>
 
-            <section class="content-card">
-                <div class="card-header"><div><h2>Payment Activity</h2><p>Recent incoming and outgoing payment records.</p></div></div>
+            <section class="content-card payments-records" aria-labelledby="paymentsRecordsHeading">
+                <div class="card-header"><div><h2 id="paymentsRecordsHeading">Payment records</h2><p>Review customer payments and their linked invoice activity.</p></div></div>
 
-                <div class="page-toolbar">
+                <div class="page-toolbar payments-toolbar" role="group" aria-label="Payment filters">
                     <div class="toolbar-group">
                         <div class="toolbar-search"><i class="fa-solid fa-magnifying-glass"></i><input type="text" placeholder="Search payment ID" aria-label="Search payments" /></div>
                         <select class="toolbar-select" id="paymentMethodFilter" aria-label="Filter by payment method">
@@ -92,28 +91,29 @@
                             <option value="bank">Bank</option>
                         </select>
                     </div>
-                    <button class="secondary-button" type="button" data-clear-filters>Clear filters</button>
+                    <button class="secondary-button" type="button" data-clear-filters hidden>Clear filters</button>
                     <p class="record-result-count" data-record-result-count role="status" aria-live="polite" aria-atomic="true"></p>
                 </div>
 
                 <div class="table-container">
-                    <table>
+                    <table aria-label="Payment records">
                         <thead>
                             <tr>
-                                <th>PAYMENT ID</th>
-                                <th>CUSTOMER</th>
-                                <th>INVOICE</th>
-                                <th>DATE</th>
-                                <th>METHOD</th>
-                                <th>AMOUNT</th>
-                                <th>STATUS</th>
-                                <th>ACTION</th>
+                                <th scope="col">Payment ID</th>
+                                <th scope="col">Customer</th>
+                                <th scope="col">Invoice</th>
+                                <th scope="col">Date</th>
+                                <th scope="col">Method</th>
+                                <th scope="col">Amount</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Action</th>
                             </tr>
                         </thead>
                         <tbody aria-busy="true"><tr><td colspan="8" class="loading-cell" role="status">Loading records…</td></tr></tbody>
                     </table>
                 </div>
 
+                <div class="record-card-list payment-record-cards" aria-live="polite" hidden></div>
                 <div class="pagination" hidden></div>
             </section>
         </section>

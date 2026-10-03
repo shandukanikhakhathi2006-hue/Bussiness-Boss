@@ -61,11 +61,11 @@
             </div>
         </header>
 
-        <section class="page-shell">
+        <section class="page-shell expenses-page">
             <div class="page-header">
                 <div>
                     <h1 class="page-title">Expenses</h1>
-                    <p class="page-subtitle">Track spending and keep budgets in check.</p>
+                    <p class="page-subtitle">Track business spending and review recent expense records.</p>
                 </div>
                 <div class="page-actions">
                     <button class="secondary-button" type="button">Download CSV</button>
@@ -73,42 +73,42 @@
                 </div>
             </div>
 
-            <div class="stats-grid">
-                <div class="stat-card"><div class="stat-top"><div class="stat-icon blue"><i class="fa-solid fa-wallet"></i></div><span class="trend positive"></span></div><p>Total Spend</p><h2>—</h2><small><i class="fa-solid fa-arrow-up"></i> this month</small></div>
-                <div class="stat-card"><div class="stat-top"><div class="stat-icon green"><i class="fa-solid fa-sack-dollar"></i></div><span class="trend positive"></span></div><p>Operating</p><h2>—</h2><small>core expenses</small></div>
-                <div class="stat-card"><div class="stat-top"><div class="stat-icon orange"><i class="fa-solid fa-briefcase"></i></div><span class="trend positive"></span></div><p>Marketing</p><h2>—</h2><small>campaign spend</small></div>
-                <div class="stat-card"><div class="stat-top"><div class="stat-icon red"><i class="fa-solid fa-chart-pie"></i></div><span class="trend negative"></span></div><p>Over Budget</p><h2>—</h2><small>needs review</small></div>
+            <div class="stats-grid expenses-summary" role="group" aria-label="Expense summary metrics">
+                <div class="stat-card"><div class="stat-top"><div class="stat-icon blue"><i class="fa-solid fa-wallet"></i></div></div><p>Total Spend</p><h2>—</h2><small>current period</small></div>
+                <div class="stat-card"><div class="stat-top"><div class="stat-icon green"><i class="fa-solid fa-circle-check"></i></div></div><p>Approved</p><h2>—</h2><small>recorded expenses</small></div>
+                <div class="stat-card"><div class="stat-top"><div class="stat-icon orange"><i class="fa-solid fa-clock"></i></div></div><p>Pending</p><h2>—</h2><small>waiting review</small></div>
             </div>
 
-            <section class="content-card">
-                <div class="card-header"><div><h2>Expense Ledger</h2><p>Review and categorize your business spending.</p></div></div>
+            <section class="content-card expenses-ledger" aria-labelledby="expenseLedgerHeading">
+                <div class="card-header"><div><h2 id="expenseLedgerHeading">Expense ledger</h2><p>Review recorded spending by category, vendor, and date.</p></div></div>
 
-                <div class="page-toolbar">
+                <div class="page-toolbar expenses-toolbar" role="group" aria-label="Expense filters">
                     <div class="toolbar-group">
                         <div class="toolbar-search"><i class="fa-solid fa-magnifying-glass"></i><input type="text" placeholder="Search expenses" aria-label="Search expenses" /></div>
                         <select class="toolbar-select" id="expenseCategoryFilter" aria-label="Filter by expense category"><option value="all">All Categories</option><option value="operations">Operations</option><option value="marketing">Marketing</option><option value="payroll">Payroll</option></select>
                     </div>
-                    <button class="secondary-button" type="button" data-clear-filters>Clear filters</button>
+                    <button class="secondary-button" type="button" data-clear-filters hidden>Clear filters</button>
                     <p class="record-result-count" data-record-result-count role="status" aria-live="polite" aria-atomic="true"></p>
                 </div>
 
                 <div class="table-container">
-                    <table>
+                    <table aria-label="Expense ledger">
                         <thead>
                             <tr>
-                                <th>EXPENSE</th>
-                                <th>CATEGORY</th>
-                                <th>DATE</th>
-                                <th>VENDOR</th>
-                                <th>AMOUNT</th>
-                                <th>STATUS</th>
-                                <th>ACTION</th>
+                                <th scope="col">Expense</th>
+                                <th scope="col">Category</th>
+                                <th scope="col">Date</th>
+                                <th scope="col">Vendor</th>
+                                <th scope="col">Amount</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Action</th>
                             </tr>
                         </thead>
                         <tbody aria-busy="true"><tr><td colspan="7" class="loading-cell" role="status">Loading records…</td></tr></tbody>
                     </table>
                 </div>
 
+                <div class="record-card-list expense-record-cards" aria-live="polite" hidden></div>
                 <div class="pagination" hidden></div>
             </section>
         </section>
