@@ -1314,80 +1314,181 @@ document.addEventListener('DOMContentLoaded', () => {
 			: updateFinancialPageStats(pageRecords);
 
 		const loadReports = async (user) => {
-			const [invoiceSnapshot, expenseSnapshot] = await Promise.all([
-				getDocs(query(collection(firestore, 'invoices'), where('ownerId', '==', user.uid))),
-				getDocs(query(collection(firestore, 'expenses'), where('ownerId', '==', user.uid)))
-			]);
-			const selectedPeriod = reportPeriodSelect?.value || 'This Month';
-			const reportRange = getDateRange(selectedPeriod);
-			const isInSelectedPeriod = (record) => {
-				const date = pageDate(record);
-				return Boolean(date) && date >= reportRange.start && date < reportRange.end;
-			};
-			const allPaidInvoices = invoiceSnapshot.docs.map((record) => record.data()).filter(isPaidInvoice);
-			const allExpenses = expenseSnapshot.docs.map((record) => record.data());
-			const invoices = allPaidInvoices.filter(isInSelectedPeriod);
-			const expenses = allExpenses.filter(isInSelectedPeriod);
-			const revenue = sumAmounts(invoices);
-			const expenseTotal = sumAmounts(expenses);
-			const profit = calculateProfit(revenue, expenseTotal);
-			const reportValues = [money(revenue), money(expenseTotal), money(profit), revenue ? `${((profit / revenue) * 100).toFixed(1)}%` : '0%'];
-			reportValues.forEach((value, index) => { if (statCards[index]) statCards[index].textContent = value; });
-			const now = new Date();
-			const comparisonRange = selectedPeriod === 'This Year'
-				? { start: new Date(now.getFullYear() - 1, 0, 1), end: new Date(now.getFullYear(), 0, 1) }
-				: selectedPeriod === 'Last Month'
-					? { start: new Date(now.getFullYear(), now.getMonth() - 2, 1), end: new Date(now.getFullYear(), now.getMonth() - 1, 1) }
-					: { start: new Date(now.getFullYear(), now.getMonth() - 1, 1), end: new Date(now.getFullYear(), now.getMonth(), 1) };
-			const sumForRange = (records, range) => records.reduce((sum, record) => {
-				const date = pageDate(record);
-				return date && date >= range.start && date < range.end ? sum + Number(record.amount || 0) : sum;
-			}, 0);
-			const previousRevenue = sumForRange(allPaidInvoices, comparisonRange);
-			const previousExpenses = sumForRange(allExpenses, comparisonRange);
-			const currentProfit = profit;
-			const previousProfit = calculateProfit(previousRevenue, previousExpenses);
-			const currentMargin = revenue ? currentProfit / revenue : 0;
-			const previousMargin = previousRevenue ? previousProfit / previousRevenue : 0;
-			updatePageTrends([
-				getPercentageChange(revenue, previousRevenue),
-				getPercentageChange(expenseTotal, previousExpenses),
-				getPercentageChange(currentProfit, previousProfit),
-				getPercentageChange(currentMargin, previousMargin)
-			]);
-			const reportLine = pageShell.querySelector('.reports-analytics .line-chart polyline');
-			const reportYAxis = pageShell.querySelector('.reports-analytics .y-axis');
-			if (reportLine) {
-				const now = new Date();
-				const reportLabels = pageShell.querySelector('.reports-analytics .chart-labels');
-				if (reportLabels) reportLabels.innerHTML = Array.from({ length: 8 }, (_, index) => {
-					const month = new Date(now.getFullYear(), now.getMonth() - 7 + index, 1);
-					return `<span>${new Intl.DateTimeFormat('en-ZA', { month: 'short' }).format(month)}</span>`;
-				}).join('');
-				const monthlyRevenue = Array.from({ length: 8 }, (_, index) => {
-					const month = new Date(now.getFullYear(), now.getMonth() - 7 + index, 1);
-					return allPaidInvoices.reduce((sum, invoice) => {
-						const date = pageDate(invoice);
-						return date && date.getMonth() === month.getMonth() && date.getFullYear() === month.getFullYear() ? sum + Number(invoice.amount || 0) : sum;
-					}, 0);
-				});
-				const axisMaximum = getNiceAxisMaximum(Math.max(...monthlyRevenue, 0));
-				reportLine.setAttribute('points', monthlyRevenue.map((value, index) => `${index * 100},${220 - (value / axisMaximum) * 185}`).join(' '));
-				if (reportYAxis) {
-					const steps = 4;
-					reportYAxis.innerHTML = Array.from({ length: steps + 1 }, (_, index) => `<span>R${formatAxisValue(axisMaximum * (1 - index / steps))}</span>`).join('');
+			if (!pageShell || pageName !== 'reports') return;
+			const metricCards = [...pageShell.querySelectorAll('[data-report-metric]')];
+			const revenueChart = pageShell.querySelector('#revenueExpensesChart');
+			const categoryChart = pageShell.querySelector('#expenseCategoryChart');
+			const summaryText = pageShell.querySelector('#reportSummaryText');
+			const setLoadingState = (message = 'Loading report data…') => {
+				metricCards.forEach((card) => { card.textContent = '—'; });
+				if (revenueChart) {
+					revenueChart.innerHTML = `<div class="report-empty-state" role="status">${message}</div>`;
+					revenueChart.setAttribute('aria-label', 'Revenue and expenses chart loading');
 				}
-			}
-			const serviceList = pageShell.querySelector('.reports-analytics .service-list');
-			if (serviceList) {
+				if (categoryChart) {
+					categoryChart.innerHTML = `<div class="report-empty-state" role="status">${message}</div>`;
+					categoryChart.setAttribute('aria-label', 'Expense category chart loading');
+				}
+				if (summaryText) summaryText.textContent = 'Loading report summary…';
+			};
+			setLoadingState();
+			try {
+				const [invoiceSnapshot, expenseSnapshot] = await Promise.all([
+					getDocs(query(collection(firestore, 'invoices'), where('ownerId', '==', user.uid))),
+					getDocs(query(collection(firestore, 'expenses'), where('ownerId', '==', user.uid)))
+				]);
+				const selectedPeriod = reportPeriodSelect?.value || 'This Month';
+				const reportRange = getDateRange(selectedPeriod);
+				const isInSelectedPeriod = (record) => {
+					const date = pageDate(record);
+					return Boolean(date) && date >= reportRange.start && date < reportRange.end;
+				};
+				const allPaidInvoices = invoiceSnapshot.docs.map((record) => record.data()).filter(isPaidInvoice);
+				const allExpenses = expenseSnapshot.docs.map((record) => record.data());
+				const invoices = allPaidInvoices.filter(isInSelectedPeriod);
+				const expenses = allExpenses.filter(isInSelectedPeriod);
+				const revenue = sumAmounts(invoices);
+				const expenseTotal = sumAmounts(expenses);
+				const net = calculateProfit(revenue, expenseTotal);
+				const metricMap = {
+					revenue: money(revenue),
+					expenses: money(expenseTotal),
+					net: money(net)
+				};
+				metricCards.forEach((card) => {
+					const metric = card.dataset.reportMetric;
+					card.textContent = metricMap[metric] ?? '—';
+				});
+
+				const buildGroupedBuckets = () => {
+					const now = new Date();
+					const year = now.getFullYear();
+					const targetMonth = selectedPeriod === 'Last Month' ? new Date(year, now.getMonth() - 1, 1) : new Date(year, now.getMonth(), 1);
+					const buckets = [];
+					if (selectedPeriod === 'This Year') {
+						for (let monthIndex = 0; monthIndex < 12; monthIndex += 1) {
+							const start = new Date(year, monthIndex, 1);
+							const end = new Date(year, monthIndex + 1, 1);
+							buckets.push({ label: new Intl.DateTimeFormat('en-ZA', { month: 'short' }).format(start), start, end });
+						}
+					} else {
+						const daysInPeriod = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0).getDate();
+						for (let day = 1; day <= daysInPeriod; day += 1) {
+							const start = new Date(targetMonth.getFullYear(), targetMonth.getMonth(), day);
+							const end = new Date(targetMonth.getFullYear(), targetMonth.getMonth(), day + 1);
+							buckets.push({ label: String(day), start, end });
+						}
+					}
+					return buckets.map((bucket) => {
+						const revenueValue = allPaidInvoices.reduce((sum, record) => {
+							const date = pageDate(record);
+							return date && date >= bucket.start && date < bucket.end ? sum + Number(record.amount || 0) : sum;
+						}, 0);
+						const expenseValue = allExpenses.reduce((sum, record) => {
+							const date = pageDate(record);
+							return date && date >= bucket.start && date < bucket.end ? sum + Number(record.amount || 0) : sum;
+						}, 0);
+						return { ...bucket, revenue: revenueValue, expenses: expenseValue };
+					});
+				};
+				const renderGroupedChart = (chartElement, buckets) => {
+					if (!chartElement) return;
+					const values = buckets.flatMap((bucket) => [bucket.revenue, bucket.expenses]);
+					const maxValue = Math.max(...values, 0, 1);
+					if (!buckets.some((bucket) => bucket.revenue || bucket.expenses)) {
+						chartElement.innerHTML = '<div class="report-empty-state" role="status">No revenue or expense records were recorded during this period.</div>';
+						chartElement.setAttribute('aria-label', 'Revenue and expense chart has no data for the selected period');
+						return;
+					}
+					const yAxisValues = [maxValue, maxValue * 0.75, maxValue * 0.5, maxValue * 0.25, 0];
+					const chartMarkup = `
+						<div class="report-chart-shell">
+							<div class="report-chart-y-axis" aria-hidden="true">
+								<span>${money(yAxisValues[0])}</span>
+								<span>${money(yAxisValues[1])}</span>
+								<span>${money(yAxisValues[2])}</span>
+								<span>${money(yAxisValues[3])}</span>
+								<span>${money(yAxisValues[4])}</span>
+							</div>
+							<div class="report-chart-grid" role="list" aria-label="Revenue and expenses by period bucket">
+								${buckets.map((bucket) => {
+									const revenueHeight = (bucket.revenue / maxValue) * 100;
+									const expenseHeight = (bucket.expenses / maxValue) * 100;
+									return `<div class="report-bar-group" role="listitem" aria-label="${bucket.label}: Revenue ${money(bucket.revenue)} and Expenses ${money(bucket.expenses)}">
+										<div class="report-bar-stack">
+											<span class="report-bar report-bar-revenue" style="height:${Math.max(revenueHeight, 0)}%" aria-hidden="true"></span>
+											<span class="report-bar report-bar-expense" style="height:${Math.max(expenseHeight, 0)}%" aria-hidden="true"></span>
+										</div>
+										<span class="report-bar-label">${pageEscape(bucket.label)}</span>
+									</div>`;
+								}).join('')}
+							</div>
+						</div>`;
+					chartElement.innerHTML = chartMarkup;
+					chartElement.setAttribute('aria-label', `Revenue and expenses grouped bar chart for ${selectedPeriod}.`);
+				};
+
+				const renderCategoryChart = (chartElement, totals) => {
+					if (!chartElement) return;
+					const entries = Object.entries(totals).sort(([, first], [, second]) => second - first);
+					if (!entries.length) {
+						chartElement.innerHTML = '<div class="report-empty-state" role="status">No expense records were recorded during this period.</div>';
+						chartElement.setAttribute('aria-label', 'Expense category chart has no data for the selected period');
+						return;
+					}
+					const total = entries.reduce((sum, [, value]) => sum + Number(value || 0), 0);
+					chartElement.innerHTML = entries.map(([category, value]) => {
+						const percentage = total ? (Number(value || 0) / total) * 100 : 0;
+						return `<div class="report-category-row" role="listitem" aria-label="${pageEscape(category)}: ${money(value)} which is ${percentage.toFixed(1)} percent of expenses">
+							<div class="report-category-meta"><span class="report-category-label">${pageEscape(category)}</span><strong>${money(value)}</strong></div>
+							<div class="report-category-track"><span class="report-category-bar" style="width:${Math.max(percentage, 2)}%" aria-hidden="true"></span></div>
+						</div>`;
+					}).join('');
+					chartElement.setAttribute('aria-label', `Expense category chart for ${selectedPeriod}.`);
+				};
+
 				const categoryTotals = expenses.reduce((totals, record) => {
 					const category = record.category || 'Other';
 					totals[category] = (totals[category] || 0) + Number(record.amount || 0);
 					return totals;
 				}, {});
-				const colors = ['blue-dot', 'purple-dot', 'green-dot', 'orange-dot', 'red-dot'];
-				const entries = Object.entries(categoryTotals).sort(([, first], [, second]) => second - first).slice(0, 5);
-				serviceList.innerHTML = entries.length ? entries.map(([category, total], index) => `<div><span><i class="service-dot ${colors[index]}"></i>${pageEscape(category)}</span><strong>${expenseTotal ? Math.round((total / expenseTotal) * 100) : 0}%</strong></div>`).join('') : '<div>No expense data yet.</div>';
+				renderGroupedChart(revenueChart, buildGroupedBuckets());
+				renderCategoryChart(categoryChart, categoryTotals);
+
+				const summaryTextEntries = [];
+				if (!revenue && !expenseTotal) {
+					summaryTextEntries.push('No paid invoice revenue or expense records were recorded during this period.');
+				} else if (!revenue) {
+					summaryTextEntries.push('No paid invoice revenue was recorded during this period.');
+					summaryTextEntries.push(`Expenses totalled ${money(expenseTotal)}.`);
+				} else if (!expenseTotal) {
+					summaryTextEntries.push('No expenses were recorded during this period.');
+					summaryTextEntries.push(`Recorded revenue totalled ${money(revenue)} and net was ${money(net)}.`);
+				} else {
+					if (net >= 0) {
+						summaryTextEntries.push(`Recorded revenue exceeded expenses by ${money(Math.abs(net))}.`);
+					} else {
+						summaryTextEntries.push(`Expenses exceeded recorded revenue by ${money(Math.abs(net))}.`);
+					}
+				}
+				const largestCategory = Object.entries(categoryTotals).sort(([, first], [, second]) => second - first)[0];
+				if (largestCategory) {
+					summaryTextEntries.push(`${largestCategory[0]} was the largest expense category at ${money(largestCategory[1])}.`);
+				}
+				if (summaryText) summaryText.textContent = summaryTextEntries.join(' ');
+			} catch (error) {
+				console.error('Failed to load reports', error);
+				metricCards.forEach((card) => { card.textContent = '—'; });
+				if (revenueChart) {
+					revenueChart.innerHTML = '<div class="report-empty-state report-error" role="alert">The report could not be loaded.</div>';
+					revenueChart.setAttribute('aria-label', 'Revenue and expenses chart error');
+				}
+				if (categoryChart) {
+					categoryChart.innerHTML = '<div class="report-empty-state report-error" role="alert">The expense category chart could not be loaded.</div>';
+					categoryChart.setAttribute('aria-label', 'Expense category chart error');
+				}
+				if (summaryText) summaryText.textContent = 'The report could not be loaded.';
+				showMessage('The report could not be loaded.', 'error');
 			}
 		};
 

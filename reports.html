@@ -68,6 +68,7 @@
                     <p class="page-subtitle">View detailed reports and analytics.</p>
                 </div>
                 <div class="page-actions">
+                    <label class="report-period-label" for="reportPeriodSelect">Report period</label>
                     <select id="reportPeriodSelect" aria-label="Report period">
                         <option value="This Month">This Month</option>
                         <option value="Last Month">Last Month</option>
@@ -76,31 +77,67 @@
                 </div>
             </div>
 
-            <div class="stats-grid reports-stats">
-                <div class="stat-card"><div class="stat-top"><div class="stat-icon green"><i class="fa-solid fa-money-bill-wave"></i></div><span class="trend positive"></span></div><p>Total Revenue</p><h2>—</h2><small><i class="fa-solid fa-arrow-up"></i> vs last month</small></div>
-                <div class="stat-card"><div class="stat-top"><div class="stat-icon blue"><i class="fa-solid fa-wallet"></i></div><span class="trend positive"></span></div><p>Total Expenses</p><h2>—</h2><small><i class="fa-solid fa-arrow-up"></i> vs last month</small></div>
-                <div class="stat-card"><div class="stat-top"><div class="stat-icon green"><i class="fa-solid fa-chart-line"></i></div><span class="trend positive"></span></div><p>Net Profit</p><h2>—</h2><small><i class="fa-solid fa-arrow-up"></i> vs last month</small></div>
-                <div class="stat-card"><div class="stat-top"><div class="stat-icon purple"><i class="fa-solid fa-percent"></i></div><span class="trend positive"></span></div><p>Profit Margin</p><h2>—</h2><small><i class="fa-solid fa-arrow-up"></i> vs last month</small></div>
+            <div class="stats-grid report-summary-grid" aria-label="Financial summary">
+                <article class="stat-card report-summary-card">
+                    <div class="stat-top">
+                        <div class="stat-icon green"><i class="fa-solid fa-money-bill-wave"></i></div>
+                    </div>
+                    <p>Revenue</p>
+                    <h2 data-report-metric="revenue">—</h2>
+                </article>
+
+                <article class="stat-card report-summary-card">
+                    <div class="stat-top">
+                        <div class="stat-icon blue"><i class="fa-solid fa-wallet"></i></div>
+                    </div>
+                    <p>Expenses</p>
+                    <h2 data-report-metric="expenses">—</h2>
+                </article>
+
+                <article class="stat-card report-summary-card">
+                    <div class="stat-top">
+                        <div class="stat-icon purple"><i class="fa-solid fa-chart-line"></i></div>
+                    </div>
+                    <p>Net</p>
+                    <h2 data-report-metric="net">—</h2>
+                </article>
             </div>
 
-            <div class="analytics-grid reports-analytics">
-                <section class="content-card performance-card">
-                    <div class="card-header"><div><h2>Revenue Overview</h2><p>Revenue over the last eight months.</p></div></div>
-                    <div class="chart">
-                        <div class="y-axis"><span>R40K</span><span>R30K</span><span>R20K</span><span>R10K</span><span>R0</span></div>
-                        <div class="chart-area">
-                            <div class="grid-lines"><span></span><span></span><span></span><span></span><span></span></div>
-                            <svg class="line-chart" viewBox="0 0 700 250" preserveAspectRatio="none"><polyline points="" fill="none" stroke="#2563eb" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /></svg>
-                            <div class="chart-labels"></div>
+            <div class="reports-workspace">
+                <section class="content-card report-card" aria-labelledby="revenue-expenses-chart-heading">
+                    <div class="card-header">
+                        <div>
+                            <h2 id="revenue-expenses-chart-heading">Revenue vs Expenses</h2>
+                            <p>Grouped period comparison.</p>
                         </div>
+                    </div>
+                    <div id="revenueExpensesChart" class="report-bar-chart" role="img" aria-live="polite" aria-label="Revenue and expenses chart loading"></div>
+                    <div class="chart-legend" aria-label="Chart legend">
+                        <span><i class="legend revenue"></i>Revenue</span>
+                        <span><i class="legend expenses"></i>Expenses</span>
                     </div>
                 </section>
 
-                <section class="content-card service-card">
-                    <div class="card-header"><div><h2>Expenses by Category</h2><p>Breakdown for the selected period.</p></div></div>
-                    <div class="service-list"><p class="loading-cell" role="status">Loading expense breakdown…</p></div>
+                <section class="content-card report-card" aria-labelledby="expense-category-chart-heading">
+                    <div class="card-header">
+                        <div>
+                            <h2 id="expense-category-chart-heading">Expenses by Category</h2>
+                            <p>Actual category totals for the selected period.</p>
+                        </div>
+                    </div>
+                    <div id="expenseCategoryChart" class="report-category-chart" role="img" aria-live="polite" aria-label="Expense category chart loading"></div>
                 </section>
             </div>
+
+            <section class="content-card report-summary-panel" aria-labelledby="report-summary-heading">
+                <div class="card-header">
+                    <div>
+                        <h2 id="report-summary-heading">Report summary</h2>
+                        <p>Deterministic observations from the selected period.</p>
+                    </div>
+                </div>
+                <div id="reportSummaryText" class="report-summary-text" aria-live="polite" role="status">Loading report summary…</div>
+            </section>
         </section>
     </main>
 
