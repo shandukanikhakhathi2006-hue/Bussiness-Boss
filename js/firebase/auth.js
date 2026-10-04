@@ -10,6 +10,7 @@ import {
     sendPasswordResetEmail
 } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
 import { doc, getDoc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
+import { ensureBusinessContext } from './businessContextClient.js';
 
 const googleProvider = new GoogleAuthProvider();
 const boundElements = new WeakSet();
@@ -33,9 +34,17 @@ const getFirebaseErrorMessage = (error) => {
     return messages[error.code] || 'Something went wrong. Please try again.';
 };
 
+const ensureTenantFoundation = () => {
+    if (!auth.currentUser) return;
+    void ensureBusinessContext().catch(error => {
+        // Legacy flows remain usable while production App Check/functions are
+        // being configured. No browser fallback creates business authority.
+        console.warn('Business context provisioning is unavailable.', error.code || error.message);
+    });
+};
 const getCurrentUser = () => auth.currentUser;
 const getUserProfile = (user) => getDoc(doc(firestore, 'users', user.uid));
-const loginWithEmail = (email, password) => signInWithEmailAndPassword(auth, email, password);
+const loginWithEmail = async (email, password) => { const result = await signInWithEmailAndPassword(auth, email, password); ensureTenantFoundation(); return result; };
 const sendPasswordReset = (email) => sendPasswordResetEmail(auth, email);
 
 const registerWithEmail = async (fullName, email, password) => {
@@ -46,6 +55,7 @@ const registerWithEmail = async (fullName, email, password) => {
         email,
         createdAt: serverTimestamp()
     });
+    ensureTenantFoundation();
     return credentials;
 };
 
@@ -62,6 +72,7 @@ const loginWithGoogle = async () => {
             updatedAt: serverTimestamp()
         }, { merge: true });
     }
+    ensureTenantFoundation();
     return credentials;
 };
 

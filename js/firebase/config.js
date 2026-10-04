@@ -3,6 +3,7 @@ import { getAuth, connectAuthEmulator } from 'https://www.gstatic.com/firebasejs
 import { getFirestore, connectFirestoreEmulator } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
 import { getFunctions, connectFunctionsEmulator } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-functions.js';
 import { initializeFirebaseClient, resolveClientEnvironment } from './clientEnvironment.js';
+import { initializeProductionAppCheck } from './appCheck.js';
 
 const firebaseConfig = {
 	apiKey: 'AIzaSyCCOdG3HgBJ6-BGxS6nA2iaVBwaaok3YSs',
@@ -23,4 +24,5 @@ const { firebaseApp, auth, firestore, functions } = initializeFirebaseClient({
     getApps, initializeApp, getAuth, getFirestore, getFunctions,
     connectAuthEmulator, connectFirestoreEmulator, connectFunctionsEmulator
 }, firebaseConfig, clientEnvironment);
+initializeProductionAppCheck(firebaseApp, clientEnvironment);
 export { firebaseApp, auth, firestore, functions, clientEnvironment };
