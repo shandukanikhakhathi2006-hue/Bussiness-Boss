@@ -127,17 +127,20 @@ const fixture = (initial = []) => {
         }
     };
 };
+// Keep the test aligned with the browser's actual current day so the "today"
+// range and the rendered record date match the page's runtime date logic.
 const now = new Date();
 const next = moveAppointmentMonth(createAppointmentCalendarState(now), 1);
 const nextDate = `${next.year}-${String(next.month + 1).padStart(2, '0')}-10`;
 const todayKey = appointmentDateKey(now);
+const todayDisplay = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 test('table prioritizes date and time, keeps cancellation visible, and excludes completed appointments', () => {
     const f = fixture([
         booking({ id: 'pending-today', date: todayKey, time: '09:30', customerName: 'Pending Customer', service: 'Consulting' }),
         booking({ id: 'cancelled-today', date: todayKey, time: '10:30', customerName: 'Cancelled Customer', status: 'cancelled' }),
         booking({ id: 'completed-today', date: todayKey, time: '08:30', customerName: 'Completed Customer', status: 'completed' })
     ]);
-    assert.match(f.table.innerHTML, /03 Oct 2026 · 09:30/);
+    assert.match(f.table.innerHTML, new RegExp(`${todayDisplay} · 09:30`));
     assert.match(f.table.innerHTML, /Pending Customer/);
     assert.match(f.table.innerHTML, /Consulting/);
     assert.match(f.table.innerHTML, /cancelled/);
