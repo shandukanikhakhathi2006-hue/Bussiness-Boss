@@ -6,20 +6,12 @@ import { appointmentCustomerOptions, prepareAppointmentCustomer } from './js/fea
 import { dashboardUpcomingAppointments } from './js/features/dashboardAppointments.js';
 import { dashboardInvoiceRecords, dashboardInvoicesNeedingFollowUp } from './js/features/dashboardInvoices.js';
 import { getCustomerSnapshot, initCustomersPage } from './js/features/customers.js';
-import { getCurrentUser, getUserProfile, requireAuthenticatedUser, initAuthPages, initLogoutButtons, getFirebaseErrorMessage } from './js/firebase/auth.js';
+import { getCurrentUser, getUserProfile, requireAuthenticatedUser, initAuthPages, initLogoutButtons } from './js/firebase/auth.js';
 import { firestore, clientEnvironment } from './js/firebase/config.js';
 import { getFirstRecordDate, isSameDay, getDateRange } from './js/utils/dates.js';
 import { formatCurrency, money, formatAxisValue } from './js/utils/currency.js';
 import { isPaidInvoice, getPercentageChange, getPeriodTotals, sumAmounts, calculateProfit } from './js/utils/calculations.js';
 import { observeResponsiveTableLabels, renderTableState } from './js/utils/recordTable.js';
-import {
-	updateProfile,
-	updateEmail,
-	updatePassword,
-	reauthenticateWithCredential,
-	EmailAuthProvider
-} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
-
 const appointmentValidationMessage = (error) => {
 	if (!(error instanceof AppointmentValidationError)) return 'The appointment could not be saved. Please try again.';
 	const label = { customerName: 'customer name', customerId: 'customer', date: 'date', time: 'time', service: 'service', staff: 'staff member', status: 'status' }[error.path];
@@ -1496,104 +1488,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (getCurrentUser()) loadReports(getCurrentUser());
 		});
 
-		const loadSettings = async (user) => {
-			const profileSnapshot = await getDoc(doc(firestore, 'users', user.uid));
-			const profileData = profileSnapshot.data() || {};
-			const fullName = pageShell.querySelector('#fullName');
-			const email = pageShell.querySelector('#email');
-			const phone = pageShell.querySelector('#phone');
-			const changePictureButton = pageShell.querySelector('#changePictureButton');
-			const currentPasswordInput = pageShell.querySelector('#currentPassword');
-			const newPasswordInput = pageShell.querySelector('#newPassword');
-			const confirmPasswordInput = pageShell.querySelector('#confirmPassword');
-			const isPasswordAccount = user.providerData.some((provider) => provider.providerId === 'password');
-
-			if (fullName) fullName.value = profileData.fullName || user.displayName || '';
-			if (email) email.value = user.email || profileData.email || '';
-			if (phone) phone.value = profileData.phone || '';
-			renderPageProfile(user, profileData.photoURL || user.photoURL);
-
-			// "Change Picture" reuses the same hidden file input and upload logic as the
-			// header avatar, so there is only one place that resizes and saves photos.
-			if (changePictureButton && !changePictureButton.dataset.bound) {
-				changePictureButton.dataset.bound = 'true';
-				changePictureButton.addEventListener('click', () => profileImageInput?.click());
-			}
-
-			const saveButton = pageShell.querySelector('#profileSaveButton');
-			if (saveButton && !saveButton.dataset.bound) {
-				saveButton.dataset.bound = 'true';
-				saveButton.addEventListener('click', async () => {
-					try {
-						const name = fullName?.value.trim() || '';
-						const newEmail = email?.value.trim() || '';
-
-						await updateProfile(user, { displayName: name });
-
-						if (newEmail && newEmail !== user.email) {
-							await updateEmail(user, newEmail);
-						}
-
-						await setDoc(doc(firestore, 'users', user.uid), {
-							fullName: name,
-							phone: phone?.value.trim() || '',
-							email: getCurrentUser()?.email || newEmail || user.email,
-							updatedAt: serverTimestamp()
-						}, { merge: true });
-
-						const profile = pageShell.closest('.main-content')?.querySelector('.profile-info strong');
-						if (profile) profile.textContent = getFirstDisplayName(name || user.email);
-
-						showMessage('Profile settings saved.');
-					} catch (error) {
-						console.error('Failed to save settings', error);
-						showMessage(getFirebaseErrorMessage(error), 'error');
-					}
-				});
-			}
-
-			const updatePasswordButton = pageShell.querySelector('#updatePasswordButton');
-			if (updatePasswordButton && !updatePasswordButton.dataset.bound) {
-				updatePasswordButton.dataset.bound = 'true';
-				updatePasswordButton.addEventListener('click', async () => {
-					if (!isPasswordAccount) {
-						showMessage('This account signs in with Google, so there is no password to change here.', 'error');
-						return;
-					}
-
-					const currentPassword = currentPasswordInput?.value || '';
-					const newPassword = newPasswordInput?.value || '';
-					const confirmPassword = confirmPasswordInput?.value || '';
-
-					if (!currentPassword || !newPassword || !confirmPassword) {
-						showMessage('Fill in all three password fields.', 'error');
-						return;
-					}
-					if (newPassword.length < 12) {
-						showMessage('Your new password must be at least 12 characters.', 'error');
-						return;
-					}
-					if (newPassword !== confirmPassword) {
-						showMessage('New password and confirmation do not match.', 'error');
-						return;
-					}
-
-					try {
-						const credential = EmailAuthProvider.credential(user.email, currentPassword);
-						await reauthenticateWithCredential(user, credential);
-						await updatePassword(user, newPassword);
-						if (currentPasswordInput) currentPasswordInput.value = '';
-						if (newPasswordInput) newPasswordInput.value = '';
-						if (confirmPasswordInput) confirmPasswordInput.value = '';
-						showMessage('Password updated.');
-					} catch (error) {
-						console.error('Failed to update password', error);
-						showMessage(getFirebaseErrorMessage(error), 'error');
-					}
-				});
-			}
-		};
-
 		const recordFieldSets = {
 			expenses: (customerHint, existing, generatedId) => [
 				{ name: 'expenseNumber', label: 'Expense number', disabled: true, defaultValue: existing.expenseNumber || generatedId },
@@ -1707,7 +1601,6 @@ document.addEventListener('DOMContentLoaded', () => {
 				await savePageRecord(user);
 			}
 			if (pageName === 'reports') await loadReports(user);
-			if (pageName === 'settings') await loadSettings(user);
 		});
 
 		// The Appointments feature owns its period dropdown and view refresh.

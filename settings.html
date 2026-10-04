@@ -61,68 +61,115 @@
             </div>
         </header>
 
-        <section class="page-shell">
+        <section class="page-shell settings-page" data-settings-workspace aria-labelledby="settingsTitle">
             <div class="page-header">
                 <div>
-                    <h1 class="page-title">Settings</h1>
-                    <p class="page-subtitle">Manage your account and preferences.</p>
+                    <h1 class="page-title" id="settingsTitle">Settings</h1>
+                    <p class="page-subtitle">Manage your profile and sign-in security.</p>
                 </div>
             </div>
 
-            <div class="settings-layout">
-                <aside class="settings-sidebar" aria-label="Settings sections">
-                    <a href="#profile" class="settings-nav-link active"><i class="fa-regular fa-user"></i> Profile</a>
-                    <a href="#security" class="settings-nav-link"><i class="fa-solid fa-shield-halved"></i> Security</a>
-                    <a href="pricing.html" class="settings-nav-link"><i class="fa-regular fa-credit-card"></i> Plans & billing</a>
-                    <a href="Contact.html" class="settings-nav-link"><i class="fa-solid fa-headset"></i> Help & support</a>
-                </aside>
+            <p class="settings-intro">Changes to your profile are saved to your BusinessBoss account.</p>
 
-                <section class="settings-panel" aria-label="Profile settings">
-                    <div class="settings-section" id="profile">
-                        <h3>Profile Information</h3>
-                        <div class="form-grid">
-                            <div class="form-field">
-                                <label for="fullName">Full Name</label>
-                                <input id="fullName" type="text" value="Business Manager" />
+            <div class="settings-workspace">
+                <nav class="settings-navigation" aria-label="Settings sections">
+                    <a href="#profile" class="settings-nav-link"><i class="fa-regular fa-user" aria-hidden="true"></i><span>Profile</span></a>
+                    <a href="#security" class="settings-nav-link"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><span>Sign-in security</span></a>
+                    <a href="#product-information" class="settings-nav-link"><i class="fa-regular fa-circle-info" aria-hidden="true"></i><span>Product information</span></a>
+                    <a href="#support-information" class="settings-nav-link"><i class="fa-regular fa-life-ring" aria-hidden="true"></i><span>Help information</span></a>
+                </nav>
+
+                <div class="settings-content">
+                    <section class="settings-card" id="profile" aria-labelledby="profileSettingsTitle">
+                        <div class="settings-card-heading">
+                            <div>
+                                <h2 id="profileSettingsTitle">Profile</h2>
+                                <p>Keep the account details used across your workspace up to date.</p>
                             </div>
-                            <div class="form-field">
-                                <label for="email">Email</label>
-                                <input id="email" type="email" value="manager@businessboss.com" />
-                            </div>
-                            <div class="form-field">
-                                <label for="phone">Phone Number</label>
-                                <input id="phone" type="tel" value="083 123 4567" />
-                            </div>
-                            <div class="form-field">
-                                <label>Profile Photo</label>
-                                <div class="profile-photo-box">
-                                    <div class="avatar-large" id="settingsAvatar">BM</div>
-                                    <button class="secondary-button" type="button" id="changePictureButton">Change Picture</button>
+                        </div>
+
+                        <form data-settings-profile-form novalidate>
+                            <div class="settings-form-grid">
+                                <div class="settings-field">
+                                    <label for="fullName">Full name</label>
+                                    <input id="fullName" name="fullName" type="text" autocomplete="name" required />
+                                </div>
+                                <div class="settings-field">
+                                    <label for="email">Email address</label>
+                                    <input id="email" name="email" type="email" autocomplete="email" required />
+                                    <p class="settings-field-help">Changing this address may require you to sign in again.</p>
+                                </div>
+                                <div class="settings-field">
+                                    <label for="phone">Phone number <span class="optional-label">Optional</span></label>
+                                    <input id="phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" />
+                                </div>
+                                <div class="settings-field">
+                                    <span class="settings-label">Profile photo</span>
+                                    <div class="settings-avatar-control">
+                                        <div class="settings-avatar" id="settingsAvatar" aria-label="Profile photo">BB</div>
+                                        <button class="secondary-button" type="button" id="changePictureButton">Change photo</button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="settings-actions"><button class="primary-button" type="button" id="profileSaveButton">Save Changes</button></div>
-                    </div>
+                            <p class="settings-feedback" data-settings-profile-feedback aria-live="polite" hidden></p>
+                            <div class="settings-actions">
+                                <button class="secondary-button" type="button" data-settings-retry hidden>Retry loading profile</button>
+                                <button class="primary-button" type="submit" data-settings-profile-submit>Save profile</button>
+                            </div>
+                        </form>
+                    </section>
 
-                    <div class="settings-section" id="security">
-                        <h3>Change Password</h3>
-                        <div class="form-grid">
-                            <div class="form-field">
-                                <label for="currentPassword">Current Password</label>
-                                <input id="currentPassword" type="password" placeholder="Enter current password" />
-                            </div>
-                            <div class="form-field">
-                                <label for="newPassword">New Password</label>
-                                <input id="newPassword" type="password" placeholder="Enter new password" />
-                            </div>
-                            <div class="form-field">
-                                <label for="confirmPassword">Confirm New Password</label>
-                                <input id="confirmPassword" type="password" placeholder="Confirm new password" />
+                    <section class="settings-card" id="security" aria-labelledby="securitySettingsTitle">
+                        <div class="settings-card-heading">
+                            <div>
+                                <h2 id="securitySettingsTitle">Sign-in security</h2>
+                                <p data-settings-security-description>Checking your sign-in method…</p>
                             </div>
                         </div>
-                        <div class="settings-actions"><button class="primary-button" type="button" id="updatePasswordButton">Update Password</button></div>
-                    </div>
-                </section>
+
+                        <form data-settings-security-form novalidate>
+                            <div class="settings-form-grid" data-settings-password-fields>
+                                <div class="settings-field">
+                                    <label for="currentPassword">Current password</label>
+                                    <input id="currentPassword" name="currentPassword" type="password" autocomplete="current-password" required />
+                                </div>
+                                <div class="settings-field">
+                                    <label for="newPassword">New password</label>
+                                    <input id="newPassword" name="newPassword" type="password" autocomplete="new-password" minlength="12" required />
+                                    <p class="settings-field-help">Use at least 12 characters.</p>
+                                </div>
+                                <div class="settings-field">
+                                    <label for="confirmPassword">Confirm new password</label>
+                                    <input id="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password" minlength="12" required />
+                                </div>
+                            </div>
+                            <p class="settings-feedback" data-settings-security-feedback aria-live="polite" hidden></p>
+                            <div class="settings-actions">
+                                <button class="primary-button" type="submit" data-settings-password-submit>Update password</button>
+                            </div>
+                        </form>
+                    </section>
+
+                    <section class="settings-card settings-information-card" id="product-information" aria-labelledby="productInformationTitle">
+                        <div class="settings-card-heading">
+                            <div>
+                                <h2 id="productInformationTitle">Product information</h2>
+                                <p>Subscription and payment management are not available in the workspace yet.</p>
+                            </div>
+                        </div>
+                        <a class="text-link" href="pricing.html">View current product information <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+                    </section>
+
+                    <section class="settings-card settings-information-card" id="support-information" aria-labelledby="supportInformationTitle">
+                        <div class="settings-card-heading">
+                            <div>
+                                <h2 id="supportInformationTitle">Help information</h2>
+                                <p>Support contact availability is being verified. The help page has the latest information.</p>
+                            </div>
+                        </div>
+                        <a class="text-link" href="help.html">Open help and support <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+                    </section>
+                </div>
             </div>
         </section>
     </main>
@@ -130,6 +177,7 @@
     <script src="live-clock.js"></script>
     <script src="navigation.js"></script>
     <script src="script.js" type="module"></script>
+    <script src="js/features/settingsWorkspace.js" type="module"></script>
 
 </body>
 </html>
