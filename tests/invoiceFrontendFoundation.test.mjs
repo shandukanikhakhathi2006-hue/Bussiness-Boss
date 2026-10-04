@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { resolveClientEnvironment, initializeFirebaseClient, DEMO_PROJECT_ID, LOCAL_MODE_KEY } from '../js/firebase/clientEnvironment.js';
+import { resolveClientEnvironment, initializeFirebaseClient, DEMO_PROJECT_ID, PRODUCTION_PROJECT_ID, LOCAL_MODE_KEY } from '../js/firebase/clientEnvironment.js';
 import { getLocalBusinessContext, DEMO_BUSINESS_ID } from '../js/firebase/localBusinessContext.js';
 import { createInvoiceDraftApi } from '../js/features/invoiceDraftApi.js';
 import { createInvoiceDraftState } from '../js/features/invoiceDraftState.js';
@@ -43,9 +43,9 @@ for (const host of ['business.example', '127.0.0.1.example', '192.168.1.2']) tes
 for (const query of ['?emulator=true', '?emulator=1&emulator=0', '?emulator=']) test(`malformed switch fails closed: ${query}`, () => {
     assert.throws(() => resolveClientEnvironment(location(query), storage()));
 });
-test('v2 page without local mode fails before SDK initialization', () => {
-    assert.throws(() => resolveClientEnvironment(location('', '127.0.0.1', '/invoices-v2.html'), storage()));
-    assert.throws(() => resolveClientEnvironment(location('', 'business.example', '/invoices-v2.html'), storage()));
+test('v2 production routes do not require emulator mode', () => {
+    assert.deepEqual(resolveClientEnvironment(location('', '127.0.0.1', '/invoices-v2.html'), storage()), { local: false, projectId: PRODUCTION_PROJECT_ID });
+    assert.deepEqual(resolveClientEnvironment(location('', 'business.example', '/invoices-v2.html'), storage()), { local: false, projectId: PRODUCTION_PROJECT_ID });
 });
 test('unavailable session storage fails closed', () => {
     assert.throws(() => resolveClientEnvironment(location('?emulator=1'), { setItem: () => { throw Error('blocked'); } }));
@@ -64,9 +64,9 @@ test('local single app, correct region and all three emulator connections; no pr
         ['connectFunctionsEmulator', result.functions, '127.0.0.1', 5001]
     ]);
 });
-test('default configuration preserved without emulator calls', () => {
-    const { sdk, calls } = sdkDouble(); const config = { projectId: 'production-example' };
-    const result = initializeFirebaseClient(sdk, config, { local: false });
+test('production configuration uses the production project without emulator calls', () => {
+    const { sdk, calls } = sdkDouble(); const config = { projectId: PRODUCTION_PROJECT_ID };
+    const result = initializeFirebaseClient(sdk, config, { local: false, projectId: PRODUCTION_PROJECT_ID });
     assert.equal(result.firebaseApp.options, config);
     assert.equal(calls.filter(call => call[0].startsWith('connect')).length, 0);
 });
@@ -112,8 +112,12 @@ for (const method of ['saveInvoiceDraft', 'getInvoiceDraft', 'updateInvoiceDraft
     assert.deepEqual(calls, [{ instance: functions, name: method, data: expected }]);
     assert.deepEqual(result, response(7));
 });
-test('adapter fails closed outside local demo and signed-in session', async () => {
-    for (const [env, user] of [[{ local: false }, { uid: 'user' }], [{ local: true, projectId: 'wrong' }, { uid: 'user' }], [environment, null]]) {
+test('adapter supports production and fails closed for invalid environments or missing sessions', async () => {
+    const production = { local: false, projectId: PRODUCTION_PROJECT_ID };
+    const { api: productionApi, calls: productionCalls } = apiDouble(production, { uid: 'user' });
+    await productionApi.getInvoiceDraft({ businessId: 'production-business', invoiceId: 'draft-1' });
+    assert.equal(productionCalls.length, 1);
+    for (const [env, user] of [[{ local: false, projectId: DEMO_PROJECT_ID }, { uid: 'user' }], [{ local: true, projectId: 'wrong' }, { uid: 'user' }], [environment, null]]) {
         const { api, calls } = apiDouble(env, user);
         await assert.rejects(api.getInvoiceDraft({ businessId: DEMO_BUSINESS_ID, invoiceId: 'draft-1' }));
         assert.deepEqual(calls, []);

@@ -1,7 +1,8 @@
 import { HttpsError } from 'firebase-functions/v2/https';
 import { snapshot, validateEnvelope, identity, fail, SaveInvoiceDraftError } from 'businessboss/server/invoiceDraftBoundary.js';
 import { createTrustedInvoiceDraftUpdateRepository, safeUpdateError } from 'businessboss/server/invoiceDraftUpdateRepository.js';
-import { localServices } from './admin.js';
+import { updateProductionInvoiceDraft } from 'businessboss/server/productionInvoiceDraftRepository.js';
+import { localServices, servicesForCurrentEnvironment } from './admin.js';
 import { assertLocalFunctionsEnvironment } from './localEnvironment.js';
 
 const codes = {
@@ -40,7 +41,7 @@ export async function handleUpdateInvoiceDraft(request) {
         if (!identity(request.auth?.uid) || request.auth.uid.includes('/') || typeof request.auth.rawToken !== 'string') fail('UNAUTHENTICATED');
         const verifiedUid = request.auth.uid;
         const data = validateUpdateEnvelope(snapshot(request.data));
-        const { auth } = localServices();
+        const { auth, db } = servicesForCurrentEnvironment();
         let verified;
         try { verified = await auth.verifyIdToken(request.auth.rawToken, true); }
         catch (error) {
@@ -49,10 +50,12 @@ export async function handleUpdateInvoiceDraft(request) {
             throw error;
         }
         if (verified.uid !== verifiedUid) fail('UNAUTHENTICATED');
-        const result = await localRepository().updateInvoiceDraftTransaction({
-            businessId: data.businessId, invoiceId: data.invoiceId, expectedRevision: data.expectedRevision,
-            input: data.input, verifiedUid
-        });
+        const result = process.env.BUSINESSBOSS_LOCAL_FUNCTIONS === 'true'
+            ? await localRepository().updateInvoiceDraftTransaction({
+                businessId: data.businessId, invoiceId: data.invoiceId, expectedRevision: data.expectedRevision,
+                input: data.input, verifiedUid
+            })
+            : await updateProductionInvoiceDraft(db, verifiedUid, data);
         return { invoiceId: result.invoiceId, revision: result.revision };
     } catch (error) { throw updateCallableError(error); }
 }

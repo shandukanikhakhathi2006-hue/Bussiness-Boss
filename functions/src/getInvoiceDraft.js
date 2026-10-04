@@ -2,7 +2,8 @@ import { HttpsError } from 'firebase-functions/v2/https';
 import { snapshot, identity, fail, SaveInvoiceDraftError } from 'businessboss/server/invoiceDraftBoundary.js';
 import { safeUpdateError } from 'businessboss/server/invoiceDraftUpdateRepository.js';
 import { readInvoiceDraft, validateReadEnvelope } from 'businessboss/server/invoiceDraftReadRepository.js';
-import { localServices } from './admin.js';
+import { readProductionInvoiceDraft } from 'businessboss/server/productionInvoiceDraftRepository.js';
+import { servicesForCurrentEnvironment } from './admin.js';
 import { assertLocalFunctionsEnvironment } from './localEnvironment.js';
 
 const codes = {
@@ -22,7 +23,7 @@ export async function handleGetInvoiceDraft(request) {
         if (!identity(request.auth?.uid) || request.auth.uid.includes('/') || typeof request.auth.rawToken !== 'string') fail('UNAUTHENTICATED');
         const verifiedUid = request.auth.uid;
         const data = validateReadEnvelope(snapshot(request.data));
-        const { auth, db } = localServices();
+        const { auth, db } = servicesForCurrentEnvironment();
         let verified;
         try { verified = await auth.verifyIdToken(request.auth.rawToken, true); }
         catch (error) {
@@ -31,7 +32,8 @@ export async function handleGetInvoiceDraft(request) {
             throw error;
         }
         if (verified.uid !== verifiedUid) fail('UNAUTHENTICATED');
-        return await readInvoiceDraft(db, verifiedUid, data,
-            () => assertLocalFunctionsEnvironment(process.env, { invocation: true }));
+        return process.env.BUSINESSBOSS_LOCAL_FUNCTIONS === 'true'
+            ? readInvoiceDraft(db, verifiedUid, data, () => assertLocalFunctionsEnvironment(process.env, { invocation: true }))
+            : readProductionInvoiceDraft(db, verifiedUid, data);
     } catch (error) { throw readCallableError(error); }
 }

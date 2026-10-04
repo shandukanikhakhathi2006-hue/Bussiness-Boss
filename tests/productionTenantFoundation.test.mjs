@@ -15,8 +15,9 @@ test('production client initializes App Check only outside explicit local mode',
     assert.match(appCheck, /ReCaptchaEnterpriseProvider/); assert.doesNotMatch(appCheck, /127\.0\.0\.1/);
 });
 test('business provisioning client sends no ownership or role authority', () => {
-    assert.match(client, /httpsCallable\(functions, 'ensureBusinessContext'\)\(\{\}\)/);
-    assert.doesNotMatch(client, /ownerId|role|status/);
+    const callableRequest = client.slice(0, client.indexOf('export async function resolveInvoiceBusinessContext'));
+    assert.match(callableRequest, /httpsCallable\(functions, 'ensureBusinessContext'\)\(\{\}\)/);
+    assert.doesNotMatch(callableRequest, /ownerId|role|status/);
 });
 test('production Admin composition is distinct from local emulator services', () => {
     assert.match(admin, /productionServices/); assert.match(admin, /getFirestore\(app\)/);

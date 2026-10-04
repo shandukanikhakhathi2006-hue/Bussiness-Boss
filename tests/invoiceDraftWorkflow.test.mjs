@@ -5,6 +5,7 @@ import { createInvoiceDraftWorkflow, safeDraftError } from '../js/features/invoi
 import { calculateInvoiceTotals } from '../js/finance/invoiceCalculations.js';
 
 const environment = { local: true, projectId: 'demo-businessboss-rules' };
+const productionEnvironment = { local: false, projectId: 'business-boss-1b871' };
 const businessId = 'stage9n-demo-business';
 const error = code => ({ details: { code }, message: 'private raw server paths tokens stack' });
 const draft = () => ({ customerId: null, customerName: 'Customer', customerEmail: null, customerAddress: null,
@@ -24,6 +25,13 @@ function fixture(overrides = {}) {
     const editor = createInvoiceDraftWorkflow({ environment, businessId, api, makeId: () => `generated-${++id}`, onChange: state => changes.push(state) });
     return { editor, api, calls, changes, server: () => server, setServer: value => { server = value; } };
 }
+
+test('workflow preserves invoice behavior in the production environment', () => {
+    const calls = [];
+    const api = { getInvoiceDraft: async () => loaded(), saveInvoiceDraft: async () => ({ invoiceId: 'generated-1', lifecycleStatus: 'draft' }), updateInvoiceDraft: async () => ({ invoiceId: 'existing', revision: 8 }) };
+    const editor = createInvoiceDraftWorkflow({ environment: productionEnvironment, businessId: 'production-business', api, makeId: () => 'generated-1', onChange: () => calls.push(true) });
+    assert.equal(editor.newDraft(), true); assert.equal(editor.snapshot().businessId, 'production-business');
+});
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };
 
 for (const [text, minor] of [['0', 0], ['0.01', 1], ['1.00', 100], ['10.50', 1050], ['1000.99', 100099], ['90071992547409.91', Number.MAX_SAFE_INTEGER]]) {

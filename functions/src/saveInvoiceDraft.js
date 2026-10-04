@@ -1,7 +1,8 @@
 import { HttpsError } from 'firebase-functions/v2/https';
 import { snapshot, validateEnvelope, identity, fail, safeError } from 'businessboss/server/invoiceDraftBoundary.js';
 import { createDraftInTransaction } from 'businessboss/server/invoiceDraftRepository.js';
-import { localServices } from './admin.js';
+import { createProductionInvoiceDraft } from 'businessboss/server/productionInvoiceDraftRepository.js';
+import { servicesForCurrentEnvironment } from './admin.js';
 import { assertLocalFunctionsEnvironment } from './localEnvironment.js';
 
 const codes = {
@@ -23,7 +24,7 @@ export async function handleSaveInvoiceDraft(request) {
     try {
         if (!identity(request.auth?.uid) || request.auth.uid.includes('/') || typeof request.auth.rawToken !== 'string') fail('UNAUTHENTICATED');
         const data = snapshot(request.data);
-        const { auth, db } = localServices();
+        const { auth, db } = servicesForCurrentEnvironment();
         let verified;
         try {
             // Public AuthData.rawToken in pinned Functions 7.3.2. No header parsing
@@ -36,8 +37,12 @@ export async function handleSaveInvoiceDraft(request) {
         }
         if (verified.uid !== request.auth.uid) fail('UNAUTHENTICATED');
         validateEnvelope(data);
-        await db.runTransaction(transaction => createDraftInTransaction(transaction, db, request.auth.uid, data,
-            () => assertLocalFunctionsEnvironment(process.env, { invocation: true })));
+        if (process.env.BUSINESSBOSS_LOCAL_FUNCTIONS === 'true') {
+            await db.runTransaction(transaction => createDraftInTransaction(transaction, db, request.auth.uid, data,
+                () => assertLocalFunctionsEnvironment(process.env, { invocation: true })));
+        } else {
+            await createProductionInvoiceDraft(db, request.auth.uid, data);
+        }
         return { invoiceId: data.invoiceId, lifecycleStatus: 'draft' };
     } catch (error) { throw callableError(error); }
 }

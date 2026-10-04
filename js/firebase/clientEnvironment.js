@@ -1,5 +1,6 @@
 // Local routing configuration only. Never a source of business authorization.
 export const DEMO_PROJECT_ID = 'demo-businessboss-rules';
+export const PRODUCTION_PROJECT_ID = 'business-boss-1b871';
 export const LOCAL_MODE_KEY = 'businessboss.localEmulators';
 export const FUNCTIONS_REGION = 'africa-south1';
 const loopback = hostname => ['localhost', '127.0.0.1', '[::1]'].includes(hostname);
@@ -20,15 +21,15 @@ export function resolveClientEnvironment(location, storage) {
         if (flags[0] === '0') storage.removeItem(LOCAL_MODE_KEY);
         local = storage.getItem(LOCAL_MODE_KEY) === '1';
     }
-    if (location.pathname.endsWith('/invoices-v2.html') && !local) {
-        throw new Error('Invoice v2 requires explicit local emulator mode.');
-    }
-    return Object.freeze({ local, projectId: local ? DEMO_PROJECT_ID : null });
+    return Object.freeze({ local, projectId: local ? DEMO_PROJECT_ID : PRODUCTION_PROJECT_ID });
 }
 
 // SDK injection keeps initialization testable without contacting any Firebase
 // service. Browser composition passes the real SDK, once, from config.js.
 export function initializeFirebaseClient(sdk, productionConfig, environment) {
+    if (!environment?.local && productionConfig?.projectId !== PRODUCTION_PROJECT_ID) {
+        throw new Error('Production Firebase project mismatch.');
+    }
     const config = environment.local ? {
         apiKey: 'demo-api-key', projectId: DEMO_PROJECT_ID,
         authDomain: `${DEMO_PROJECT_ID}.firebaseapp.com`, appId: 'demo-businessboss-web'

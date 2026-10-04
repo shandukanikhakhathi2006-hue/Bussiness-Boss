@@ -1,10 +1,10 @@
 import { createInvoiceDraftState } from './invoiceDraftState.js';
 import { draftToForm, formToDraft, emptyDraft, newLine } from './invoiceDraftForm.js';
 import { calculateInvoiceTotals } from '../finance/invoiceCalculations.js';
-import { DEMO_PROJECT_ID } from '../firebase/clientEnvironment.js';
+import { DEMO_PROJECT_ID, PRODUCTION_PROJECT_ID } from '../firebase/clientEnvironment.js';
 
 const messages = {
-    UNAUTHENTICATED: 'Please sign in to the local demo again.',
+    UNAUTHENTICATED: 'Sign in again.',
     BUSINESS_ACCESS_DENIED: 'You do not have access to this business.',
     BUSINESS_NOT_FOUND: 'This business is unavailable.', BUSINESS_INACTIVE: 'This business is inactive.',
     INVALID_BUSINESS_ROLE: 'Only the business owner can edit drafts.',
@@ -13,7 +13,7 @@ const messages = {
     INVALID_REQUEST: 'Check the draft fields and invoice ID.', INVALID_INVOICE_DRAFT: 'Check the highlighted draft field.',
     REFERENCE_NOT_SUPPORTED: 'Linked customers and catalog items are not supported.',
     INVOICE_ALREADY_EXISTS: 'This draft ID already exists. Reload to inspect it, or deliberately start a new draft.',
-    UNAVAILABLE: 'The local service is unavailable. Please try again.', INTERNAL: 'The draft could not be processed. Please try again.'
+    UNAVAILABLE: 'Unable to save invoice. Please try again.', INTERNAL: 'Unable to save invoice. Please try again.'
 };
 const transport = { unauthenticated: 'UNAUTHENTICATED', 'permission-denied': 'BUSINESS_ACCESS_DENIED', 'not-found': 'INVOICE_NOT_FOUND',
     'failed-precondition': 'INVOICE_NOT_EDITABLE', aborted: 'INVOICE_REVISION_CONFLICT', unavailable: 'UNAVAILABLE',
@@ -38,7 +38,10 @@ const localError = code => ({ details: { code } });
 
 // Owns command coordination; SDK/DOM-free for deterministic race/error tests.
 export function createInvoiceDraftWorkflow({ environment, businessId, api, makeId = () => crypto.randomUUID(), onChange = () => {} }) {
-    if (!environment.local || environment.projectId !== DEMO_PROJECT_ID) throw new Error('Local emulator mode required.');
+    const validEnvironment = environment.local
+        ? environment.projectId === DEMO_PROJECT_ID
+        : environment.projectId === PRODUCTION_PROJECT_ID;
+    if (!validEnvironment) throw new Error('Invoice v2 environment is unavailable.');
     let state = createInvoiceDraftState({ businessId });
     let busy = false, blocked = false, needsReload = false, disposed = false, mode = 'new', pendingId = null;
     let feedback = { code: null, path: null, message: 'Start a new draft or load an existing draft.' };

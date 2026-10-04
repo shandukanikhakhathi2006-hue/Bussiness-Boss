@@ -1,4 +1,5 @@
 import { assertServerEmulatorEnvironment, demoProjectId } from 'businessboss/server/emulatorSafety.js';
+import { assertProductionFunctionsEnvironment } from './productionEnvironment.js';
 
 export function assertLocalFunctionsEnvironment(env = process.env, { invocation = false } = {}) {
     assertServerEmulatorEnvironment(env);
@@ -11,5 +12,6 @@ export function assertLocalFunctionsEnvironment(env = process.env, { invocation 
 export function callableOptions(env = process.env) {
     const local = env.BUSINESSBOSS_LOCAL_FUNCTIONS === 'true';
     if (local) assertLocalFunctionsEnvironment(env);
+    else assertProductionFunctionsEnvironment(env);
     return { region: 'africa-south1', enforceAppCheck: !local, timeoutSeconds: 60, maxInstances: 2 };
 }
