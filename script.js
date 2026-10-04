@@ -1594,88 +1594,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			}
 		};
 
-		const loadMessages = async (user) => {
-			const conversationList = pageShell.querySelector('.conversation-list');
-			const conversationSearch = pageShell.querySelector('#conversationSearch');
-			const chatMessages = pageShell.querySelector('#chatMessages');
-			const messageInput = pageShell.querySelector('#messageInput');
-			const sendButton = pageShell.querySelector('#sendButton');
-			if (conversationList) conversationList.innerHTML = '<p class="empty-state" role="status">Loading messages…</p>';
-			if (chatMessages) chatMessages.innerHTML = '<p class="empty-state" role="status">Loading messages…</p>';
-			let snapshot;
-			try { snapshot = await getDocs(query(collection(firestore, 'messages'), where('ownerId', '==', user.uid))); }
-			catch (error) {
-				console.error('Failed to load messages', error);
-				renderAsyncFailure(conversationList, 'Messages could not be loaded.', () => loadMessages(user));
-				renderAsyncFailure(chatMessages, 'Messages could not be loaded.', () => loadMessages(user));
-				return;
-			}
-			const records = snapshot.docs.map((record) => ({ id: record.id, ...record.data() }));
-			if (conversationList) conversationList.innerHTML = records.length ? records.map((record) => `<div class="conversation-item active"><div class="conversation-avatar">${pageEscape(initials(record.customerName || 'Customer'))}</div><div class="conversation-meta"><div class="conversation-topline"><span class="conversation-name">${pageEscape(record.customerName || 'Customer')}</span><span class="conversation-time">${pageEscape(pageDateText(record))}</span></div><div class="conversation-preview"><span>${pageEscape(record.text || '')}</span></div></div></div>`).join('') : '<p class="empty-state">No messages yet.</p>';
-			if (chatMessages) chatMessages.innerHTML = records.length ? records.map((record) => `<div class="message-row outgoing"><div class="message-bubble">${pageEscape(record.text || '')}</div></div>`).join('') : '<p class="empty-state">No messages yet.</p>';
-			let sending = false;
-			const sendMessage = async (event) => {
-				event?.preventDefault();
-				event?.stopImmediatePropagation();
-				if (sending) return;
-				const text = messageInput?.value.trim();
-				if (!text) return;
-				sending = true;
-				if (sendButton) sendButton.disabled = true;
-				try {
-					await addDoc(collection(firestore, 'messages'), { ownerId: user.uid, text, customerName: 'Business contact', createdAt: serverTimestamp() });
-					messageInput.value = '';
-					await loadMessages(user);
-				} catch (error) {
-					console.error('Failed to send message', error);
-					showMessage('Your message could not be sent.', 'error');
-				} finally { sending = false; if (sendButton) sendButton.disabled = false; }
-			};
-			if (sendButton && messageInput && !sendButton.dataset.bound) {
-				sendButton.dataset.bound = 'true';
-				sendButton.addEventListener('click', sendMessage, true);
-				messageInput.addEventListener('keydown', (event) => {
-					if (event.key === 'Enter' && !event.shiftKey) sendMessage(event);
-				}, true);
-			}
-			const composeMessage = async () => {
-				const values = await showFormModal({
-					title: 'New message',
-					submitLabel: 'Send message',
-					fields: [
-						{ name: 'customerName', label: 'Customer name', defaultValue: 'Business contact', required: true },
-						{ name: 'text', label: 'Message', required: true }
-					]
-				});
-				if (!values) return;
-				try {
-					await addDoc(collection(firestore, 'messages'), { ownerId: user.uid, customerName: values.customerName, text: values.text, createdAt: serverTimestamp() });
-					await loadMessages(user);
-				} catch (error) {
-					console.error('Failed to create message', error);
-					showMessage('Your message could not be sent.', 'error');
-				}
-			};
-			[...pageShell.querySelectorAll('.primary-button, [aria-label="Compose message"]')]
-				.filter((button) => /new message/i.test(button.textContent) || button.getAttribute('aria-label') === 'Compose message')
-				.forEach((button) => {
-					if (!button.dataset.bound) {
-						button.dataset.bound = 'true';
-						button.addEventListener('click', composeMessage, true);
-					}
-				});
-			if (conversationSearch && !conversationSearch.dataset.bound) {
-				conversationSearch.dataset.bound = 'true';
-				conversationSearch.addEventListener('input', (event) => {
-					event.stopImmediatePropagation();
-					const search = conversationSearch.value.trim().toLowerCase();
-					conversationList?.querySelectorAll('.conversation-item').forEach((item) => {
-						item.hidden = Boolean(search) && !item.textContent.toLowerCase().includes(search);
-					});
-				}, true);
-			}
-		};
-
 		const recordFieldSets = {
 			expenses: (customerHint, existing, generatedId) => [
 				{ name: 'expenseNumber', label: 'Expense number', disabled: true, defaultValue: existing.expenseNumber || generatedId },
@@ -1790,7 +1708,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			}
 			if (pageName === 'reports') await loadReports(user);
 			if (pageName === 'settings') await loadSettings(user);
-			if (pageName === 'messages') await loadMessages(user);
 		});
 
 		// The Appointments feature owns its period dropdown and view refresh.

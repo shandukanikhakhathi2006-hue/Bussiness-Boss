@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const source = fs.readFileSync(new URL('../script.js', import.meta.url), 'utf8');
+const messagesSource = fs.readFileSync(new URL('../js/features/messagesWorkspace.js', import.meta.url), 'utf8');
 const navigationSource = fs.readFileSync(new URL('../navigation.js', import.meta.url), 'utf8');
 const styles = fs.readFileSync(new URL('../dashboard.css', import.meta.url), 'utf8');
 const recordTableSource = fs.readFileSync(new URL('../js/utils/recordTable.js', import.meta.url), 'utf8');
@@ -82,13 +83,13 @@ test('shared async failures replace loading states with an accessible retry acti
     assert.match(source, /\(\) => updateDashboardData\(user\)/);
 });
 
-test('message reads retry and sending is protected while pending', () => {
-    assert.match(source, /Messages could not be loaded/);
-    assert.match(source, /\(\) => loadMessages\(user\)/);
-    assert.match(source, /let sending = false/);
-    assert.match(source, /if \(sending\) return/);
-    assert.match(source, /sendButton\.disabled = true/);
-    assert.match(source, /finally \{ sending = false; if \(sendButton\) sendButton\.disabled = false; \}/);
+test('Messages reads retry and local-note saving is protected while pending', () => {
+    assert.match(messagesSource, /Messages could not be loaded/);
+    assert.match(messagesSource, /retry\.addEventListener\('click', \(\) => load\(\)\)/);
+    assert.match(messagesSource, /let isSaving = false/);
+    assert.match(messagesSource, /\|\| isSaving\) return/);
+    assert.match(messagesSource, /submit\.disabled = true/);
+    assert.match(messagesSource, /isSaving = false;[\s\S]*submit\.disabled = false/);
 });
 
 test('mobile navigation has a dismissible backdrop and Escape handler', () => {
