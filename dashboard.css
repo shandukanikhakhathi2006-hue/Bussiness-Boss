@@ -88,6 +88,14 @@ body {
     line-height: 1.5;
 }
 
+/* Cross-app overflow hardening: components may scroll internally, never the document. */
+img,
+svg,
+video,
+canvas {
+    max-width: 100%;
+}
+
 
 /* =========================================
    SIDEBAR
@@ -441,6 +449,8 @@ body {
     margin-left: var(--sidebar-width);
 
     min-height: 100vh;
+
+    min-width: 0;
 
     transition: margin-left 0.28s ease;
 }
@@ -1405,6 +1415,8 @@ body {
 
     overflow: hidden;
 
+    min-width: 0;
+
     margin-bottom: 25px;
 }
 
@@ -1427,7 +1439,10 @@ body {
 
 .table-container {
 
+    max-width: 100%;
+    min-width: 0;
     overflow-x: auto;
+    overscroll-behavior-x: contain;
 }
 
 
@@ -2252,6 +2267,8 @@ select {
     padding: 28px 29px;
     max-width: 1700px;
     margin: auto;
+    min-width: 0;
+    width: 100%;
 }
 
 .page-header {
@@ -2260,6 +2277,14 @@ select {
     align-items: center;
     gap: 20px;
     margin-bottom: 18px;
+}
+
+.page-header > *,
+.page-toolbar > *,
+.section-title-row > *,
+.card-header > *,
+.top-header > * {
+    min-width: 0;
 }
 
 .page-title {
@@ -2337,6 +2362,7 @@ select {
     font-family: inherit;
     font-size: 12px;
     color: var(--dark);
+    min-width: 0;
 }
 
 .toolbar-select {
@@ -2930,6 +2956,7 @@ select {
     border: 1px solid var(--border);
     box-shadow: var(--shadow-soft);
     overflow: hidden;
+    min-width: 0;
 }
 
 .modal-header,
@@ -3294,6 +3321,7 @@ select {
     max-height: 90vh;
     overflow-y: auto;
     padding: 24px;
+    min-width: 0;
 }
 
 .app-modal-header {
@@ -5712,6 +5740,73 @@ select {
     .messages-unlinked-note {
         margin-left: 14px;
         margin-right: 14px;
+    }
+}
+
+/* Keep cross-page shell children shrinkable; wide data remains in its own scroller. */
+.main-content,
+.page-shell,
+.workspace-refined,
+.content-card,
+.chart-panel,
+.reports-workspace,
+.messages-workspace,
+.settings-workspace,
+.settings-content {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.page-title,
+.page-subtitle,
+.card-header h2,
+.card-header p,
+.modal-header h3,
+.modal-body,
+.app-modal-header h2,
+.app-modal-description,
+.app-modal-error,
+.report-category-label,
+.report-summary-text {
+    overflow-wrap: anywhere;
+}
+
+.report-chart-shell,
+.report-bar-chart,
+.report-category-chart,
+.chart-box,
+.chart-area,
+.calendar-grid,
+.form-grid,
+.app-modal-fields {
+    min-width: 0;
+    max-width: 100%;
+}
+
+@media (max-width: 700px) {
+    .page-shell {
+        padding-inline: 16px;
+    }
+
+    .toolbar-group,
+    .toolbar-search,
+    .toolbar-select,
+    .page-actions,
+    .modal-header,
+    .modal-footer,
+    .app-modal-actions {
+        max-width: 100%;
+        min-width: 0;
+    }
+
+    .toolbar-search,
+    .toolbar-select {
+        width: 100%;
+    }
+
+    .modal-card,
+    .app-modal {
+        max-width: 100%;
     }
 }
 
