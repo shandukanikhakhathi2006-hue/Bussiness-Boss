@@ -5,6 +5,7 @@ import { handleUpdateInvoiceDraft } from './updateInvoiceDraft.js';
 import { handleGetInvoiceDraft } from './getInvoiceDraft.js';
 import { handleEnsureBusinessContext } from './ensureBusinessContext.js';
 import { handleArchiveCustomer, handleCreateCustomer, handleGetCustomer, handleListCustomers, handleUpdateCustomer } from './customerV2.js';
+import { handleCreateAppointment, handleGetAppointment, handleListAppointments, handleUpdateAppointment } from './appointmentV2.js';
 
 export const ensureBusinessContext = onCall(callableOptions(), handleEnsureBusinessContext);
 export const saveInvoiceDraft = onCall(callableOptions(), handleSaveInvoiceDraft);
@@ -15,3 +16,7 @@ export const getCustomer = onCall(callableOptions(), handleGetCustomer);
 export const listCustomers = onCall(callableOptions(), handleListCustomers);
 export const updateCustomer = onCall(callableOptions(), handleUpdateCustomer);
 export const archiveCustomer = onCall(callableOptions(), handleArchiveCustomer);
+export const createAppointment = onCall(callableOptions(), handleCreateAppointment);
+export const getAppointment = onCall(callableOptions(), handleGetAppointment);
+export const listAppointments = onCall(callableOptions(), handleListAppointments);
+export const updateAppointment = onCall(callableOptions(), handleUpdateAppointment);

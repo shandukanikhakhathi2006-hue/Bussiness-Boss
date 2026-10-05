@@ -134,13 +134,15 @@ export async function archiveCustomer({ db, FieldValue, verifiedUid, data } = {}
 // Used by a future invoice command after it has already resolved authority in
 // the same transaction. A foreign-tenant ID is therefore indistinguishable
 // from a missing customer and cannot cross the tenant boundary.
-export async function loadCustomerForInvoice({ transaction, db, businessId, customerId } = {}) {
+export async function loadActiveCustomerSnapshot({ transaction, db, businessId, customerId } = {}) {
     assertBusinessId(businessId); assertCustomerId(customerId);
     const snapshot = await transaction.get(customerRef(db, businessId, customerId));
     if (!snapshot.exists) fail('CUSTOMER_NOT_FOUND');
     try { return customerSnapshotForInvoice(customerId, snapshot.data()); }
     catch (error) { if (error instanceof CustomerCommandError) fail(error.code); throw error; }
 }
+
+export const loadCustomerForInvoice = loadActiveCustomerSnapshot;
 
 export const customerRepositoryErrorCode = error => error instanceof CustomerRepositoryError || error instanceof BusinessContextError
     ? error.code : 'INTERNAL';
